@@ -31,4 +31,4 @@ Par ordre de priorité. Chaque point : état actuel -> prochaine étape.
 - PNJ et chants mélangés (remplacement du nom de l'objet dans leurs scènes — validé pour un PNJ).
 - Petites clés / clés du boss : actuellement à leur place d'origine.
 - Fenêtre de réglages sur PC (alternative simple au menu en jeu).
-- Menu natif dans le jeu (code injecté) : voir « Pistes non abouties » dans GAME_KNOWLEDGE.
+- Menu natif dans le jeu (code injecté, exlaunch) : injection validée en jeu, voir `native/README.md` ; reste la rétro-ingénierie de l'écran « Nouvelle partie ».
