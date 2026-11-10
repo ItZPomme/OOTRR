@@ -1,0 +1,15 @@
+{
+  "_doc": "Exemple de réglages : python -m ootrr --settings settings.example.json --seed 1234. Liste complète : python -m ootrr --list-settings",
+  "open_forest": "open",
+  "open_door_of_time": true,
+  "skip_child_zelda": true,
+  "free_time_travel": true,
+  "bridge": "medallions",
+  "bridge_count": 6,
+  "shuffle_rewards": "shuffled",
+  "shuffle_hearts": "freestanding",
+  "maps_compasses": "start_with",
+  "skip_cutscenes": "safe",
+  "logic_lens_required": true,
+  "accessibility": "all"
+}

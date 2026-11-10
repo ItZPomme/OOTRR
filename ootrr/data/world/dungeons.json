@@ -1,0 +1,134 @@
+{
+  "_doc": "Donjons : régions, boss (récompenses fixes) et événements. Les coffres sont dans chests.json. Petites clés et clés du boss restent à leur place d'origine.",
+  "regions": {
+    "Deku Tree": {
+      "dungeon": "Deku Tree",
+      "locations": {
+        "Deku Tree Queen Gohma Heart": {"rule": "can_use(Slingshot)", "vanilla": "Obj_Heart_Container", "hashes": [17948245526767051747], "pickup": "boss"},
+        "Queen Gohma":                 {"kind": "reward", "rule": "can_use(Slingshot)", "vanilla": "Item_Stone_Forest"}
+      },
+      "events": {
+        "Deku_Tree_Clear": "can_use(Slingshot)"
+      },
+      "exits": {
+        "Kokiri Forest": "True"
+      }
+    },
+    "Dodongos Cavern": {
+      "dungeon": "Dodongos Cavern",
+      "locations": {
+        "Dodongos Cavern King Dodongo Heart": {"rule": "dc_explosives", "vanilla": "Obj_Heart_Container", "hashes": [5936534468710061389], "pickup": "boss"},
+        "King Dodongo":                       {"kind": "reward", "rule": "dc_explosives", "vanilla": "Item_Stone_Fire"}
+      },
+      "exits": {
+        "Death Mountain Trail": "True"
+      }
+    },
+    "Jabu Jabus Belly": {
+      "dungeon": "Jabu Jabus Belly",
+      "locations": {
+        "Jabu Jabus Belly Barinade Heart": {"rule": "can_use(Boomerang)", "vanilla": "Obj_Heart_Container", "hashes": [17608884438514432711], "pickup": "boss"},
+        "Barinade":                        {"kind": "reward", "rule": "can_use(Boomerang)", "vanilla": "Item_Stone_Water"}
+      },
+      "exits": {
+        "Zoras Fountain": "True"
+      }
+    },
+    "Forest Temple": {
+      "dungeon": "Forest Temple",
+      "locations": {
+        "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
+        "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and can_use(Progressive_Hookshot)", "vanilla": "Item_Medal_Forest"}
+      },
+      "exits": {
+        "Sacred Forest Meadow": "True"
+      }
+    },
+    "Fire Temple Lower": {
+      "dungeon": "Fire Temple",
+      "exits": {
+        "DMC Central": "True",
+        "Fire Temple Upper": "has_explosives or can_use(Megaton_Hammer) or can_use(Progressive_Hookshot)"
+      }
+    },
+    "Fire Temple Upper": {
+      "dungeon": "Fire Temple",
+      "locations": {
+        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
+        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer)", "vanilla": "Item_Medal_Fire"}
+      },
+      "exits": {
+        "Fire Temple Lower": "True"
+      }
+    },
+    "Ice Cavern": {
+      "dungeon": "Ice Cavern",
+      "locations": {
+        "Ice Cavern Freestanding PoH": {"rule": "has_bottle", "vanilla": "Obj_Heart_Piece"},
+        "Sheik in Ice Cavern":         {"kind": "song", "rule": "has_bottle", "vanilla": "Item_Melody_WaterSerenade"}
+      },
+      "events": {
+        "Blue_Fire": "has_bottle"
+      },
+      "exits": {
+        "Zoras Fountain": "True"
+      }
+    },
+    "Water Temple": {
+      "dungeon": "Water Temple",
+      "locations": {
+        "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
+        "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot", "vanilla": "Item_Medal_Water"}
+      },
+      "exits": {
+        "Lake Hylia": "True"
+      }
+    },
+    "Shadow Temple": {
+      "dungeon": "Shadow Temple",
+      "locations": {
+        "Shadow Temple Bongo Bongo Heart": {"rule": "shadow_boss", "vanilla": "Obj_Heart_Container", "hashes": [17599164808183510748], "pickup": "boss"},
+        "Bongo Bongo":                     {"kind": "reward", "rule": "shadow_boss", "vanilla": "Item_Medal_Shadow"}
+      },
+      "exits": {
+        "Graveyard Warp Pad": "True"
+      }
+    },
+    "Bottom of the Well": {
+      "dungeon": "Bottom of the Well",
+      "exits": {
+        "Kakariko Village": "True"
+      }
+    },
+    "Gerudo Training Ground": {
+      "dungeon": "Gerudo Training Ground",
+      "exits": {
+        "Gerudo Fortress": "True"
+      }
+    },
+    "Spirit Temple Lobby": {
+      "dungeon": "Spirit Temple",
+      "exits": {
+        "Desert Colossus": "True",
+        "Spirit Temple Child": "is_child",
+        "Spirit Temple Adult": "is_adult and has_strength2"
+      }
+    },
+    "Spirit Temple Child": {
+      "dungeon": "Spirit Temple",
+      "exits": {
+        "Spirit Temple Lobby": "True"
+      }
+    },
+    "Spirit Temple Adult": {
+      "dungeon": "Spirit Temple",
+      "locations": {
+        "Spirit Temple Twinrova Heart": {"rule": "spirit_boss", "vanilla": "Obj_Heart_Container", "hashes": [4720088048159616469], "pickup": "boss"},
+        "Twinrova":                     {"kind": "reward", "rule": "spirit_boss", "vanilla": "Item_Medal_Spirit"}
+      },
+      "exits": {
+        "Spirit Temple Lobby": "True"
+      }
+    }
+  }
+}

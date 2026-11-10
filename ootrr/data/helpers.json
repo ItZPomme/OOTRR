@@ -1,0 +1,36 @@
+{
+  "_doc": "Règles nommées réutilisables dans les régions. Une règle peut appeler un autre helper (pas de récursion). has_explosives : dans le remake, sortir une bombe utilise l'action « soulever », il faut donc le Bracelet Goron en plus du sac (vérifié en jeu).",
+  "helpers": {
+    "has_explosives":        "Bomb_Bag and Progressive_Strength",
+    "can_blast_or_smash":    "has_explosives or can_use(Megaton_Hammer)",
+    "can_open_grotto":       "can_blast_or_smash",
+    "has_bottle":            "Bottle or Rutos_Letter",
+    "has_fire":              "can_use(Dins_Fire) or can_use(Fire_Arrows)",
+    "has_fire_or_sticks":    "has_fire or is_child",
+    "has_deku_shield":       "is_child",
+    "can_dive":              "Progressive_Scale",
+    "has_gold_scale":        "has(Progressive_Scale, 2)",
+    "has_strength2":         "has(Progressive_Strength, 2)",
+    "has_strength3":         "has(Progressive_Strength, 3)",
+    "can_use_longshot":      "can_use(Progressive_Hookshot) and has(Progressive_Hookshot, 2)",
+    "can_ride_epona":        "is_adult and can_play(Eponas_Song)",
+    "can_cross_gerudo_bridge": "can_ride_epona or can_use_longshot",
+    "can_see_invisible":     "not logic_lens_required or can_use(Lens_of_Truth)",
+    "child_ranged":          "can_use(Slingshot) or can_use(Boomerang)",
+    "dc_explosives":         "has_explosives or Progressive_Strength",
+    "has_all_stones":        "Kokiri_Emerald and Goron_Ruby and Zora_Sapphire",
+    "door_of_time_stones":   "Goron_Ruby and Zora_Sapphire",
+    "can_open_door_of_time": "open_door_of_time or (can_play(Song_of_Time) and door_of_time_stones)",
+    "kakariko_gate_open":    "open_kakariko or Zeldas_Letter",
+    "forest_exit_open":      "setting_is(open_forest, 'closed_deku') or setting_is(open_forest, 'open') or Deku_Tree_Clear",
+    "deku_tree_open":        "setting_is(open_forest, 'open') or (can_use(Kokiri_Sword) and has_deku_shield)",
+    "great_fairy":           "can_play(Zeldas_Lullaby)",
+    "gc_chests":             "is_adult and (can_use(Megaton_Hammer) or has_strength2) and has_explosives",
+    "gtg_chests":            "is_adult and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_see_invisible and can_use(Megaton_Hammer) and has_strength2 and can_use(Hover_Boots) and can_use(Iron_Boots)",
+    "ganon_castle_chests":   "can_use(Fire_Arrows) and can_use(Progressive_Hookshot) and can_use(Megaton_Hammer) and can_see_invisible and has_explosives and can_use(Hover_Boots) and has_strength2",
+    "shadow_boss":           "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_play(Zeldas_Lullaby)",
+    "spirit_boss":           "can_use(Mirror_Shield) and can_use(Progressive_Hookshot) and has_explosives",
+
+    "rainbow_bridge": "setting_is(bridge, 'open') or (setting_is(bridge, 'vanilla') and Shadow_Medallion and Spirit_Medallion and can_use(Light_Arrows)) or (setting_is(bridge, 'stones') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire) >= setting_value(bridge_count)) or (setting_is(bridge, 'medallions') and count(Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'dungeons') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire, Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'hearts') and hearts() >= setting_value(bridge_count))"
+  }
+}

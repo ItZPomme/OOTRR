@@ -1,0 +1,32 @@
+# Résultats et données personnelles
+output/
+saves/
+inventaire/
+
+# Fichiers du jeu : jamais dans le dépôt (chacun extrait sa propre copie)
+romfs/
+exefs/
+*.nsp
+*.xci
+*.nca
+*.keys
+prod.keys
+title.keys
+*.bfevfl
+*.bcett.byml
+*.msbt
+*.ainb
+*.zs
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Éditeurs / système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

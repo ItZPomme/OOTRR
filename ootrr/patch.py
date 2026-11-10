@@ -1,0 +1,96 @@
+"""Patch JSON (lieu -> objet, avec les hash des coffres) et conversion en modifications du jeu."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from . import __version__
+from .fill import Result
+from .world import World
+
+PATCH_FORMAT = "ootrr-patch"
+PATCH_VERSION = 2
+
+
+def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
+    chests = []
+    for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
+        item = result.placements[loc.name]
+        chests.append({
+            "location": loc.name,
+            "hashes": loc.hashes,
+            "vanilla": loc.vanilla,
+            "item": item,
+            "event": loc.event,
+            "conditional": loc.conditional,
+            "pickup": loc.pickup,
+        })
+    return {
+        "format": PATCH_FORMAT,
+        "format_version": PATCH_VERSION,
+        "generator_version": __version__,
+        "target": "zelda-oot-remake-switch2",
+        "seed": result.seed,
+        "hash": seed_hash,
+        "settings": world.settings,
+        "start_flags": world.start_flags(),
+        "event_skips": world.event_skips(),
+        "start_items": world.start_items(result.placements),
+        "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
+        "event_changes": world.reward_event_changes(result.placements),
+        "logic_patches": world.logic_patches(),
+        "ingame_questions": world.ingame_questions(),
+        "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},
+        "actor_changes": {str(h): c for h, c in world.actor_changes().items()},
+        "extra_pickups": world.extra_pickups(),
+        "ocarina_moat_gate": bool(world.settings.get("open_door_of_time")),
+        "removed_actors": world.removed_actors(),
+        "ground_native": world.ground_native,
+        "chests": chests,
+    }
+
+
+def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
+    """Modifications d'acteurs pour le ModBuilder : {hash: {champ: valeur ou None}}.
+
+    Un coffre qui garde son objet d'origine n'est pas touché. Sinon on change
+    Drop__DropActor, et on retire l'événement s'il appartenait à l'objet
+    d'origine (sinon l'animation de l'ancien objet se joue, ex. l'épée dans le dos)."""
+    changes: dict[int, dict] = {}
+    for chest in patch["chests"]:
+        if chest["item"] == chest["vanilla"] or chest.get("pickup"):
+            continue
+        change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
+        if chest["event"] == "drop":
+            change["GetEventName"] = None
+        if chest.get("conditional"):
+            # sinon le jeu donnerait l'objet de remplacement d'origine si le joueur a déjà l'objet testé
+            change["Drop__CheckActor"] = None
+            change["Drop__DropActor_Substitute"] = None
+        for h in chest["hashes"]:
+            changes[int(h)] = change
+    return changes
+
+
+PICKUP_PREFIX = "Obj_OoTRR_Pickup_"
+
+
+def pickup_changes(patch: dict[str, Any]) -> tuple[dict[int, dict], dict[str, str]]:
+    """Cœurs posés au sol : (changements de type d'acteur {hash: {"Gyaml": ...}}, objets sur mesure {nom: objet}).
+
+    Cœur, réceptacle ou rubis : on remet le vrai objet au sol du jeu. Autre objet : un objet
+    ramassable sur mesure (copie du réceptacle) qui porte le nom de l'objet à donner."""
+    native = patch.get("ground_native", {})
+    changes: dict[int, dict] = {}
+    pickups: dict[str, str] = {}
+    for loc in patch["chests"]:
+        if not loc.get("pickup") or loc["item"] == loc["vanilla"]:
+            continue
+        if loc["item"] in native:
+            actor = native[loc["item"]]
+        else:
+            actor = f"{PICKUP_PREFIX}{len(pickups):03d}"
+            pickups[actor] = loc["item"]
+        for h in loc["hashes"]:
+            changes[int(h)] = {"Gyaml": actor}
+    return changes, pickups
