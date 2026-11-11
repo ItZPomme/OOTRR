@@ -82,6 +82,11 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   qu'à l'étape **= Step04** ; son ramassage lance `DoorOfTime:DoorOfTime_GetOcarinaOfTime`
   (scène `Dm_MelodyGet_Time`). Porte ouverte : module modifié pour Step06 + présence « 3 pierres »
   + dons directs dans le script **[jeu]**.
+- Menu natif : la porte s'ouvre en posant l'Enum à Step06 au début de la partie (fonction `0x3e0980`) ;
+  un crochet sur le changement d'étape de quête (`0x2cf54a0`) empêche tout recul. Le module des douves
+  crée l'ocarina « après Step03 » au lieu de « = Step04 », pour servir porte fermée comme ouverte.
+  Porte ouverte (On) et porte fermée + douves vides (Off) validés **[jeu]** (2026-11-10) ; ocarina des
+  douves avec les 3 pierres pas encore testé avec le menu natif.
 - Rauru : le premier tirage de l'épée vérifie `HavePlayedEvent.Dm_TimeTemple_0040` ; marqué comme
   vu -> voyage direct, la récompense de la poche de Link est donnée au départ **[jeu]**.
 - Retour enfant : `Market_Adult_Prefab_89da` exige `SageOfForest_IsCompleted_Exp` (Temple de la
