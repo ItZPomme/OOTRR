@@ -192,14 +192,14 @@ FREE_TIME_EXP = "OoTRR_FreeTimeTravel_Exp"
 RETURN_MODULE = "Logic/Market_Adult_Prefab_89da.logic.module.ainb"
 RETURN_CONDITION = "SageOfForest_IsCompleted_Exp"
 MENU_BOOL_EXPS = {FREE_TIME_EXP: [("Bool", FREE_TIME_FLAG), ("Exp", RETURN_CONDITION), ("OR",)]}
-# Pont arc-en-ciel : un drapeau sauvegardé par condition, posé par le menu ; les deux expressions lues
-# par le module du pont deviennent « OU sur les conditions : drapeau ET condition » (original : les
-# expressions de la quête Defeat_Ganon)
+# Pont arc-en-ciel : un drapeau sauvegardé par condition, posé par le menu. Module du pont : la scène
+# GanonCastle_Adult_Field_Rainbow se déclenche si « Ready » ET NON « Step01 » (la scène fait passer la
+# quête Defeat_Ganon à Step01) ; le pont existe une fois la scène vue. Seule « Ready » est remplacée,
+# par « OU sur les conditions : drapeau ET condition » (original : l'expression de la quête).
 BRIDGE_MODES = ("open", "vanilla", "stones", "medallions", "dungeons", "hearts")
 BRIDGE_FLAGS = {mode: f"OoTRR.Bridge.{mode}" for mode in BRIDGE_MODES}
 BRIDGE_MODULE_FILE = "Logic/GanonCastle_Level_Field_00_Prefab_14ba.logic.module.ainb"
-BRIDGE_MENU_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_MenuBridge_Ready_Exp",
-                   "Defeat_Ganon_IsAfter_Step01_Exp": "OoTRR_MenuBridge_Step01_Exp"}
+BRIDGE_MENU_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_MenuBridge_Ready_Exp"}
 
 
 def bridge_menu_exps() -> dict[str, list[tuple]]:
@@ -215,10 +215,16 @@ def bridge_menu_exps() -> dict[str, list[tuple]]:
         exps.update(sub)
         conds[mode] = [("Exp", next(iter(sub)))]
     values = list(range(4 * BRIDGE_COUNTS["hearts"], 81))  # MaxLife en quarts de cœur
-    hearts = [("IntEq", MAX_LIFE, values[0])]
-    for v in values[1:]:
-        hearts += [("IntEq", MAX_LIFE, v), ("OR",)]
-    exps["OoTRR_MenuBridgeH"] = hearts
+    # « au moins N cœurs » = MaxLife vaut l'une des valeurs ; les expressions du jeu ont au plus 26
+    # éléments : morceaux de 8 valeurs (23 éléments) réunis par une expression de tête
+    top = []
+    for i in range(0, len(values), 8):
+        part = [("IntEq", MAX_LIFE, values[i])]
+        for v in values[i + 1:i + 8]:
+            part += [("IntEq", MAX_LIFE, v), ("OR",)]
+        exps[f"OoTRR_MenuBridgeH_{i // 8}"] = part
+        top += [("Exp", f"OoTRR_MenuBridgeH_{i // 8}")] + ([("OR",)] if top else [])
+    exps["OoTRR_MenuBridgeH"] = top
     conds["hearts"] = [("Exp", "OoTRR_MenuBridgeH")]
     for original, name in BRIDGE_MENU_EXP.items():
         prog = [("Bool", BRIDGE_FLAGS["open"])]
