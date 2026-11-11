@@ -100,6 +100,10 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   (rubis), `Dm_ZoraFountain_0030` + `Dm_InsideJabu_Jabu_0030` (saphir), `Dm_Awake_<X>_Get`
   (médaillons, aussi en version `.110`). Remplacer le nom dans ces scènes change la récompense
   (validé pour l'émeraude) **[jeu]**.
+- Menu natif : crochet sur l'ajout à l'inventaire `0x110d570` ; un don d'événement (raison 7) d'une
+  récompense d'origine est remplacé par celle de la seed. Validé pour la poche de Link au départ
+  (médaillon de lumière -> saphir zora) **[jeu]** (2026-11-10) ; scènes de boss : même mécanisme, non
+  testées. Raisons vues : 7 = événement, 8 = équipement de départ (bourse, tuniques).
 
 ## Pont arc-en-ciel
 
