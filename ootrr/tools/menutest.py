@@ -29,6 +29,7 @@ NATIVE = Path(__file__).resolve().parents[2] / "native" / "exlaunch" / "deploy" 
 
 # test du placement pendant le jeu : jetons d'emplacement dans les coffres de la maison de Mido
 # (le module natif les remplace ; table fixe de test dans main.cpp : grappin, bottes, arc, boomerang)
+TOKEN_BASE = "TBox_Rupee_Green"
 TOKEN_CHESTS = {
     10831981390482426294: "OoTRR_L0000",
     4555665598794293658: "OoTRR_L0001",
@@ -40,12 +41,28 @@ TOKEN_CHESTS = {
 def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
+    # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
+    from ..settings import build as build_settings
+    from ..world import World
+    world = World(build_settings({"skip_cutscenes": "safe"}))
+    common = dict(start_flags=world.start_flags(), event_skips=world.event_skips(),
+                  start_items=world.start_items())
+    actor_changes = {int(h): c for h, c in world.actor_changes().items()}
     if tokens:
-        report += mb.build({h: {"Drop__DropActor": t} for h, t in TOKEN_CHESTS.items()}, out)
+        # un jeton doit être un vrai acteur (le coffre lit aussi le nom ailleurs et refuse de s'ouvrir
+        # sur un acteur inconnu) : copie du rubis vert de coffre, sans changer son modèle
+        mb.pickup_models = False
+        tokens_actors = {t: f"{TOKEN_BASE}@{TOKEN_BASE}" for t in TOKEN_CHESTS.values()}
+        actor_changes.update({h: {"Drop__DropActor": t} for h, t in TOKEN_CHESTS.items()})
+    else:
+        tokens_actors = None
+    report += mb.build(actor_changes, out, pickups=tokens_actors, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
-    raw = mb.codec.decompress(path)
+    rel = path.relative_to(romfs).as_posix()
+    # mb.build a peut-être déjà écrit GameDataList (drapeaux de départ) : repartir de sa version
+    raw = mb.codec.decompress(out / rel if (out / rel).exists() else path)
     root = read_byml(raw)
     report += menu.gamedata_struct(root, defaults())
     enum_values = {}
@@ -59,7 +76,6 @@ def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
             if section == "Enum":
                 enum_values[names[m["Hash"]]] = entry["RawValues"]
     new = write_byml(root, byml_version(raw))
-    rel = path.relative_to(romfs).as_posix()
     mb.restbl.resize_like(rel[:-3], len(raw), len(new))
     (out / rel).parent.mkdir(parents=True, exist_ok=True)
     (out / rel).write_bytes(mb.codec.compress(path.name, new))
