@@ -6,13 +6,15 @@ namespace ootrr::logic {
 
 enum Op : int32_t { T_TRUE, T_FALSE, T_IS_CHILD, T_IS_ADULT, T_HAS, T_HELPER, T_SET_BOOL, T_SET_IS, T_NOT, T_AND, T_OR, T_CMP, N_CONST, N_COUNT, N_HEARTS, N_SETTING };
 
-constexpr int kSettingCount = 15;
+constexpr int kSettingCount = 17;
 enum SettingKind : int32_t { S_BOOL, S_ENUM, S_INT };
 struct SettingInfo { const char* name; SettingKind kind; int32_t value_count; const char* const* values; int32_t def; };
 inline constexpr const char* kValues_bridge[] = {"open", "vanilla", "stones", "medallions", "dungeons", "hearts"};
 inline constexpr const char* kValues_open_forest[] = {"closed", "closed_deku", "open", "ask"};
 inline constexpr const char* kValues_maps_compasses[] = {"vanilla", "start_with", "shuffle", "removed"};
 inline constexpr const char* kValues_shuffle_hearts[] = {"none", "freestanding", "all"};
+inline constexpr const char* kValues_shuffle_shops[] = {"off", "1", "2", "3", "4"};
+inline constexpr const char* kValues_shop_prices[] = {"vanilla", "affordable", "random"};
 inline constexpr const char* kValues_shuffle_skulltulas[] = {"off", "overworld", "all"};
 inline constexpr const char* kValues_skip_cutscenes[] = {"none", "safe"};
 inline constexpr const char* kValues_shuffle_rewards[] = {"vanilla", "shuffled"};
@@ -26,6 +28,8 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"maps_compasses", S_ENUM, 4, kValues_maps_compasses, 0},
     {"shuffle_hearts", S_ENUM, 3, kValues_shuffle_hearts, 0},
     {"shuffle_scrubs", S_BOOL, 2, nullptr, 0},
+    {"shuffle_shops", S_ENUM, 5, kValues_shuffle_shops, 0},
+    {"shop_prices", S_ENUM, 3, kValues_shop_prices, 0},
     {"shuffle_skulltulas", S_ENUM, 3, kValues_shuffle_skulltulas, 0},
     {"skip_cutscenes", S_ENUM, 2, kValues_skip_cutscenes, 0},
     {"shuffle_rewards", S_ENUM, 2, kValues_shuffle_rewards, 0},
@@ -34,7 +38,7 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"logic_lens_required", S_BOOL, 2, nullptr, 1},
     {"accessibility", S_ENUM, 2, kValues_accessibility, 0},
 };
-enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic_lens_required, SET_accessibility };
+enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic_lens_required, SET_accessibility };
 
 constexpr int32_t kRoot = 14;
 constexpr int32_t kTempleOfTime = 26;
@@ -498,7 +502,7 @@ inline constexpr int32_t kCode[kCodeSize] = {
     1, 4, 9, 1, 10, 2, 9, 2, 4, 19, 1, 4, 6, 1, 9, 4, 3, 4, 20, 1, 4, 4, 1, 4,
     6, 1, 10, 2, 5, 4, 2, 2, 4, 2, 1, 4, 2, 2, 4, 1, 2, 4, 1, 3, 9, 2, 9, 2,
     3, 4, 0, 1, 4, 0, 2, 9, 2, 3, 9, 2, 4, 7, 1, 4, 25, 1, 10, 2, 5, 12, 5, 11,
-    10, 2, 8, 6, 13, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9, 2, 2,
+    10, 2, 8, 6, 15, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9, 2, 2,
     4, 10, 1, 10, 2, 5, 0, 4, 1, 1, 9, 3, 4, 38, 1, 4, 39, 1, 4, 40, 1, 9, 2, 4,
     39, 1, 4, 40, 1, 10, 2, 6, 3, 9, 2, 9, 2, 4, 7, 1, 4, 28, 1, 5, 18, 10, 2, 6,
     4, 4, 23, 1, 10, 3, 7, 2, 1, 7, 2, 2, 4, 47, 1, 10, 2, 7, 2, 2, 9, 2, 9, 2,

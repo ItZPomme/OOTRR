@@ -13,19 +13,21 @@ constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 // structure cherchent le membre par ce hachage dans la table de la poignée
 struct MenuSetting { int32_t setting; uint32_t member; bool is_bool; int32_t count;
                      uint32_t game_values[8]; int32_t setting_values[8]; };
-constexpr int kMenuSettingCount = 11;
+constexpr int kMenuSettingCount = 13;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
-    {11, 0x8c5522fc, true, 0, {}, {}},  // free_time_travel <- IsCameraRightLeftReverse
-    {12, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
+    {13, 0x8c5522fc, true, 0, {}, {}},  // free_time_travel <- IsCameraRightLeftReverse
+    {14, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
     {0, 0x74b1edd9, false, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {0, 1, 2, 3, 4, 5}},  // bridge <- VoiceLanguage
-    {10, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
+    {12, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
     {6, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
     {7, 0xc587a7b1, true, 0, {}, {}},  // shuffle_scrubs <- IsDisplayTextRuby
-    {8, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
+    {10, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
     {5, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode
-    {13, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
+    {8, 0x02b4d56e, false, 5, {0xa3db7114, 0xdb209aaf, 0x47998da3, 0xd9a107a3, 0x9e7babee}, {0, 1, 2, 3, 4}},  // shuffle_shops <- OcarinaKeyAssign
+    {9, 0x916ac217, false, 3, {0x377eb039, 0x21332403, 0x6308516b}, {0, 1, 2}},  // shop_prices <- MessageWindowTransparency
+    {15, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
 };
 
 // seed manuelle : bascule ; activée, le clavier virtuel s'ouvre au lancement de la partie
@@ -35,7 +37,7 @@ constexpr uint32_t kSeedMax = 999999;  // seeds aléatoires : 1-999999 (courtes 
 struct FixedSetting { int32_t setting; int32_t value; };
 constexpr int kFixedSettingCount = 1;
 inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {
-    {9, 1},  // skip_cutscenes = safe
+    {11, 1},  // skip_cutscenes = safe
 };
 
 constexpr int32_t kBridgeSetting = 0;
@@ -80,7 +82,7 @@ inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {5, 1, 0x9d6efaac, 0x8308d4be, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
     {5, 1, 0x322f2a94, 0x3876f97a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
     {5, 1, 0xea1846e6, 0x3876f97a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
-    {11, 1, 0xdb242fa0, 0x00000000, 0x00000000, true},  // free_time_travel=True : OoTRR.FreeTimeTravel
+    {13, 1, 0xdb242fa0, 0x00000000, 0x00000000, true},  // free_time_travel=True : OoTRR.FreeTimeTravel
     {0, 0, 0xe38b96ef, 0x00000000, 0x00000000, true},  // bridge=open : OoTRR.Bridge.open
     {0, 1, 0x2ac765f3, 0x00000000, 0x00000000, true},  // bridge=vanilla : OoTRR.Bridge.vanilla
     {0, 2, 0x58d1d8ce, 0x00000000, 0x00000000, true},  // bridge=stones : OoTRR.Bridge.stones

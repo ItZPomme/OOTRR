@@ -68,6 +68,12 @@ ROWS: list[tuple[str, str, list[str] | None]] = [
     ("shuffle_skulltulas", "OcarinaSongEstimateMode", ["off", "overworld", "all"]),
     ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
     (SEPARATOR, "", None),
+    # OcarinaKeyAssign n'a que 2 valeurs dans le jeu : notre copie en reçoit d'autres (EXTRA_VALUES).
+    # MessageWindowTransparency : type d'option connu du code (table des noms) mais sans ligne ni
+    # donnée dans OptionData : ligne et membre créés (EXTRA_MEMBERS).
+    ("shuffle_shops", "OcarinaKeyAssign", ["off", "1", "2", "3", "4"]),
+    ("shop_prices", "MessageWindowTransparency", ["vanilla", "affordable", "random"]),
+    (SEPARATOR, "", None),
     ("logic_lens_required", "IsChangeJumpButton", None),
 ]
 # réglages fixés pour la partie générée dans le jeu (pas de ligne dans le menu)
@@ -94,7 +100,11 @@ TEXTS_EN = {
                 "dungeons": "Dungeons", "hearts": "Hearts"}),
     "shuffle_rewards": ("Dungeon Rewards", "Shuffle the Spiritual Stones and Medallions between the bosses\nand Link's Pocket.",
                         {"vanilla": "Vanilla", "shuffled": "Shuffled"}),
-    "shuffle_skulltulas": ("Gold Skulltulas", "Off: tokens. Overworld / All: Gold Skulltulas outside dungeons (or all)\ndrop an item of the seed (never an item needed to finish, for now).",
+    "shuffle_shops": ("Shops", "Number of items per shop (8 shops, not the mask shop) that sell\nan item of the seed instead, once.",
+                      {"off": "Off", "1": "1", "2": "2", "3": "3", "4": "4"}),
+    "shop_prices": ("Shop Prices", "Price of the shuffled shop items. Vanilla: price of the replaced item.\nAffordable: 10 rupees. Random: 0 to 95 rupees, chosen by the seed.",
+                    {"vanilla": "Vanilla", "affordable": "Affordable", "random": "Random"}),
+    "shuffle_skulltulas": ("Gold Skulltulas", "Off: tokens. Overworld / All: Gold Skulltulas outside dungeons (or all)\ndrop an item of the seed.",
                            {"off": "Off", "overworld": "Overworld", "all": "All"}),
     "shuffle_scrubs": ("Deku Scrubs", "The 5 Deku Scrubs selling a unique item sell an item of the seed\ninstead, once, for 40 rupees.", {}),
     "shuffle_hearts": ("Heart Pieces", "Shuffle the freestanding Pieces of Heart (and the boss Heart Containers).",
@@ -117,7 +127,11 @@ TEXTS_FR = {
                 "dungeons": "Donjons", "hearts": "Cœurs"}),
     "shuffle_rewards": ("Récompenses des boss", "Mélange les pierres et médaillons entre les boss\net la poche de Link.",
                         {"vanilla": "Original", "shuffled": "Mélangées"}),
-    "shuffle_skulltulas": ("Skulltulas d'or", "Désactivé : jetons. Extérieur / Toutes : les Skulltulas hors donjons (ou toutes)\nlâchent un objet de la seed (jamais un objet nécessaire pour finir, pour l'instant).",
+    "shuffle_shops": ("Boutiques", "Nombre d'articles par boutique (8 boutiques, sans les masques) qui vendent\nun objet de la seed à la place, une seule fois.",
+                      {"off": "Désactivé", "1": "1", "2": "2", "3": "3", "4": "4"}),
+    "shop_prices": ("Prix des boutiques", "Prix des articles mélangés. Origine : prix de l'article remplacé.\nAbordable : 10 rubis. Aléatoire : 0 à 95 rubis, tirés par la seed.",
+                    {"vanilla": "Origine", "affordable": "Abordable", "random": "Aléatoire"}),
+    "shuffle_skulltulas": ("Skulltulas d'or", "Désactivé : jetons. Extérieur / Toutes : les Skulltulas hors donjons (ou toutes)\nlâchent un objet de la seed.",
                            {"off": "Désactivé", "overworld": "Extérieur", "all": "Toutes"}),
     "shuffle_scrubs": ("Peste Mojo", "Les 5 Peste Mojo qui vendent un objet unique vendent un objet de la seed\nà la place, une fois, pour 40 rubis.", {}),
     "shuffle_hearts": ("Quarts de cœur", "Mélange les quarts de cœur au sol (et les réceptacles des boss).",
@@ -148,12 +162,22 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     by_type = {t: (s, values) for s, t, values in SETTING_ROWS}
     members = []
     report = []
-    for m in src["DefaultValue"]:
-        section, entry = idx[m["Value"]]
+    sources = [(m["Hash"], idx[m["Value"]]) for m in src["DefaultValue"]]
+    for name, template in EXTRA_MEMBERS.items():
+        sources.append((U32(flag_hash(name)), idx[flag_hash(f"{OPTION_STRUCT}.{template}")]))
+    for member_hash, (section, entry) in sources:
+        m = {"Hash": member_hash}
         name = types.get(m["Hash"], f"{m['Hash']:08x}")
         new = copy.deepcopy(entry)
         new["Hash"] = U32(flag_hash(f"{STRUCT}.{name}"))
         setting, values = by_type.get(name, (None, None))
+        if section == "Enum" and values is not None and (name in EXTRA_MEMBERS or len(values) > len(new["RawValues"])):
+            raw = list(new["RawValues"]) if name not in EXTRA_MEMBERS else []
+            raw += [f"OoTRR_{name}_{i:02d}" for i in range(len(raw), len(values))]
+            new["RawValues"] = raw
+            new["Values"] = [U32(flag_hash(v)) for v in raw]
+            new["DefaultValue"] = new["Values"][0]
+            entry = new
         new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
         new["ResetTypeValue"] = 0
         if any(r[1] == name for r in SEED_ROWS):
@@ -302,6 +326,11 @@ def add_saved_entries(root: dict, save_index: int, count: int) -> list[str]:
             f"taille {old[1]} -> {meta['SaveDataSize'][save_index]})"]
 
 
+# types d'option sans membre dans OptionData : membre créé dans OoTRRMenu, copie du membre indiqué
+# (même section), et ligne copiée d'une ligne de ce type
+EXTRA_MEMBERS = {"MessageWindowTransparency": "DisplayMode"}
+
+
 def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
     """Notre table de lignes, construite à partir des lignes du jeu (même forme, sans conditions)."""
     tree = read_byml(game_table)
@@ -313,7 +342,8 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
         if setting == SEPARATOR:
             out.append(copy.deepcopy(separator))
             continue
-        row = copy.deepcopy(rows[flag_hash(option_type)])
+        row = copy.deepcopy(rows[flag_hash(EXTRA_MEMBERS.get(option_type, option_type))])
+        row["OptionType"] = U32(flag_hash(option_type))
         row.pop("CheckGameData", None)
         row.pop("IsCheckDisplayGameData", None)
         if values is not None:
@@ -505,7 +535,7 @@ def menu_header(root: dict) -> str:
     from .settings import SETTINGS
 
     idx = index(root)
-    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
+    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(STRUCT))
     member = {m["Hash"]: i for i, m in enumerate(src["DefaultValue"])}
     names = list(SETTINGS)
     lines = ["// Généré par ootrr/ingame_menu.py (menu_header) : ne pas modifier à la main.", "#pragma once",

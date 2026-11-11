@@ -30,6 +30,12 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "shuffle_scrubs": (False, bool,
                        "Peste Mojo vendeurs : les 5 qui vendent un objet unique (quarts de cœur de la plaine et du "
                        "cratère, améliorations des bâtons et des noix) vendent une fois l'objet placé, 40 rubis"),
+    "shuffle_shops": ("off", ("off", "1", "2", "3", "4"),
+                      "Boutiques : nombre d'articles par boutique (8 boutiques, sans les masques) qui vendent "
+                      "un objet de la seed, une seule fois"),
+    "shop_prices": ("vanilla", ("vanilla", "affordable", "random"),
+                    "Prix des articles mélangés : vanilla = prix de l'article remplacé ; affordable = 10 rubis ; "
+                    "random = 0 à 95 rubis tirés par la seed (achetables sans bourse)"),
     "shuffle_skulltulas": ("off", ("off", "overworld", "all"),
                            "Skulltulas d'or : overworld = les Skulltulas hors donjons lâchent l'objet placé à la "
                            "place de leur jeton ; all = aussi celles des donjons (règles prudentes : jamais d'objet "

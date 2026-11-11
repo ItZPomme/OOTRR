@@ -200,7 +200,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     enum_values = {}
     from ..formats.gamedata import flag_hash, index
     idx = index(root)
-    st = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(menu.OPTION_STRUCT))
+    st = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(menu.STRUCT))
     names = {flag_hash(t): t for _, t, _ in menu.SETTING_ROWS}
     for m in st["DefaultValue"]:
         if m["Hash"] in names:
