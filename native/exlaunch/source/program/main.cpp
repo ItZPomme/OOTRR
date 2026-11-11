@@ -244,6 +244,31 @@ const char* TokenModelPath(const char* path) {
     return nullptr;
 }
 
+/* Recherche d'un fichier dans une archive SARC (0x32ade0 : archive, chaîne* chemin -> numéro ; la
+ * chaîne commence par son pointeur de texte). Les composants d'un acteur (ModelInfo…) sont lus ainsi
+ * dans son archive : le modèle d'un jeton est remplacé ici par celui de l'objet placé. */
+struct PathString {
+    const char* text;
+};
+
+HOOK_DEFINE_TRAMPOLINE(ArchiveEntry) {
+    static s64 Callback(void* archive, PathString* path) {
+        if (path && path->text && path->text[0] == 'C') {
+            if (const char* other = TokenModelPath(path->text)) {
+                if (g_model_logs > 0) {
+                    g_model_logs--;
+                    Log(path->text);
+                    Log(other);
+                    Log("OoTRR: modele de jeton redirige (avant / apres)");
+                }
+                PathString replaced{other};
+                return Orig(archive, &replaced);
+            }
+        }
+        return Orig(archive, path);
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(LoadResource) {
     static ResourceHandle Callback(void* manager, const char** path) {
         if (g_loading_menu_table && path == reinterpret_cast<const char**>(Main() + kOptionTablePath)) {
@@ -654,6 +679,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     LoadLayout::InstallAtOffset(kLoadLayout);
     SetChallengeStep::InstallAtOffset(0x2cf54a0);
     PouchAdd::InstallAtOffset(ootrr::ingame::kPouchAdd);
+    ArchiveEntry::InstallAtOffset(0x32ade0);
     InitDrop::InstallAtOffset(kInitDrop);
     Log("OoTRR: module natif charge, crochets du menu installes");
 }
