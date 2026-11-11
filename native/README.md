@@ -156,6 +156,10 @@ Disposition relevée dans sdk : `KeyboardConfig` 0x518 octets (mode +0x0, longue
 `GetRequiredStringBufferSize()`** : plus grande, la lecture de la réponse échoue et le SDK arrête le
 jeu (2128-0503).
 
+Seed aléatoire tirée à l'ouverture du menu (1-999999) et affichée dans la description de la ligne
+(validé en jeu) : le texte lu par `0xa6afe0` (sortie { const char* UTF-8 ; s32 longueur }) est copié
+avec le repère `######` remplacé par la seed. C'est cette seed qui sert si la seed manuelle est désactivée.
+
 ## Ghidra
 
 Installé hors du dépôt (`C:\Users\<toi>\Tools` : Ghidra 12.2 + JDK 25, le projet d'analyse contient
