@@ -59,7 +59,7 @@ Module injecté dans le jeu avec [exlaunch](https://github.com/shadowninja108/ex
   +4 genre de ligne : 0 bascule, 1 choix, 2 amiibo, 3 séparateur ; +0x24 condition GameData).
   Accès : `FUN_0349c5a0` (nombre de lignes visibles), `FUN_0349c630` (ligne i), `FUN_0349c790`
   (ligne par type). Le comportement de chaque type d'option reste dans le code.
-  **Validé en jeu (2026-11-10, `python -m ootrr.tools.optiontest`)** : table réordonnée / ligne retirée
+  **Validé en jeu (2026-11-10, expérience retirée depuis)** : table réordonnée / ligne retirée
   dans le pack Bootup et textes de `LayoutMsg/SystemOption_00` remplacés sont acceptés par le jeu.
 - Objet écran `UISystemOptionScreen` : boutons par genre en `+0x2b8/+0x2c0`, `+0x2c8/+0x2d0`,
   `+0x2d8/+0x2e0` (type d'option du bouton en +0x54 / +0x58), lignes affichées `+0x338/+0x340`
@@ -75,7 +75,7 @@ chaînes en 0x408) :
 - nœud 1 (`Element_StringSelector`) : `Pa_Button_00` -> 50 -> 49 -> 48 -> 2 `ConfirmationNewGame.module`
   (« Yes » -> 13 début de partie, « No » -> 53 retour au titre) ; `Pa_Button_02` -> 52 -> 43 -> 9
   `Option.module` (`IsTitleMenu` = vrai, « End » -> 53). 48 et 43 font la même préparation (cachent l'écran titre).
-- Modification (`ootrr.tools.optiontest.add_menu_after_new_game`) : copie du nœud 9 en nœud 74,
+- Modification (`ootrr.ingame_menu.title_sequence`) : copie du nœud 9 en nœud 74,
   48 -> 74, « End » de 74 -> 2 ; `Option.module.ainb` passe à 2 instances. Résultat en jeu :
   Nouvelle partie -> écran d'options -> B -> confirmation -> Oui = partie, Non = titre.
 - Échecs utiles : remplacer `ConfirmationNewGame.module.ainb` par le module d'options fait juste
@@ -83,6 +83,28 @@ chaînes en 0x408) :
   fenêtre de confirmation affichée par-dessus.
 - Reste : nos propres lignes seulement dans ce menu (l'écran Options normal doit garder les siennes)
   et nos propres valeurs (aujourd'hui une ligne renommée change toujours l'option du jeu).
+
+### Menu du randomizer (validé en jeu, 2026-11-10)
+
+`python -m ootrr.tools.menutest --romfs ROMFS --install` (mod `OoTRR-menu`, RomFS + exefs ; données
+dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
+- Drapeau `OoTRR.IsRandomizerMenu` (entrée GameData non sauvegardée) écrit par trois nœuds ajoutés à
+  `NormalTitle` : vrai avec la préparation de Nouvelle partie (48), faux avec celle d'Options (43) et au
+  début de la partie (13). Le crochet de `0x682b00` / `0x32e6910` (exécution de
+  `SeqOneShotSetNonStructGameDataBool`, arguments nœud + hachage ; valeur en `**(nœud + 0x40)`) le suit.
+- Table : `LoadOptionTable` (`0x339bc40`) charge une deuxième table à nous ; pendant ce chargement, le
+  crochet du chargeur de ressources `0xa57350` remplace le chemin. **Ce chargeur prend (gestionnaire,
+  const char** chemin) et renvoie son résultat par x8** : le crochet renvoie un type non trivial pour
+  garder x8. Les accès `0x339c5a0` / `0x339c630` / `0x339c790` reçoivent notre table pendant le menu.
+- Textes : `0xa6afe0` (sortie, `const char**` fichier, `const char**` étiquette ; 1 = trouvé) : on
+  essaie d'abord `OoTRR_<étiquette>`.
+- Valeurs : `0x9b3eb0` (gestionnaire, poignée, hachage) : `OptionData` -> `OoTRRMenu` (structure
+  GameData copiée, entrées non sauvegardées, valeurs par défaut = `settings.py`). Les options du joueur
+  ne sont pas touchées (vérifié en jeu).
+- Mise en page : `0x43a0e0` (nom de la mise en page en x4, 11 arguments) : `SystemOption_00` ->
+  `OoTRRMenu_00`, copie où le modèle amiibo est invisible (bit 0 des drapeaux d'un élément .buil =
+  visible, vérifié en jeu). Un modèle sans ligne correspondante reste affiché à sa place dans la page.
+- Reste : utiliser les choix (au début de la partie) et générer la seed dans le jeu.
 
 ## Ghidra
 
