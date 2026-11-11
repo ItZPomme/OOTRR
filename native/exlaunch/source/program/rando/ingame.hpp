@@ -40,6 +40,11 @@ int32_t ReadSavedSeed(std::uintptr_t main_base);
 bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed);
 void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
 
+// rubis (Obj_Rupee_* / TBox_Rupee_*) : valeur en rubis, 0 si ce n'est pas un rubis
+int32_t RupeeValue(const char* item);
+// ajoute des rubis à la bourse (GameData PlayerStatus.CurrentRupee) ; renvoie le nouveau total, -1 si illisible
+int32_t AddRupees(std::uintptr_t main_base, int32_t amount);
+
 // drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre
 int ApplyStartFlags(std::uintptr_t main_base);
 

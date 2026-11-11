@@ -549,6 +549,11 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                     Log(t);
                     Log(text);
                     Log("OoTRR: jeton de coeur remplace (jeton / objet)");
+                    // les rubis ne passent pas par l'inventaire : valeur ajoutée à la bourse
+                    if (s32 rupees = ootrr::ingame::RupeeValue(text)) {
+                        LogValue("OoTRR: rubis ajoutes, nouveau total", static_cast<u64>(ootrr::ingame::AddRupees(Main(), rupees)));
+                        return 1;
+                    }
                     return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
                 }
             }

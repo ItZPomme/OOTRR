@@ -115,6 +115,43 @@ void WriteSavedSeed(std::uintptr_t main_base, int32_t seed) {
     reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, menu::kSeedHash);
 }
 
+namespace {
+constexpr uint32_t kCurrentRupeeHash = 0xa77921d7;  // PlayerStatus.CurrentRupee
+
+bool StartsWith(const char* text, const char* prefix) {
+    while (*prefix && *text == *prefix) { text++; prefix++; }
+    return !*prefix;
+}
+}  // namespace
+
+int32_t RupeeValue(const char* item) {
+    const char* rest = nullptr;
+    if (StartsWith(item, "Obj_Rupee_")) rest = item + 10;
+    else if (StartsWith(item, "TBox_Rupee_")) rest = item + 11;
+    if (!rest) return 0;
+    struct Kind { const char* name; int32_t value; };
+    static const Kind kinds[] = {{"Green", 1}, {"Blue", 5}, {"Red", 20}, {"Purple", 50}, {"Gold", 200}};
+    for (const Kind& k : kinds) {
+        const char* a = rest;
+        const char* b = k.name;
+        while (*a && *a == *b) { a++; b++; }
+        if (!*a && !*b) return k.value;
+    }
+    return 0;
+}
+
+int32_t AddRupees(std::uintptr_t main_base, int32_t amount) {
+    void* manager = Manager(main_base);
+    int32_t current = 0;
+    if (!manager || !reinterpret_cast<GetIntFn>(main_base + kGetInt)(manager, &current, kCurrentRupeeHash)) return -1;
+    alignas(16) uint8_t node[0x50] = {};
+    static int32_t value;
+    value = current + amount;
+    *reinterpret_cast<int32_t**>(node + 0x40) = &value;
+    reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, kCurrentRupeeHash);
+    return value;
+}
+
 int ApplyStartFlags(std::uintptr_t main_base) {
     auto set_bool = reinterpret_cast<SetBoolNodeFn>(main_base + kSetBoolNode);
     auto set_struct_bool = reinterpret_cast<SetStructBoolFn>(main_base + kSetStructBool);
