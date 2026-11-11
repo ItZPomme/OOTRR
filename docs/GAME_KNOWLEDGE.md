@@ -40,6 +40,11 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   ramassage, la séquence « objet obtenu » cherche `<objet>_GetMessage` / `_GetCaption` dans
   `ActorMsg/PouchContent` : **un texte introuvable bloque la partie** (le cœur tourne sans fin) ; les
   textes du jeton sont redirigés vers ceux de l'objet de la seed, puis l'ajout (`0x110d570`) aussi.
+- **Modèle d'un objet au sol choisi en jeu [jeu]** (2026-11-11) : les composants d'un acteur (`ModelInfoRef`,
+  `AnimationRef`…) sont cherchés par leur chemin dans son archive SARC (`0x32ade0`, chemin -> numéro de
+  fichier), pas par le chargeur de ressources `0xa57350`. Le jeton référence `Component/ModelInfo/<jeton>…` ;
+  la recherche est redirigée vers le `ModelInfo` / `AnimationParam` de l'objet, copiés dans l'archive du
+  jeton sous leur chemin d'origine. Chants : modèle de rubis sans animation, gardent celui du cœur.
 - Les rubis de coffre `TBox_Rupee_*` n'ont pas ces textes (les `Obj_Rupee_*` si). Les rubis ne passent
   pas par l'inventaire : l'ajout est sans effet, l'argent est l'entier `PlayerStatus.CurrentRupee` **[jeu]**.
 - Inventaire : bloc binaire de la sauvegarde, pas de drapeaux par objet (sauf `PouchData.<objet>.StockNum`).
