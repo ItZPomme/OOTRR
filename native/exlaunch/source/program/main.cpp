@@ -278,6 +278,21 @@ int TokenLocation(const char* text) {
 
 int g_token_message_logs = 16;
 
+/* Objet donné par un cœur au sol : les rubis « de coffre » (TBox_Rupee_*) n'ont ni texte « objet
+ * obtenu » ni rôle au sol ; leur équivalent posé au sol (Obj_Rupee_*) en a (constaté : blocage). */
+const char* GroundItem(const char* item) {
+    const char* prefix = "TBox_Rupee_";
+    int k = 0;
+    while (prefix[k] && item[k] == prefix[k]) k++;
+    if (prefix[k]) return item;
+    static char buffer[64];
+    size_t n = 0;
+    for (const char* p = "Obj_Rupee_"; *p; p++) buffer[n++] = *p;
+    for (const char* p = item + k; *p && n < sizeof(buffer) - 1; p++) buffer[n++] = *p;
+    buffer[n] = 0;
+    return buffer;
+}
+
 HOOK_DEFINE_TRAMPOLINE(FindMessage) {
     static u64 Callback(void* out, const char** file, const char** label, u64 extra) {
         if (label && *label) {
@@ -285,12 +300,22 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
             const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
             if (item) {
                 static char name[160];
-                size_t n = 0;
-                for (const char* p = item; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
-                for (const char* p = *label + 11; *p && n < sizeof(name) - 1; p++) name[n++] = *p;  // « _GetCaption »…
-                name[n] = 0;
+                const char* suffix = *label + 11;  // « _GetCaption »…
+                auto build = [&](const char* base) {
+                    size_t n = 0;
+                    for (const char* p = base; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                    for (const char* p = suffix; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                    name[n] = 0;
+                };
+                build(GroundItem(item));
                 const char* mine = name;
                 u64 found = Orig(out, file, &mine, extra);
+                if (!(found & 1)) {
+                    // secours : texte du quart de cœur plutôt qu'un blocage
+                    build("Obj_Heart_Piece");
+                    mine = name;
+                    found = Orig(out, file, &mine, extra);
+                }
                 if (g_token_message_logs > 0) {
                     g_token_message_logs--;
                     if (file && *file) Log(*file);
@@ -513,6 +538,7 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                     else location = location * 10 + (c - '0');
                 }
                 const char* item = ok && !t[k + 4] ? ootrr::ingame::ItemFor(location) : nullptr;
+                if (item) item = GroundItem(item);
                 if (item) {
                     static char text[128];
                     size_t n = 0;
