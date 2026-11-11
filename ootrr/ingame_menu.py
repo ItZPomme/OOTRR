@@ -192,9 +192,62 @@ FREE_TIME_EXP = "OoTRR_FreeTimeTravel_Exp"
 RETURN_MODULE = "Logic/Market_Adult_Prefab_89da.logic.module.ainb"
 RETURN_CONDITION = "SageOfForest_IsCompleted_Exp"
 MENU_BOOL_EXPS = {FREE_TIME_EXP: [("Bool", FREE_TIME_FLAG), ("Exp", RETURN_CONDITION), ("OR",)]}
-EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,)
+# Pont arc-en-ciel : un drapeau sauvegardé par condition, posé par le menu ; les deux expressions lues
+# par le module du pont deviennent « OU sur les conditions : drapeau ET condition » (original : les
+# expressions de la quête Defeat_Ganon)
+BRIDGE_MODES = ("open", "vanilla", "stones", "medallions", "dungeons", "hearts")
+BRIDGE_FLAGS = {mode: f"OoTRR.Bridge.{mode}" for mode in BRIDGE_MODES}
+BRIDGE_MODULE_FILE = "Logic/GanonCastle_Level_Field_00_Prefab_14ba.logic.module.ainb"
+BRIDGE_MENU_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_MenuBridge_Ready_Exp",
+                   "Defeat_Ganon_IsAfter_Step01_Exp": "OoTRR_MenuBridge_Step01_Exp"}
+
+
+def bridge_menu_exps() -> dict[str, list[tuple]]:
+    """Expressions du pont valables pour toutes les conditions du menu (nombres : BRIDGE_COUNTS)."""
+    from .world import MAX_LIFE, MEDAL_FLAGS, STONE_FLAGS, _at_least
+
+    exps: dict[str, list[tuple]] = {}
+    conds: dict[str, list[tuple]] = {}
+    for mode, flags, prefix in (("stones", STONE_FLAGS, "OoTRR_MenuBridgeS"),
+                                ("medallions", MEDAL_FLAGS, "OoTRR_MenuBridgeM"),
+                                ("dungeons", STONE_FLAGS + MEDAL_FLAGS, "OoTRR_MenuBridgeD")):
+        sub = _at_least(flags, min(BRIDGE_COUNTS[mode], len(flags)), prefix)
+        exps.update(sub)
+        conds[mode] = [("Exp", next(iter(sub)))]
+    values = list(range(4 * BRIDGE_COUNTS["hearts"], 81))  # MaxLife en quarts de cœur
+    hearts = [("IntEq", MAX_LIFE, values[0])]
+    for v in values[1:]:
+        hearts += [("IntEq", MAX_LIFE, v), ("OR",)]
+    exps["OoTRR_MenuBridgeH"] = hearts
+    conds["hearts"] = [("Exp", "OoTRR_MenuBridgeH")]
+    for original, name in BRIDGE_MENU_EXP.items():
+        prog = [("Bool", BRIDGE_FLAGS["open"])]
+        for mode, cond in (("vanilla", [("Exp", original)]), *conds.items()):
+            prog += [("Bool", BRIDGE_FLAGS[mode])] + cond + [("AND",), ("OR",)]
+        exps[name] = prog
+    return exps
+
+
+def bridge_module(raw: bytes) -> bytes:
+    """Module du pont : les deux expressions de la quête Defeat_Ganon deviennent celles du menu."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    found = set()
+    for node in script.nodes:
+        for p in node.params.string_inputs or []:
+            if p.name == "GameDataNameBoolExp" and p.default_value in BRIDGE_MENU_EXP:
+                found.add(p.default_value)
+                p.default_value = BRIDGE_MENU_EXP[p.default_value]
+    if found != set(BRIDGE_MENU_EXP):
+        raise ValueError(f"{BRIDGE_MODULE_FILE} : expressions trouvées {sorted(found)}")
+    return script.to_binary()
+
+
+EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,) + tuple(BRIDGE_FLAGS.values())
 # drapeaux de départ propres au menu : (réglage, valeur, drapeau, valeur du drapeau)
-EXTRA_START_FLAGS = [("free_time_travel", True, FREE_TIME_FLAG, True)]
+EXTRA_START_FLAGS = [("free_time_travel", True, FREE_TIME_FLAG, True)] + [
+    ("bridge", mode, flag, True) for mode, flag in BRIDGE_FLAGS.items()]
 
 
 def return_module(raw: bytes) -> bytes:

@@ -82,7 +82,8 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
     actor_changes[OCARINA_OF_TIME_ACTOR] = {"Presence": {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False,
                                                          "IsNegation": False}}
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
-                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS}, moat_gate=True, **common)
+                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps()},
+                       moat_gate=True, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
@@ -162,6 +163,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
     (out / menu.MOAT_MODULE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.MOAT_MODULE).write_bytes(new)
     report.append(f"{menu.MOAT_MODULE}: ocarina dès l'étape Step04")
+
+    # module du pont arc-en-ciel
+    raw = (romfs / menu.BRIDGE_MODULE_FILE).read_bytes()
+    new = menu.bridge_module(raw)
+    mb.restbl.resize_like(menu.BRIDGE_MODULE_FILE, len(raw), len(new))
+    (out / menu.BRIDGE_MODULE_FILE).parent.mkdir(parents=True, exist_ok=True)
+    (out / menu.BRIDGE_MODULE_FILE).write_bytes(new)
+    report.append(f"{menu.BRIDGE_MODULE_FILE}: pont selon le menu")
 
     # module du retour enfant (voyage dans le temps libre)
     raw = (romfs / menu.RETURN_MODULE).read_bytes()
