@@ -71,6 +71,9 @@ const char* VanillaItem(int location);
 const char* RewardFor(const char* name);
 bool IsDropEvent(int location);
 bool IsConditional(int location);
+// emplacement dont le jeton est un objet ramassable gardé tel quel (Skulltula d'or) : pas de
+// remplacement à la source, l'objet est donné au ramassage
+bool KeepsToken(int location);
 int LocationCount();
 
 }  // namespace ootrr::ingame

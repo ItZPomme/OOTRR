@@ -140,6 +140,13 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             actor_changes[h] = {"Gyaml": t}
             tokens_actors[t] = f"SELF@{base}"
         report.append(f"jetons des cœurs au sol : {len(hearts)}")
+        # Skulltulas d'or : elles lâchent leur jeton (copie du jeton d'or), objet donné au ramassage
+        from ..native_logic import skulltula_tokens
+        gs = skulltula_tokens()
+        for h, t in gs.items():
+            actor_changes[h] = {"Drop__DropActor": t}
+            tokens_actors[t] = "SELF@Obj_Token_Gold"
+        report.append(f"Skulltulas d'or : {len(gs)} acteurs, {len(set(gs.values()))} jetons")
         # Peste Mojo vendeuses : elles vendent leur jeton (prix unique) ; au paiement, le module natif
         # donne l'objet placé (ou l'objet d'origine si le réglage est désactivé). La Peste Mojo de la
         # plaine a sa propre vente directe (entrée « Secret »).

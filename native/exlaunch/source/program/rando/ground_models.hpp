@@ -5,7 +5,7 @@ namespace ootrr::ground {
 
 // objet posé au sol -> fichiers de son modèle (copiés dans les archives des jetons)
 struct GroundModel { const char* item; const char* model; const char* anim; };
-constexpr int kGroundModelCount = 37;
+constexpr int kGroundModelCount = 38;
 inline constexpr GroundModel kGroundModels[kGroundModelCount] = {
     {"Item_Hookshot", "Component/ModelInfo/Item_Hookshot.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_Hookshot.engine__component__AnimationParam.bgyml"},
     {"Item_Longshot", "Component/ModelInfo/Item_Longshot.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_Longshot.engine__component__AnimationParam.bgyml"},
@@ -36,6 +36,7 @@ inline constexpr GroundModel kGroundModels[kGroundModelCount] = {
     {"Item_Quiver_Large", "Component/ModelInfo/Item_Quiver_Large.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_Quiver_Large.engine__component__AnimationParam.bgyml"},
     {"Item_BulletBag_Medium", "Component/ModelInfo/Item_BulletBag_Medium.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_BulletBag_Medium.engine__component__AnimationParam.bgyml"},
     {"Item_BulletBag_Large", "Component/ModelInfo/Item_BulletBag_Large.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_BulletBag_Large.engine__component__AnimationParam.bgyml"},
+    {"Obj_Token_Gold", "Component/ModelInfo/Obj_Token_Gold.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Obj_Token_Gold.engine__component__AnimationParam.bgyml"},
     {"Obj_Heart_Piece", "Component/ModelInfo/Obj_Heart_Piece.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Obj_Heart_Piece.engine__component__AnimationParam.bgyml"},
     {"Obj_Heart_Container", "Component/ModelInfo/Obj_Heart_Container.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Obj_Heart_Container.engine__component__AnimationParam.bgyml"},
     {"Item_ScrubBusinessSeed", "Component/ModelInfo/Item_ScrubBusinessSeed.engine__component__ModelInfo.bgyml", "Component/AnimationParam/Item_ScrubBusinessSeed.engine__component__AnimationParam.bgyml"},

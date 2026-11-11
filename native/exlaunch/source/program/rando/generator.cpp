@@ -49,6 +49,10 @@ struct World {
                 shuffle = mode == kHeartsAll || (mode == kHeartsFreestanding && info.pickup == 1);
             }
             if (info.scrub) shuffle = s[SET_shuffle_scrubs] != 0;
+            if (info.skulltula) {
+                int mode = s[SET_shuffle_skulltulas];
+                shuffle = mode == kSkulltulasAll || (mode == kSkulltulasOverworld && info.dungeon < 0);
+            }
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -72,6 +76,7 @@ struct World {
     bool CanPlace(int item, int loc) const {
         const LocationInfo& info = kLocations[loc];
         if (info.pickup && !kItems[item].ground) return false;
+        if (info.skulltula && !kItems[item].ground) return false;  // lâché par la Skulltula : ramassable
         // Peste Mojo : objets « au sol », sauf les rubis (un rubis vendu n'irait pas dans la bourse)
         if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name))) return false;
         if (info.no_progression && IsProgression(item)) return false;

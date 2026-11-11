@@ -76,7 +76,12 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         changes.setdefault(int(h), {})["Drop__DropActor"] = name
         print(f"Test : butin de {h} -> {name} (donne {item.strip()}, hors logique)")
     # Peste Mojo de test : HASH=OBJET[:PRIX] -> vend OBJET (vente unique) via le script commun
-    from .patch import scrub_changes
+    from .patch import scrub_changes, skulltula_changes
+    gs = skulltula_changes(patch, pickups)
+    for h, change in gs.items():
+        changes.setdefault(h, {}).update(change)
+    if gs:
+        print(f"Skulltulas d'or mélangées : {len(gs)} acteurs")
     from .world import SCRUB_SECRET_LOCATION
     scrubs, scrub_sales = scrub_changes(patch)
     for h, change in scrubs.items():

@@ -231,6 +231,7 @@ class Exporter:
                 no_progression=bool(lbody.get("no_progression", False)),
                 event={"keep": 1, "drop": 2}.get(lbody.get("event"), 0),
                 conditional=bool(lbody.get("conditional", False)), scrub=bool(lbody.get("scrub", False)),
+                skulltula=bool(lbody.get("skulltula", False)),
                 hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
@@ -304,6 +305,8 @@ class Exporter:
             "kMapsShuffle": enum_value("maps_compasses", "shuffle"),
             "kHeartsAll": enum_value("shuffle_hearts", "all"),
             "kHeartsFreestanding": enum_value("shuffle_hearts", "freestanding"),
+            "kSkulltulasOverworld": enum_value("shuffle_skulltulas", "overworld"),
+            "kSkulltulasAll": enum_value("shuffle_skulltulas", "all"),
             "kSkipSafe": enum_value("skip_cutscenes", "safe"),
             "kRewardsVanilla": enum_value("shuffle_rewards", "vanilla"),
             "kRewardsShuffled": enum_value("shuffle_rewards", "shuffled"),
@@ -334,13 +337,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}}},")
         lines.append("};")
         # règles
         lines.append(f"constexpr int kHelperCount = {len(self.helper_offsets)};")
@@ -367,10 +370,17 @@ def chest_tokens() -> dict[int, str]:
     w = Exporter().world()
     out = {}
     for i, l in enumerate(w["locations"]):
-        if l["hashes"] and l["shuffle"] and not l["pickup"] and not l["scrub"]:
+        if l["hashes"] and l["shuffle"] and not l["pickup"] and not l["scrub"] and not l["skulltula"]:
             for h in l["hashes"]:
                 out[h] = token(i)
     return out
+
+
+def skulltula_tokens() -> dict[int, str]:
+    """{hash d'acteur: jeton} pour les Skulltulas d'or : elles lâchent le jeton (objet ramassable sur mesure),
+    le module natif donne l'objet placé au ramassage (modèle, textes et ajout redirigés)."""
+    w = Exporter().world()
+    return {h: token(i) for i, l in enumerate(w["locations"]) if l["skulltula"] for h in l["hashes"]}
 
 
 def scrub_tokens() -> dict[str, tuple[str, list[int]]]:

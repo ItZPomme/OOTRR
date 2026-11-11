@@ -31,6 +31,7 @@ PRESETS = {
     "récompenses": {"shuffle_rewards": "shuffled", "skip_cutscenes": "safe", "maps_compasses": "shuffle"},
     "cœurs": {"bridge": "hearts", "bridge_count": 10, "shuffle_hearts": "all", "maps_compasses": "removed"},
     "mojo": {"shuffle_scrubs": True, "shuffle_hearts": "freestanding", "open_forest": "open"},
+    "skulltulas": {"shuffle_skulltulas": "all", "shuffle_scrubs": True, "maps_compasses": "shuffle"},
     "pont": {"bridge": "medallions", "bridge_count": 6, "shuffle_rewards": "shuffled",
              "skip_child_zelda": True, "free_time_travel": False, "accessibility": "beatable"},
 }

@@ -351,6 +351,7 @@ int g_token_message_logs = 16;
 /* Objet donné par un cœur au sol : les rubis « de coffre » (TBox_Rupee_*) n'ont ni texte « objet
  * obtenu » ni rôle au sol ; leur équivalent posé au sol (Obj_Rupee_*) en a (constaté : blocage). */
 const char* GroundItem(const char* item) {
+    if (SameString(item, "Obj_Token_Gold")) return "Item_Token_Gold";  // ActorInfo.ActorName du jeton d'or
     const char* prefix = "TBox_Rupee_";
     int k = 0;
     while (prefix[k] && item[k] == prefix[k]) k++;
@@ -542,6 +543,7 @@ void ReplaceTokenAtSource(u8* info) {
         if (!key || !value || !SameString(key, "Drop__DropActor")) continue;
         int index = TokenIndex(value);
         if (index < 0) return;
+        if (ootrr::ingame::KeepsToken(index)) return;  // Skulltula : le jeton reste, objet donné au ramassage
         EnsureSeedForCurrentGame();
         const char* real = ootrr::ingame::ItemFor(index);
         params->values[i] = real;

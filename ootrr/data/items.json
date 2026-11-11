@@ -93,6 +93,7 @@
     "Item_Wallet_Medium": {}, "Item_Wallet_Large": {}, "Item_FairyBless_DefenseDouble": {},
     "Item_Quiver_Medium": {}, "Item_Quiver_Large": {}, "Item_BulletBag_Medium": {}, "Item_BulletBag_Large": {},
     "Item_StickBag_Medium": {}, "Item_StickBag_Large": {}, "Item_NutBag_Medium": {},
+    "Obj_Token_Gold": {},
     "Obj_Heart_Piece": {"logic": "Heart_Piece"}, "Obj_Heart_Container": {"logic": "Heart_Container"},
     "Item_ScrubBusinessSeed": {}, "Item_DekuStickBundle_Small": {}, "Item_BombchuBundle_Small": {}, "Item_BombBundle_Small": {},
     "Tbox_MagicJar_Large": {}, "TBox_DekuNutBundle": {}, "TBox_ArrowBundle_Large": {}, "TBox_ArrowBundle_Medium": {},
@@ -118,6 +119,7 @@
   "ground_native": {
     "Obj_Heart_Piece": "Obj_Heart_Piece", "Obj_Heart_Container": "Obj_Heart_Container",
     "TBox_Rupee_Green": "Obj_Rupee_Green", "TBox_Rupee_Blue": "Obj_Rupee_Blue", "TBox_Rupee_Red": "Obj_Rupee_Red",
-    "TBox_Rupee_Purple": "Obj_Rupee_Purple", "TBox_Rupee_Gold": "Obj_Rupee_Gold"
+    "TBox_Rupee_Purple": "Obj_Rupee_Purple", "TBox_Rupee_Gold": "Obj_Rupee_Gold",
+    "Obj_Token_Gold": "Obj_Token_Gold"
   }
 }

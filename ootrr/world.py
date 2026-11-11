@@ -218,10 +218,11 @@ class Location:
     pickup: str | None = None  # "freestanding" | "boss" : cœur posé au sol (pas un coffre)
     no_progression: bool = False  # emplacement incertain : jamais d'objet nécessaire pour finir
     scrub: bool = False  # Peste Mojo vendeuse : hashes = l'acteur Enemy_Scrub_Business (enfant / adulte)
+    skulltula: bool = False  # Skulltula d'or : hashes = l'acteur Enemy_Skulltula_Gold, l'objet remplace le jeton
 
     @property
     def is_chest(self) -> bool:
-        return bool(self.hashes) and not self.pickup and not self.scrub
+        return bool(self.hashes) and not self.pickup and not self.scrub and not self.skulltula
 
 
 @dataclass
@@ -355,6 +356,7 @@ class World:
             pickup=lbody.get("pickup"),
             no_progression=bool(lbody.get("no_progression", False)),
             scrub=bool(lbody.get("scrub", False)),
+            skulltula=bool(lbody.get("skulltula", False)),
         )
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
@@ -363,6 +365,9 @@ class World:
             loc.shuffle = mode == "all" or (mode == "freestanding" and loc.pickup == "freestanding")
         if loc.scrub:
             loc.shuffle = bool(self.settings.get("shuffle_scrubs"))
+        if loc.skulltula:
+            mode = self.settings.get("shuffle_skulltulas", "off")
+            loc.shuffle = mode == "all" or (mode == "overworld" and loc.dungeon is None)
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -595,6 +600,8 @@ class World:
         """Contraintes d'emplacement : objets au sol limités, emplacements incertains sans progression."""
         if loc.pickup and item not in self.ground and item not in self.ground_native:
             return False
+        if loc.skulltula and item not in self.ground and item not in self.ground_native:
+            return False  # lâché par la Skulltula : objet ramassable (objet sur mesure ou version au sol)
         if loc.scrub and (item not in self.ground and item not in self.ground_native
                           or item.startswith("TBox_Rupee_")):
             return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)

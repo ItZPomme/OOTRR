@@ -25,6 +25,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "conditional": loc.conditional,
             "pickup": loc.pickup,
             "scrub": loc.scrub,
+            "skulltula": loc.skulltula,
         })
     return {
         "format": PATCH_FORMAT,
@@ -60,7 +61,7 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
     d'origine (sinon l'animation de l'ancien objet se joue, ex. l'épée dans le dos)."""
     changes: dict[int, dict] = {}
     for chest in patch["chests"]:
-        if chest["item"] == chest["vanilla"] or chest.get("pickup") or chest.get("scrub"):
+        if chest["item"] == chest["vanilla"] or chest.get("pickup") or chest.get("scrub") or chest.get("skulltula"):
             continue
         change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
         if chest["event"] == "drop":
@@ -92,6 +93,29 @@ def scrub_changes(patch: dict[str, Any], price: int | None = None) -> tuple[dict
         for h in loc["hashes"]:
             changes[int(h)] = {SCRUB_FIELDS[0]: loc["item"], SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
     return changes, sales
+
+
+def skulltula_changes(patch: dict[str, Any], pickups: dict[str, str]) -> dict[int, dict]:
+    """Skulltulas d'or : {hash: {"Drop__DropActor": acteur lâché}}. Objet qui a sa version au sol
+    (cœur, rubis, jeton) : cette version ; sinon un objet ramassable sur mesure, ajouté à `pickups`
+    (même numérotation que pickup_changes)."""
+    native = patch.get("ground_native", {})
+    changes: dict[int, dict] = {}
+    made: dict[str, str] = {v: k for k, v in pickups.items()}
+    for loc in patch["chests"]:
+        if not loc.get("skulltula") or loc["item"] == loc["vanilla"]:
+            continue
+        if loc["item"] in native:
+            actor = native[loc["item"]]
+        elif loc["item"] in made:
+            actor = made[loc["item"]]
+        else:
+            actor = f"{PICKUP_PREFIX}{len(pickups):03d}"
+            pickups[actor] = loc["item"]
+            made[loc["item"]] = actor
+        for h in loc["hashes"]:
+            changes[int(h)] = {"Drop__DropActor": actor}
+    return changes
 
 
 PICKUP_PREFIX = "Obj_OoTRR_Pickup_"

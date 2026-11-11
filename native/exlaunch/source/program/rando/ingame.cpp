@@ -293,5 +293,6 @@ const char* ItemFor(int location) {
 
 bool IsDropEvent(int location) { return logic::kLocations[location].event == 2; }
 bool IsConditional(int location) { return logic::kLocations[location].conditional; }
+bool KeepsToken(int location) { return logic::kLocations[location].skulltula; }
 
 }  // namespace ootrr::ingame
