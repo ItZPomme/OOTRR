@@ -46,7 +46,19 @@ SEPARATOR = "-"
 
 # réglage -> (type d'option emprunté, valeurs du réglage dans l'ordre affiché) ; None = bascule oui / non.
 # Ordre d'affichage ; SEPARATOR = ligne de séparation du jeu.
+# Seed : « manuelle » (bascule) puis 3 lignes de 100 valeurs (2 chiffres chacune, seed 000000-999999).
+# Les énumérations de notre copie de structure sont agrandies à 100 valeurs (Seed00…Seed99).
+SEED_MANUAL = "seed_manual"
+SEED_DIGITS = ("seed_digits_0", "seed_digits_1", "seed_digits_2")
+SEED_VALUES = [f"{i:02d}" for i in range(100)]
+SEED_ENUM_VALUES = [f"Seed{v}" for v in SEED_VALUES]
+SEED_ROW_NAMES = (SEED_MANUAL,) + SEED_DIGITS
 ROWS: list[tuple[str, str, list[str] | None]] = [
+    (SEED_MANUAL, "VoiceSubtitle", None),
+    (SEED_DIGITS[0], "OcarinaSongEstimateMode", SEED_VALUES),
+    (SEED_DIGITS[1], "OcarinaKeyAssign", SEED_VALUES),
+    (SEED_DIGITS[2], "ZeldaNoteState", SEED_VALUES),
+    (SEPARATOR, "", None),
     ("open_forest", "CameraRotateSpeed", ["closed", "closed_deku", "open"]),
     ("open_door_of_time", "IsCameraUpDownReverse", None),
     ("free_time_travel", "IsCameraRightLeftReverse", None),
@@ -67,7 +79,10 @@ BRIDGE_COUNTS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 10}
 # base des fichiers du mod du menu : scènes passées, et Kokiri bloqueurs présents selon leur drapeau
 # (comme open_forest = ask) pour que la forêt s'ouvre en jeu selon le réglage
 STATIC_SETTINGS = {"skip_cutscenes": "safe", "open_forest": "ask"}
-SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR]
+SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR and r[0] not in SEED_ROW_NAMES]
+SEED_ROWS = [r for r in ROWS if r[0] in SEED_ROW_NAMES]
+# modèle des lignes à choix (la ligne d'origine de ZeldaNoteState est un autre type de bouton)
+CHOICE_BUTTON = 3569415379
 SEPARATOR_BUTTON = flag_hash("Separator")
 
 # textes : réglage -> (titre, description, {valeur: libellé}) ; anglais puis français
@@ -89,6 +104,10 @@ TEXTS_EN = {
     "skip_cutscenes": ("Skip Cutscenes", "Mark cutscenes that change nothing as already seen.",
                        {"none": "None", "safe": "Safe"}),
     "logic_lens_required": ("Lens Required", "The logic requires the Lens of Truth for invisible paths.", {}),
+    "seed_manual": ("Manual Seed", "Off: random seed. On: the seed is the six digits below.", {}),
+    "seed_digits_0": ("Seed: digits 1-2", "First two digits of the manual seed.", {}),
+    "seed_digits_1": ("Seed: digits 3-4", "Middle two digits of the manual seed.", {}),
+    "seed_digits_2": ("Seed: digits 5-6", "Last two digits of the manual seed.", {}),
 }
 TEXTS_FR = {
     "open_forest": ("Forêt Kokiri", "Fermée : jeu d'origine. Fermée (Mojo) : la sortie vers la plaine est ouverte.\nOuverte : l'Arbre Mojo aussi.",
@@ -108,6 +127,10 @@ TEXTS_FR = {
     "skip_cutscenes": ("Passer les cinématiques", "Les cinématiques sans effet sont marquées comme vues.",
                        {"none": "Aucune", "safe": "Sûres"}),
     "logic_lens_required": ("Monocle requis", "La logique exige le Monocle de Vérité pour les passages invisibles.", {}),
+    "seed_manual": ("Seed manuelle", "Désactivé : seed aléatoire. Activé : la seed est faite des six chiffres ci-dessous.", {}),
+    "seed_digits_0": ("Seed : chiffres 1-2", "Deux premiers chiffres de la seed manuelle.", {}),
+    "seed_digits_1": ("Seed : chiffres 3-4", "Deux chiffres du milieu de la seed manuelle.", {}),
+    "seed_digits_2": ("Seed : chiffres 5-6", "Deux derniers chiffres de la seed manuelle.", {}),
 }
 FRENCH = ("EUfr", "USfr")
 
@@ -124,7 +147,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     src = next(e for e in data["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
     if any(e["Hash"] == flag_hash(STRUCT) for e in data["Struct"]):
         raise KeyError(f"GameData : structure {STRUCT} déjà présente")
-    types = {flag_hash(t): t for _, t, _ in SETTING_ROWS}
+    types = {flag_hash(t): t for _, t, _ in SETTING_ROWS + SEED_ROWS}
     by_type = {t: (s, values) for s, t, values in SETTING_ROWS}
     members = []
     report = []
@@ -136,6 +159,15 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         setting, values = by_type.get(name, (None, None))
         new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
         new["ResetTypeValue"] = 0
+        seed_row = next((r for r in SEED_ROWS if r[1] == name), None)
+        if seed_row is not None:
+            if section == "Enum":
+                new["RawValues"] = list(SEED_ENUM_VALUES)
+                new["Values"] = [type(entry["Values"][0])(flag_hash(v)) for v in SEED_ENUM_VALUES]
+                new["DefaultValue"] = new["Values"][0]
+            else:
+                new["DefaultValue"] = False
+            report.append(f"GameData {STRUCT}.{name} (seed)")
         if defaults is not None and setting in defaults:
             value = defaults[setting]
             if values is None and section == "Bool":
@@ -234,7 +266,10 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
         row = copy.deepcopy(rows[flag_hash(option_type)])
         row.pop("CheckGameData", None)
         row.pop("IsCheckDisplayGameData", None)
-        if values is not None:
+        if setting in SEED_DIGITS:
+            row["ButtonType"] = U32(CHOICE_BUTTON)
+            row["ChoiceType"] = [U32(flag_hash(n)) for n in SEED_ENUM_VALUES]
+        elif values is not None:
             names = enum_values[option_type][:len(values)]
             if len(names) < len(values):
                 raise ValueError(f"{option_type} : {len(names)} valeurs pour {len(values)} choix")
@@ -247,12 +282,12 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
 def messages(msbt: bytes, language: str) -> bytes:
     texts = TEXTS_FR if language in FRENCH else TEXTS_EN
     new = {}
-    for setting, option_type, values in SETTING_ROWS:
+    for setting, option_type, values in SETTING_ROWS + SEED_ROWS:
         title, caption, labels = texts[setting]
         new[f"OoTRR_{option_type}_Title"] = title.encode()
         new[f"OoTRR_{option_type}_Caption"] = caption.encode()
         for i, v in enumerate(values or []):
-            new[f"OoTRR_{option_type}_{i:02d}"] = labels[v].encode()
+            new[f"OoTRR_{option_type}_{i:02d}"] = labels.get(v, v).encode()
     have = read_labels(msbt)
     clash = [k for k in new if k in have]
     if clash:
@@ -451,6 +486,16 @@ def menu_header(root: dict) -> str:
         rows.append(f"    {{{sid}, {m}, false, {len(values)}, {{{game}}}, {{{ours}}}}},  // {setting} <- {option_type}")
     lines += [f"constexpr int kMenuSettingCount = {len(rows)};",
               "inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {"] + rows + ["};", ""]
+    by_name = {s: t for s, t, _ in SEED_ROWS}
+    lines += ["// seed manuelle : bascule, puis 3 énumérations de 100 valeurs (2 chiffres chacune)",
+              f"constexpr uint32_t kSeedManualMember = 0x{flag_hash(by_name[SEED_MANUAL]):08x};  // {by_name[SEED_MANUAL]}",
+              "inline constexpr uint32_t kSeedDigitMembers[3] = {"
+              + ", ".join(f"0x{flag_hash(by_name[s]):08x}" for s in SEED_DIGITS) + "};",
+              f"constexpr int kSeedValueCount = {len(SEED_ENUM_VALUES)};",
+              "inline constexpr uint32_t kSeedValues[kSeedValueCount] = {"]
+    lines += ["    " + ", ".join(f"0x{flag_hash(v):08x}" for v in SEED_ENUM_VALUES[i:i + 8]) + ","
+              for i in range(0, len(SEED_ENUM_VALUES), 8)]
+    lines += ["};", "constexpr uint32_t kSeedMax = 999999;  // seed manuelle 000000 -> 1000000 (0 = pas de seed)", ""]
 
     def value_index(setting, value):
         allowed = SETTINGS[setting][1]

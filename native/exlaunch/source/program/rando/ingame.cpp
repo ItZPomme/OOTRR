@@ -83,6 +83,29 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     return g_ready;
 }
 
+bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed) {
+    void* manager = Manager(main_base);
+    if (!manager) return false;
+    Handle handle;
+    if (!reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle)(manager, &handle, menu::kStructHash)) return false;
+    bool manual = false;
+    if (!reinterpret_cast<GetBoolFn>(main_base + kGetStructBool)(manager, &manual, &handle, menu::kSeedManualMember) ||
+        !manual)
+        return false;
+    auto get_enum = reinterpret_cast<GetEnumFn>(main_base + kGetStructEnum);
+    uint32_t value = 0;
+    for (uint32_t member : menu::kSeedDigitMembers) {
+        uint32_t raw = 0;
+        int digits = 0;
+        if (get_enum(manager, &raw, &handle, member))
+            for (int i = 0; i < menu::kSeedValueCount; i++)
+                if (menu::kSeedValues[i] == raw) digits = i;
+        value = value * menu::kSeedValueCount + static_cast<uint32_t>(digits);
+    }
+    *seed = value ? value : menu::kSeedMax + 1;
+    return true;
+}
+
 int32_t ReadSavedSeed(std::uintptr_t main_base) {
     void* manager = Manager(main_base);
     int32_t value = 0;

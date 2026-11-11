@@ -35,6 +35,9 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read = 
 
 // seed enregistrée dans la partie (GameData OoTRR.Seed) ; 0 = aucune
 int32_t ReadSavedSeed(std::uintptr_t main_base);
+
+// seed manuelle du menu (lignes « Seed manuelle » + 3 x 2 chiffres) : vrai et *seed rempli si activée
+bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed);
 void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
 
 // drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre

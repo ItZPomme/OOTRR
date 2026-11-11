@@ -115,8 +115,10 @@ void LogMenuRead(const ootrr::ingame::MenuRead& r) {
 }
 
 void GenerateSeed() {
-    u32 seed = static_cast<u32>(ReadTick() ^ (ReadTick() >> 32)) & 0x7fffffffu;
-    if (!seed) seed = 1;
+    // seed aléatoire dans la plage de la seed manuelle (1-999999) : on peut la ressaisir dans le menu
+    u32 seed = static_cast<u32>((ReadTick() ^ (ReadTick() >> 32)) % ootrr::menu::kSeedMax) + 1;
+    bool manual = ootrr::ingame::ReadManualSeed(Main(), &seed);
+    LogValue(manual ? "OoTRR: seed manuelle" : "OoTRR: seed aleatoire", seed);
     ootrr::ingame::MenuRead read;
     bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed, &read);
     LogMenuRead(read);
