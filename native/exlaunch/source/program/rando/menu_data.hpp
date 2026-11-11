@@ -47,7 +47,7 @@ inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {
 // membre de structure (structure != 0) : écrit via la poignée de la structure
 struct StartFlag { int32_t setting; int32_t value; uint32_t flag; uint32_t structure; uint32_t member;
                    bool flag_value; };
-constexpr int kStartFlagCount = 25;
+constexpr int kStartFlagCount = 26;
 inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {2, 1, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
     {2, 2, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
@@ -74,6 +74,7 @@ inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {5, 1, 0x9d6efaac, 0x8308d4be, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
     {5, 1, 0x322f2a94, 0x3876f97a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
     {5, 1, 0xea1846e6, 0x3876f97a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
+    {9, 1, 0xdb242fa0, 0x00000000, 0x00000000, true},  // free_time_travel=True : OoTRR.FreeTimeTravel
 };
 // énumérations posées au début de la partie (valeur = hachage du nom de la valeur)
 struct StartEnum { int32_t setting; int32_t value; uint32_t flag; uint32_t enum_value; };

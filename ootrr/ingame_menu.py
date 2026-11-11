@@ -154,16 +154,49 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         data["Bool"].append(flag)
         report.append(f"GameData : drapeau {name}")
     report.append(f"GameData : structure {STRUCT} ({len(members)} membres)")
+    # drapeaux posés selon le menu et lus par des expressions (sauvegardés : ils doivent tenir au chargement)
+    for name in EXTRA_SAVED_FLAGS:
+        flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
+        flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
+        data["Bool"].append(flag)
+        report.append(f"GameData : drapeau {name} (sauvegardé)")
     seed = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
     seed.update({"Hash": U32(flag_hash(SEED_ENTRY)), "DefaultValue": 0, "ResetTypeValue": 0})
     data["Int"].append(seed)
     report.append(f"GameData : entier {SEED_ENTRY} (sauvegardé)")
-    saved = sum(1 for _ in SETTING_ROWS) + 1
+    saved = sum(1 for _ in SETTING_ROWS) + 1 + len(EXTRA_SAVED_FLAGS)
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
 
 
 PROGRESS_SAVE = 0  # SaveFileIndex de slot_%02d/progress.sav
+
+# Voyage dans le temps libre : la condition de retour enfant (module du marché adulte,
+# SageOfForest_IsCompleted_Exp) devient « drapeau du menu OU Temple de la Forêt fini »
+FREE_TIME_FLAG = "OoTRR.FreeTimeTravel"
+FREE_TIME_EXP = "OoTRR_FreeTimeTravel_Exp"
+RETURN_MODULE = "Logic/Market_Adult_Prefab_89da.logic.module.ainb"
+RETURN_CONDITION = "SageOfForest_IsCompleted_Exp"
+MENU_BOOL_EXPS = {FREE_TIME_EXP: [("Bool", FREE_TIME_FLAG), ("Exp", RETURN_CONDITION), ("OR",)]}
+EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,)
+# drapeaux de départ propres au menu : (réglage, valeur, drapeau, valeur du drapeau)
+EXTRA_START_FLAGS = [("free_time_travel", True, FREE_TIME_FLAG, True)]
+
+
+def return_module(raw: bytes) -> bytes:
+    """Module du retour enfant : l'expression lue devient FREE_TIME_EXP."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    found = 0
+    for node in script.nodes:
+        for p in node.params.string_inputs or []:
+            if p.name == "GameDataNameBoolExp" and p.default_value == RETURN_CONDITION:
+                p.default_value = FREE_TIME_EXP
+                found += 1
+    if found != 1:
+        raise ValueError(f"{RETURN_MODULE} : {found} conditions {RETURN_CONDITION}")
+    return script.to_binary()
 
 
 def add_saved_entries(root: dict, save_index: int, count: int) -> list[str]:
@@ -280,6 +313,7 @@ def start_flag_table() -> tuple[list[tuple[str, object, str, bool]], list[str]]:
                     skipped.append(f"{setting}={value}: {name}={flag_value}")
                     continue
                 table.append((setting, value, name, flag_value))
+    table += EXTRA_START_FLAGS
     return table, skipped
 
 

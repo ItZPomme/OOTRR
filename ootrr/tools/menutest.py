@@ -82,7 +82,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
     actor_changes[OCARINA_OF_TIME_ACTOR] = {"Presence": {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False,
                                                          "IsNegation": False}}
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
-                       bool_exps=dict(BOOL_EXPS), moat_gate=True, **common)
+                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS}, moat_gate=True, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
@@ -162,6 +162,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
     (out / menu.MOAT_MODULE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.MOAT_MODULE).write_bytes(new)
     report.append(f"{menu.MOAT_MODULE}: ocarina dès l'étape Step04")
+
+    # module du retour enfant (voyage dans le temps libre)
+    raw = (romfs / menu.RETURN_MODULE).read_bytes()
+    new = menu.return_module(raw)
+    mb.restbl.resize_like(menu.RETURN_MODULE, len(raw), len(new))
+    (out / menu.RETURN_MODULE).parent.mkdir(parents=True, exist_ok=True)
+    (out / menu.RETURN_MODULE).write_bytes(new)
+    report.append(f"{menu.RETURN_MODULE}: retour enfant si {menu.FREE_TIME_FLAG}")
 
     # écran titre
     raw = (romfs / menu.TITLE).read_bytes()
