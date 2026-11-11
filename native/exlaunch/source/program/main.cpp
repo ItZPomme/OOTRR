@@ -259,8 +259,48 @@ HOOK_DEFINE_TRAMPOLINE(TableRowByType) {
     static void* Callback(void* table, s32 type) { return Orig(PickTable(table), type); }
 };
 
+/* Jeton d'emplacement (OoTRR_Lnnnn) : l'objet donné par un cœur au sol porte le nom du jeton ; la
+ * séquence « objet obtenu » cherche ses textes par ce nom (OoTRR_Lnnnn_GetCaption…). On les
+ * redirige vers ceux de l'objet placé par la seed (<objet>_GetCaption…). Renvoie l'emplacement, -1 sinon. */
+int TokenLocation(const char* text) {
+    const char* prefix = "OoTRR_L";
+    int k = 0;
+    while (prefix[k] && text[k] == prefix[k]) k++;
+    if (prefix[k]) return -1;
+    int location = 0;
+    for (int d = 0; d < 4; d++) {
+        char c = text[k + d];
+        if (c < '0' || c > '9') return -1;
+        location = location * 10 + (c - '0');
+    }
+    return location;
+}
+
+int g_token_message_logs = 16;
+
 HOOK_DEFINE_TRAMPOLINE(FindMessage) {
     static u64 Callback(void* out, const char** file, const char** label, u64 extra) {
+        if (label && *label) {
+            int location = TokenLocation(*label);
+            const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+            if (item) {
+                static char name[160];
+                size_t n = 0;
+                for (const char* p = item; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                for (const char* p = *label + 11; *p && n < sizeof(name) - 1; p++) name[n++] = *p;  // « _GetCaption »…
+                name[n] = 0;
+                const char* mine = name;
+                u64 found = Orig(out, file, &mine, extra);
+                if (g_token_message_logs > 0) {
+                    g_token_message_logs--;
+                    if (file && *file) Log(*file);
+                    Log(*label);
+                    Log(name);
+                    LogValue("OoTRR: texte de jeton redirige, trouve", found);
+                }
+                return found;
+            }
+        }
         if (g_menu && file && *file && label && *label && SameString(*file, kOptionMessages)) {
             char name[160];
             size_t n = 0;
