@@ -340,6 +340,9 @@ class ModBuilder:
     scrub_secret: tuple[str, int] | None = None
     # messages de vente supplémentaires (objets que le module natif peut substituer à un jeton)
     scrub_message_items: list[str] = []
+    # article reconnu -> objet vendu (menu natif : l'article de la Peste Mojo doit être un vrai objet,
+    # EventScrubBusinessWriteGameDataBancItemName ignore un nom inconnu ; il sert de marque)
+    scrub_sold: dict[str, str] = {}
 
     def _scrub_sales(self, flow: bytes, sales: dict[str, int]) -> tuple[bytes, list[str]]:
         """Peste Mojo : avant les comparaisons d'origine, une question par objet vendu
@@ -401,11 +404,12 @@ class ModBuilder:
         nodes = []
         items = sorted(sales)
         for k, item in enumerate(items):
+            sold = self.scrub_sold.get(item, item)
             nodes.append({"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
                           "set": {"Value": item}, "cases": {0: 2 * k + 1, 1: 2 * k + 2 if k + 1 < len(items) else "old"}})
             nodes.append({"copy_event": sale, "next": None,
-                          "set": {"ActorName": item, "Price": int(sales[item]),
-                                  "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{item}"}})
+                          "set": {"ActorName": sold, "Price": int(sales[item]),
+                                  "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{sold}"}})
         flow, sale_report = insert_flow(flow, None, nodes, before=compare)
         return flow, report + sale_report
 

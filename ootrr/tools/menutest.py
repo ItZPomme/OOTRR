@@ -146,18 +146,28 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         from ..native_logic import scrub_tokens
         from ..patch import SCRUB_FIELDS
         from ..world import SCRUB_PRICE, SCRUB_SECRET_LOCATION
+        # l'article reste un vrai objet, différent pour chaque Peste Mojo (le jeu ignore un nom inconnu) :
+        # il sert de marque, la question insérée vend le jeton correspondant
+        markers = {"KF Deku Scrub Stick Upgrade": "Item_StickBag_Medium", "LW Deku Scrub Stick Upgrade": "Item_StickBag_Large",
+                   "LW Deku Scrub Nut Upgrade": "Item_NutBag_Medium", "DMC Deku Scrub Heart Piece": "Obj_Heart_Piece",
+                   SCRUB_SECRET_LOCATION: "Obj_Heart_Piece"}
         scrub_sales = {}
+        mb.scrub_sold = {}
         for lname, (t, hashes) in scrub_tokens().items():
+            marker = markers[lname]
             for h in hashes:
-                actor_changes[h] = {SCRUB_FIELDS[0]: t, SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
+                actor_changes[h] = {SCRUB_FIELDS[0]: marker, SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
             tokens_actors[t] = "SELF@Obj_Heart_Piece"
-            scrub_sales[t] = SCRUB_PRICE
             if lname == SCRUB_SECRET_LOCATION:
-                mb.scrub_secret = (t, SCRUB_PRICE)
+                mb.scrub_secret = (t, SCRUB_PRICE)  # vente directe, pas de comparaison
+                continue
+            scrub_sales[marker] = SCRUB_PRICE
+            mb.scrub_sold[marker] = t
         # messages de vente des objets possibles (le module redirige le message du jeton)
         from ..native_logic import Exporter
         mb.scrub_message_items = sorted({i["name"].replace("TBox_Rupee_", "Obj_Rupee_") for i in Exporter().world()["items"]
-                                         if i["ground"]} | {"Item_StickBag_Medium", "Item_StickBag_Large", "Item_NutBag_Medium"})
+                                         if i["ground"]} | {"Item_StickBag_Medium", "Item_StickBag_Large", "Item_NutBag_Medium"}
+                                        | {t for t, _ in scrub_tokens().values()})
         common["scrub_sales"] = scrub_sales
         report.append(f"Peste Mojo : {len(scrub_sales)} jetons vendus")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
