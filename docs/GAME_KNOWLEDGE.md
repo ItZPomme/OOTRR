@@ -60,6 +60,14 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   `TalkEventName`. Le script `Enemy_Scrub_Business_Common` compare le nom à une liste fixe.
   Méthode **[jeu]** : script « sac de bâtons » pour toutes, questions insérées (« objet = X ? »)
   qui mènent à la vente unique `SimpleShopSub_Scrub_Business_OneTime` (prix entier, message).
+- **Peste Mojo mélangées (menu natif) [jeu]** (2026-11-11) : 5 vendeuses d'objet unique (plaine,
+  cratère, bâtons forêt/Bois Perdus, noix). L'article doit rester un **vrai objet**
+  (`EventScrubBusinessWriteGameDataBancItemName` ignore un nom inconnu) : il sert de marque, une
+  question insérée vend le jeton. La plaine vend directement (entrée `Secret`). Nom dans le message :
+  balise des boutiques `[2:3 Shop_SelectItemName]` (posée avant la vente), résolue par la recherche
+  intérieure `0xa6b060` (pas `0xa6afe0`) où le texte du jeton est redirigé.
+- Un quart de cœur ajouté sous un autre nom (jeton) n'est **pas compté** : le module incrémente
+  `PouchData.Obj_Heart_Piece.StockNum` (passage à 4 quarts -> réceptacle : non vérifié).
 - Skulltula d'or : `Dynamic.Drop__DropActor` remplace le jeton **[jeu]** ; il faut un objet
   ramassable (copie de `Obj_Token_Gold` ou du réceptacle). Tant que l'objet n'est pas ramassé, la
   Skulltula réapparaît.
