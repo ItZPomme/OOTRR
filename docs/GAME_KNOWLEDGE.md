@@ -73,7 +73,13 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   Skulltula réapparaît.
 - Skulltulas d'or mélangées : la Skulltula lâche son jeton `OoTRR_Lnnnn` (copie de `Obj_Token_Gold`),
   modèle, textes et ajout redirigés vers l'objet de la seed — **validé en jeu** (Arbre Mojo). Le jeton
-  n'est pas remplacé à la source (`KeepsToken`). Jeton d'or placé dans un coffre : non vérifié.
+  n'est pas remplacé à la source (`KeepsToken`). Jeton d'or placé dans un coffre : **validé en jeu**.
+- Paramètres utiles de `Enemy_Skulltula_Gold` (Dynamic) pour identifier chaque Skulltula :
+  `Enemy_Skulltula_Gold_IsMagicBeanSoil` (terre meuble, présence = drapeau `Gimmick_MagicBeanSoil_<zone>`,
+  posé quand on lâche des insectes), `Enemy_Skulltula_Gold_Nocturnal` (nuit), `AppearPopOut` +
+  `AppearWarpRotOffset` (arbre), une caisse `Obj_BrokenBox_A_*` à la même position, `DefaultDungeonRoomIndex`.
+  Règles dans `skulltulas.json` (9 incertaines gardent `no_progression`) : **vérifié dans les fichiers**,
+  pas encore validées en jeu une par une.
 
 ## Messages (Mals)
 

@@ -32,6 +32,8 @@ PRESETS = {
     "récompenses mélangées": {"shuffle_rewards": "shuffled", "open_forest": "open", "open_door_of_time": True},
     "pont cœurs": {"bridge": "hearts", "bridge_count": 8, "shuffle_hearts": "freestanding"},
     "pont récompenses": {"bridge": "dungeons", "bridge_count": 5, "shuffle_rewards": "shuffled"},
+    "Skulltulas extérieur": {"shuffle_skulltulas": "overworld", "shuffle_scrubs": True},
+    "Skulltulas toutes": {"shuffle_skulltulas": "all", "shuffle_hearts": "freestanding", "open_forest": "open"},
 }
 
 
