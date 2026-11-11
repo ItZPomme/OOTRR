@@ -126,7 +126,12 @@ ajouter (non sauvegardées, la taille de sauvegarde ne change pas) **[jeu]**.
 
 ## Pistes non abouties
 
-- Menu de réglages **dans le jeu** (comme le randomizer de Super Mario Odyssey) : l'exefs est au
-  format NSO0 classique (`main`, `rtld`, `sdk`, `subsdk0`) et Eden accepte les mods exefs, mais
-  il faudrait du code natif (exlaunch) et une rétro-ingénierie de 63 Mo de code. Prototype en
-  cours sans code natif : questions au début de la nouvelle partie (`open_forest=ask`).
+- Menu de réglages **dans le jeu** : fait avec du code natif (exlaunch), voir `native/README.md`.
+- **Cartes et boussoles « au départ » (`maps_compasses=start_with`) : ne fonctionne pas** (validé
+  en jeu, 2026-11-10, avec le mod Python seed 1234 et avec le menu natif). Ni le drapeau
+  `DungeonInfo.<donjon>.IsGetMap` / `IsGetCompass` à 1 dès la nouvelle partie (valeur par défaut ou
+  écrit au départ, relu à 1 dans la sauvegarde et à l'entrée du donjon), ni en plus l'appel des
+  fonctions du nœud `OneShotDungeonGetMap` (`0x3282fe0` / `0x3283060` : drapeau + objet
+  `Item_Dungeon_Map` / `Item_Dungeon_Compass`) n'affichent la carte. La scène du coffre
+  (`InsideTheDekuTree_GetMap`, événement de `GameSystemActor` avec `EventGetDungeonMap`) fait
+  donc autre chose : piste à suivre (comparer une sauvegarde avant / après un vrai coffre de carte).
