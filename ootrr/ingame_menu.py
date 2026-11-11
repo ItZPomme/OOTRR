@@ -348,10 +348,13 @@ def title_sequence(raw: bytes) -> bytes:
     prepare_new_game.child_plugs.append(child(set_flag(True)))
     to_option[0].child_plugs.append(child(set_flag(False)))
     start.child_plugs.insert(0, child(set_flag(False)))
-    # génération juste avant Opening.module : après la remise à zéro des données de la partie
-    # (SeqExecuteResetGameData), sinon les drapeaux posés au départ seraient effacés
-    opening = next(i for i, p in enumerate(start.child_plugs) if nodes[p.node_index].name == "Opening.module")
-    start.child_plugs.insert(opening, child(set_flag(True, GENERATE_FLAG)))
+    # génération après la remise à zéro des données de la partie (SeqExecuteResetGameData, sinon les
+    # drapeaux posés au départ seraient effacés) mais avant AfterLoadSaveData.module : le jeu y lit ses
+    # données (ex. cartes des donjons) ; posés après, ils ne sont pas pris en compte (vérifié en jeu)
+    after_load = next(n for n in nodes if n.name == "AfterLoadSaveData.module")
+    holder = next(n for n in nodes if any(p.node_index == after_load.index for p in (n.child_plugs or [])))
+    pos = next(i for i, p in enumerate(holder.child_plugs) if p.node_index == after_load.index)
+    holder.child_plugs.insert(pos, child(set_flag(True, GENERATE_FLAG)))
     return script.to_binary()
 
 
