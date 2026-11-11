@@ -82,10 +82,56 @@ namespace {
         return mine ? static_cast<void*>(g_menu_table) : table;
     }
 
+    // seed aléatoire tirée à l'ouverture du menu (affichée dans la description de « Seed manuelle »,
+    // utilisée au lancement si la seed manuelle est désactivée) ; 1-999999 pour pouvoir la ressaisir
+    u32 g_menu_seed = 0;
+
+    u32 RollSeed() {
+        u64 tick;
+        asm volatile("mrs %0, cntpct_el0" : "=r"(tick));
+        return static_cast<u32>((tick ^ (tick >> 32) ^ (tick >> 17)) % ootrr::menu::kSeedMax) + 1;
+    }
+
     void SetMenu(bool on) {
         if (g_menu != on) Log(on ? "OoTRR: menu du randomizer ouvert" : "OoTRR: menu du randomizer ferme");
-        if (on && !g_menu) g_trace = 4;
+        if (on && !g_menu) {
+            g_trace = 4;
+            g_menu_seed = RollSeed();
+        }
         g_menu = on;
+    }
+
+    /* Texte trouvé (sortie de 0xa6afe0 : { const char* texte UTF-8 ; s32 longueur ; … }) : le repère
+     * « ###### » est remplacé par la seed du menu, dans une copie (le texte du jeu reste intact). */
+    struct MessageOut {
+        const char* text;
+        s32 length;
+    };
+
+    void SubstituteSeed(void* out) {
+        auto* m = static_cast<MessageOut*>(out);
+        if (!m->text || m->length <= 0 || !g_menu_seed) return;
+        static char buffer[512];
+        const char* src = m->text;
+        size_t i = 0, n = 0;
+        bool done = false;
+        char digits[12];
+        int count = 0;
+        for (u32 v = g_menu_seed; v; v /= 10) digits[count++] = static_cast<char>('0' + v % 10);
+        while (src[i] && n < sizeof(buffer) - 16) {
+            if (!done && src[i] == '#' && src[i + 1] == '#' && src[i + 2] == '#' && src[i + 3] == '#' &&
+                src[i + 4] == '#' && src[i + 5] == '#') {
+                for (int k = count - 1; k >= 0; k--) buffer[n++] = digits[k];
+                i += 6;
+                done = true;
+                continue;
+            }
+            buffer[n++] = src[i++];
+        }
+        if (!done) return;
+        buffer[n] = 0;
+        m->text = buffer;
+        m->length += count - 6;  // chiffres ASCII : même écart en octets comme en caractères
     }
 
 }
@@ -115,8 +161,8 @@ void LogMenuRead(const ootrr::ingame::MenuRead& r) {
 }
 
 void GenerateSeed() {
-    // seed aléatoire dans la plage de la seed manuelle (1-999999) : on peut la ressaisir dans le menu
-    u32 seed = static_cast<u32>((ReadTick() ^ (ReadTick() >> 32)) % ootrr::menu::kSeedMax) + 1;
+    // seed aléatoire : celle affichée dans le menu (1-999999), qu'on peut ressaisir au clavier
+    u32 seed = g_menu_seed ? g_menu_seed : RollSeed();
     bool manual = ootrr::ingame::ReadManualSeed(Main(), &seed);
     LogValue(manual ? "OoTRR: seed manuelle" : "OoTRR: seed aleatoire", seed);
     ootrr::ingame::MenuRead read;
@@ -228,7 +274,10 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
                 Log(name);
                 LogValue("OoTRR: message trouve", found);
             }
-            if (found & 1) return found;
+            if (found & 1) {
+                SubstituteSeed(out);
+                return found;
+            }
         }
         return Orig(out, file, label, extra);
     }

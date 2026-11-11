@@ -50,6 +50,8 @@ SEPARATOR = "-"
 # de la partie (pavé numérique) pour la saisir. Pas un réglage : non sauvegardée.
 SEED_MANUAL = "seed_manual"
 SEED_ROW_NAMES = (SEED_MANUAL,)
+# repère remplacé par le module natif (texte lu) par la seed aléatoire tirée à l'ouverture du menu
+SEED_PLACEHOLDER = "######"
 ROWS: list[tuple[str, str, list[str] | None]] = [
     (SEED_MANUAL, "VoiceSubtitle", None),
     (SEPARATOR, "", None),
@@ -96,7 +98,7 @@ TEXTS_EN = {
     "skip_cutscenes": ("Skip Cutscenes", "Mark cutscenes that change nothing as already seen.",
                        {"none": "None", "safe": "Safe"}),
     "logic_lens_required": ("Lens Required", "The logic requires the Lens of Truth for invisible paths.", {}),
-    "seed_manual": ("Manual Seed", "Off: random seed. On: a keyboard opens when the game starts\nto type the seed.", {}),
+    "seed_manual": ("Manual Seed", f"Off: random seed {SEED_PLACEHOLDER}. On: a keyboard opens when the game\nstarts to type the seed.", {}),
 }
 TEXTS_FR = {
     "open_forest": ("Forêt Kokiri", "Fermée : jeu d'origine. Fermée (Mojo) : la sortie vers la plaine est ouverte.\nOuverte : l'Arbre Mojo aussi.",
@@ -116,7 +118,7 @@ TEXTS_FR = {
     "skip_cutscenes": ("Passer les cinématiques", "Les cinématiques sans effet sont marquées comme vues.",
                        {"none": "Aucune", "safe": "Sûres"}),
     "logic_lens_required": ("Monocle requis", "La logique exige le Monocle de Vérité pour les passages invisibles.", {}),
-    "seed_manual": ("Seed manuelle", "Désactivé : seed aléatoire. Activé : un clavier s'ouvre au lancement\nde la partie pour saisir la seed.", {}),
+    "seed_manual": ("Seed manuelle", f"Désactivé : seed aléatoire {SEED_PLACEHOLDER}. Activé : un clavier s'ouvre\nau lancement de la partie pour saisir la seed.", {}),
 }
 FRENCH = ("EUfr", "USfr")
 
