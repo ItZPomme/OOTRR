@@ -363,6 +363,37 @@ const char* GroundItem(const char* item) {
     return buffer;
 }
 
+/* Recherche intérieure d'un message (0xa6b060 : gestionnaire, sortie, const char** fichier,
+ * const char** étiquette ; 0 = trouvé). Les balises de nom (ex. Shop_SelectItemName dans un message de
+ * vente) l'appellent sans passer par 0xa6afe0 : texte <jeton>_Name… redirigé vers celui de l'objet. */
+int g_inner_logs = 12;
+
+HOOK_DEFINE_TRAMPOLINE(FindMessageInner) {
+    static u64 Callback(void* manager, void* out, const char** file, const char** label) {
+        if (label && *label) {
+            int location = TokenLocation(*label);
+            const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+            if (item) {
+                static char name[160];
+                size_t n = 0;
+                for (const char* p = GroundItem(item); *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                for (const char* p = *label + 11; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                name[n] = 0;
+                const char* mine = name;
+                u64 result = Orig(manager, out, file, &mine);
+                if (g_inner_logs > 0) {
+                    g_inner_logs--;
+                    Log(*label);
+                    Log(name);
+                    LogValue("OoTRR: nom de jeton redirige (recherche interieure), resultat", result);
+                }
+                if (result == 0) return result;
+            }
+        }
+        return Orig(manager, out, file, label);
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(FindMessage) {
     static u64 Callback(void* out, const char** file, const char** label, u64 extra) {
         // message de vente d'une Peste Mojo (OoTRR_Scrub_<jeton>) -> celui de l'objet placé
@@ -699,6 +730,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     TableRow::InstallAtOffset(kTableRow);
     TableRowByType::InstallAtOffset(kTableRowByType);
     FindMessage::InstallAtOffset(kFindMessage);
+    FindMessageInner::InstallAtOffset(0xa6b060);
     GetStructHandle::InstallAtOffset(kGetStructHandle);
     LoadLayout::InstallAtOffset(kLoadLayout);
     SetChallengeStep::InstallAtOffset(0x2cf54a0);
