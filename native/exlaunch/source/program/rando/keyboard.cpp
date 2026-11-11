@@ -6,7 +6,9 @@
  *   +0x3ac longueur maximale (s32), +0x3b0 longueur minimale (s32). MakePreset remplit le reste.
  * - ShowKeyboardArg : KeyboardConfig puis +0x518 tampon de travail, +0x520 sa taille (0x1000 octets
  *   sans dictionnaire, aligné sur 0x1000), +0x528… autres tampons facultatifs (laissés à zéro).
- * - String : { char16_t* texte ; size_t taille } ; taille requise GetRequiredStringBufferSize (0x7d4).
+ * - String : { char16_t* texte ; size_t taille } ; taille = exactement GetRequiredStringBufferSize (0x7d4) :
+ *   ReadCloseResultAndString lit ce nombre d'octets dans la réponse ; plus grand, la lecture échoue et
+ *   le SDK arrête le jeu (erreur 2128-0503, constaté en jeu).
  * - ShowKeyboard renvoie 0 si le texte est validé, 0x29f si le joueur annule. */
 #include "keyboard.hpp"
 
@@ -66,7 +68,8 @@ bool AskSeed(uint32_t* seed) {
     At<void*>(kConfigSize) = g_work;
     At<std::size_t>(kConfigSize + 8) = kWorkSize;
 
-    nn::swkbd::String out{g_text, sizeof(g_text)};
+    // taille exacte : la réponse est lue d'un bloc de cette taille (au-delà, le SDK arrête le jeu)
+    nn::swkbd::String out{g_text, nn::swkbd::GetRequiredStringBufferSize()};
     if (nn::swkbd::ShowKeyboard(&out, *reinterpret_cast<nn::swkbd::ShowKeyboardArg*>(g_arg)) != 0) return false;
 
     uint64_t value = 0;
