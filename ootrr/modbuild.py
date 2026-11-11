@@ -309,7 +309,9 @@ class ModBuilder:
             template = ev_texts[ev_labels[self.SCRUB_TEMPLATE]] if self.SCRUB_TEMPLATE in ev_labels else None
             new = {}
             for item in scrub_items:
-                name = texts[labels[f"{item}_Name"]] if f"{item}_Name" in labels else item.encode()
+                # nom écrit par le jeu depuis Shop_SelectItemName (posé avant la vente) : un jeton du menu
+                # natif y prend le nom de l'objet placé (texte <jeton>_Name redirigé)
+                name = self.SHOP_ITEM_NAME_TAG
                 start = template.find(on) if template else -1
                 end = template.find(off, start + len(on)) if start >= 0 else -1
                 if start >= 0 and end > start:
@@ -334,6 +336,8 @@ class ModBuilder:
             dest.write_bytes(self.codec.compress(path.name, data))
             report.append(f"{rel}: {len(new)} messages de Peste Mojo")
         return report
+    # balise des boutiques : nom de l'objet contenu dans la donnée GameData Shop_SelectItemName
+    SHOP_ITEM_NAME_TAG = bytes.fromhex("0e020003001700130053686f705f53656c6563744974656d4e616d65ffff")
     SCRUB_TALK = "Enemy_Scrub_Business_DekuStickPouch_01"  # script « sac de bâtons » commun aux Peste Mojo mélangées
     # Peste Mojo du quart de cœur de la plaine : son script (entrée « Secret ») vend le quart de cœur
     # directement, sans comparer l'article ; (objet, prix) vendu à la place, ou None
@@ -384,16 +388,23 @@ class ModBuilder:
         ask = (flow, _q(flow, fc["events"] + compare * EVENT_SIZE + 0x10)) if compare is not None else None
         if compare is None or sale is None:
             raise KeyError("repères introuvables dans le script des Peste Mojo")
+        from .tools.events import trace
+        # étape « Shop_SelectItemName = objet » (nom écrit dans le message de vente)
+        set_name = [int(line.split(":", 1)[0]) for line in trace(flow, "SimpleShopRoot_Enemy_Scrub_Business_Pouch")
+                    if "EventTriggerSetGameDataString64" in line and "'Shop_SelectItemName'" in line]
+        if not set_name:
+            raise KeyError("pose de Shop_SelectItemName introuvable dans le script des Peste Mojo")
+        set_name = set_name[0]
         report: list[str] = []
         if self.scrub_secret:
             # vente directe du quart de cœur dans l'entrée « Secret » : remplacée par celle de l'objet
-            from .tools.events import trace
             item, price = self.scrub_secret
             direct = [int(line.split(":", 1)[0]) for line in trace(flow, "Secret")
                       if "SimpleShopSub_Scrub_Business_OneTime" in line and "'Obj_Heart_Piece'" in line]
             if len(direct) != 1:
                 raise KeyError(f"vente du quart de cœur (entrée Secret) : {len(direct)} candidates")
             flow, secret_report = insert_flow(flow, None, [{
+                "copy_event": set_name, "next": 1, "set": {"Value": item}}, {
                 "copy_event": direct[0], "next": None,
                 "set": {"ActorName": item, "Price": int(price),
                         "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{item}"}}],
@@ -406,7 +417,8 @@ class ModBuilder:
         for k, item in enumerate(items):
             sold = self.scrub_sold.get(item, item)
             nodes.append({"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
-                          "set": {"Value": item}, "cases": {0: 2 * k + 1, 1: 2 * k + 2 if k + 1 < len(items) else "old"}})
+                          "set": {"Value": item}, "cases": {0: 3 * k + 1, 1: 3 * k + 3 if k + 1 < len(items) else "old"}})
+            nodes.append({"copy_event": set_name, "next": 3 * k + 2, "set": {"Value": sold}})
             nodes.append({"copy_event": sale, "next": None,
                           "set": {"ActorName": sold, "Price": int(sales[item]),
                                   "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{sold}"}})
