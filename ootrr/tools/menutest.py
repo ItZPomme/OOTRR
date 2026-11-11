@@ -73,6 +73,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
         chests = chest_tokens()
         tokens_actors = {t: f"{TOKEN_BASE}@{TOKEN_BASE}" for t in sorted(set(chests.values()))}
         actor_changes.update({h: {"Drop__DropActor": t} for h, t in chests.items()})
+        # cœurs au sol : l'acteur devient un jeton (copie du cœur d'origine dont l'objet donné porte le
+        # nom du jeton) ; au ramassage, le module natif donne l'objet de la seed à la place
+        from ..native_logic import heart_tokens
+        hearts = heart_tokens()
+        for h, (t, base) in hearts.items():
+            actor_changes[h] = {"Gyaml": t}
+            tokens_actors[t] = f"SELF@{base}"
+        report.append(f"jetons des cœurs au sol : {len(hearts)}")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None

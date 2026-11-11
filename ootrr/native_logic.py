@@ -372,6 +372,18 @@ def chest_tokens() -> dict[int, str]:
     return out
 
 
+def heart_tokens() -> dict[int, tuple[str, str]]:
+    """{hash d'acteur: (jeton, acteur d'origine)} pour tous les cœurs posés au sol (quarts de cœur et
+    réceptacles des boss), mélangés ou non : le module natif donne l'objet de la seed au ramassage."""
+    w = Exporter().world()
+    out = {}
+    for i, l in enumerate(w["locations"]):
+        if l["hashes"] and l["pickup"]:
+            for h in l["hashes"]:
+                out[h] = (token(i), w["items"][l["vanilla"]]["name"])
+    return out
+
+
 def main() -> int:
     text = Exporter().header()
     OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -458,6 +458,35 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
             Log(name->text);
             LogValue("OoTRR: ajout a l'inventaire, raison", reason);
         }
+        // jeton d'un cœur au sol (OoTRR_Lnnnn) ramassé : objet de la seed pour cet emplacement
+        if (name && name->text) {
+            const char* t = name->text;
+            const char* prefix = "OoTRR_L";
+            int k = 0;
+            while (prefix[k] && t[k] == prefix[k]) k++;
+            if (!prefix[k]) {
+                int location = 0;
+                bool ok = true;
+                for (int d = 0; d < 4; d++) {
+                    char c = t[k + d];
+                    if (c < '0' || c > '9') ok = false;
+                    else location = location * 10 + (c - '0');
+                }
+                const char* item = ok && !t[k + 4] ? ootrr::ingame::ItemFor(location) : nullptr;
+                if (item) {
+                    static char text[128];
+                    size_t n = 0;
+                    for (; item[n] && n < sizeof(text) - 1; n++) text[n] = item[n];
+                    text[n] = 0;
+                    static PouchName replaced;
+                    replaced = {text, static_cast<s32>(sizeof(text)), 0};
+                    Log(t);
+                    Log(text);
+                    Log("OoTRR: jeton de coeur remplace (jeton / objet)");
+                    return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
+                }
+            }
+        }
         if (name && name->text && reason == ootrr::ingame::kReasonEvent) {
             if (const char* reward = ootrr::ingame::RewardFor(name->text)) {
                 static char text[128];

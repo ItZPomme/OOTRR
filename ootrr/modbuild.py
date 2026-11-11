@@ -512,7 +512,9 @@ class ModBuilder:
 
         pickups : {nouveau nom d'acteur: objet donné (ex. Item_Hookshot)}
         L'objet peut s'écrire « OBJET@ACTEUR » pour copier un autre acteur que le
-        réceptacle (ex. un article de boutique Shop_Weapon_Shield_Deku).
+        réceptacle (ex. un article de boutique Shop_Weapon_Shield_Deku). OBJET = « SELF » : l'objet
+        donné porte le nom de l'acteur lui-même (jeton remplacé au ramassage par le module natif),
+        paramètres d'inventaire copiés de ACTEUR.
         Écrit les archives et retourne les lignes RSDB à ajouter (fusionnées avec rsdb_changes)."""
         from .formats.sarc import Sarc
 
@@ -521,6 +523,9 @@ class ModBuilder:
         for name, spec in sorted(pickups.items()):
             item, _, base = spec.partition("@")
             base = base or self.PICKUP_BASE
+            pouch_from = item
+            if item == "SELF":
+                item, pouch_from = name, base
             if base not in bases:
                 raw = self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{base}.pack.zs")
                 bases[base] = (raw, self.restbl.get(f"Pack/Actor/{base}.pack") - len(raw))
@@ -545,7 +550,7 @@ class ModBuilder:
             dest.write_bytes(self.codec.compress(dest.name, data))
             rsdb["ActorInfo"][name] = {"__new": True, "__copy_from": base, "ActorName": item}
             rsdb["GameActorInfo"][name] = {"__new": True, "__copy_from": base}
-            rsdb["PouchActorInfo"][name] = {"__new": True, "__copy_from": item}
+            rsdb["PouchActorInfo"][name] = {"__new": True, "__copy_from": pouch_from}
         return rsdb
 
     def build(self, changes: dict[int, dict], out_romfs: Path | str,
