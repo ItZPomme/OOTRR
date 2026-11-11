@@ -22,7 +22,7 @@ inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {0, 0x74b1edd9, false, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {0, 1, 2, 3, 4, 5}},  // bridge <- VoiceLanguage
     {9, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
     {6, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
-    {7, 0x4ac6a8ab, true, 0, {}, {}},  // shuffle_scrubs <- VoiceSubtitleSpeakerName
+    {7, 0xc587a7b1, true, 0, {}, {}},  // shuffle_scrubs <- IsDisplayTextRuby
     {5, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode
     {12, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
 };

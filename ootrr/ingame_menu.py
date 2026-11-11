@@ -63,7 +63,8 @@ ROWS: list[tuple[str, str, list[str] | None]] = [
     ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
     ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
     ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
-    ("shuffle_scrubs", "VoiceSubtitleSpeakerName", None),
+    # VoiceSubtitleSpeakerName est grisé tant que VoiceSubtitle (seed manuelle) est désactivé : IsDisplayTextRuby
+    ("shuffle_scrubs", "IsDisplayTextRuby", None),
     ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
     (SEPARATOR, "", None),
     ("logic_lens_required", "IsChangeJumpButton", None),
