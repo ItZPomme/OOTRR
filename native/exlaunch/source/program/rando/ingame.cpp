@@ -2,6 +2,7 @@
 
 #include "generator.hpp"
 #include "logic_data.hpp"
+#include "keyboard.hpp"
 #include "menu_data.hpp"
 
 namespace ootrr::ingame {
@@ -92,17 +93,9 @@ bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed) {
     if (!reinterpret_cast<GetBoolFn>(main_base + kGetStructBool)(manager, &manual, &handle, menu::kSeedManualMember) ||
         !manual)
         return false;
-    auto get_enum = reinterpret_cast<GetEnumFn>(main_base + kGetStructEnum);
     uint32_t value = 0;
-    for (uint32_t member : menu::kSeedDigitMembers) {
-        uint32_t raw = 0;
-        int digits = 0;
-        if (get_enum(manager, &raw, &handle, member))
-            for (int i = 0; i < menu::kSeedValueCount; i++)
-                if (menu::kSeedValues[i] == raw) digits = i;
-        value = value * menu::kSeedValueCount + static_cast<uint32_t>(digits);
-    }
-    *seed = value ? value : menu::kSeedMax + 1;
+    if (!keyboard::AskSeed(&value)) return false;  // annulé : seed aléatoire
+    *seed = value ? value : 1;  // 0 = « pas de seed » dans la sauvegarde
     return true;
 }
 
