@@ -44,6 +44,9 @@ void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
 int32_t RupeeValue(const char* item);
 // ajoute des rubis à la bourse (GameData PlayerStatus.CurrentRupee) ; renvoie le nouveau total, -1 si illisible
 int32_t AddRupees(std::uintptr_t main_base, int32_t amount);
+// nombre de quarts de cœur (GameData PouchData.Obj_Heart_Piece.StockNum) ; -1 si illisible
+int32_t HeartPieces(std::uintptr_t main_base);
+void SetHeartPieces(std::uintptr_t main_base, int32_t value);
 
 // drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre
 int ApplyStartFlags(std::uintptr_t main_base);

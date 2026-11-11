@@ -679,7 +679,21 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                         LogValue("OoTRR: rubis ajoutes, nouveau total", static_cast<u64>(ootrr::ingame::AddRupees(Main(), rupees)));
                         return 1;
                     }
-                    return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
+                    bool heart = SameString(text, "Obj_Heart_Piece");
+                    s32 before = heart ? ootrr::ingame::HeartPieces(Main()) : 0;
+                    u64 result = Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
+                    LogValue("OoTRR: ajout du jeton, resultat", result);
+                    if (heart) {
+                        s32 after = ootrr::ingame::HeartPieces(Main());
+                        LogValue("OoTRR: quarts de coeur avant", static_cast<u64>(before));
+                        LogValue("OoTRR: quarts de coeur apres", static_cast<u64>(after));
+                        if (before >= 0 && after == before) {
+                            // l'ajout n'a rien compté (vente d'un jeton) : on compte le quart nous-mêmes
+                            ootrr::ingame::SetHeartPieces(Main(), before + 1);
+                            LogValue("OoTRR: quart de coeur compte a la main, total", static_cast<u64>(before + 1));
+                        }
+                    }
+                    return result;
                 }
             }
         }

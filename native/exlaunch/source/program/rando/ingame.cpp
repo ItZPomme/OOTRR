@@ -168,6 +168,25 @@ int32_t AddRupees(std::uintptr_t main_base, int32_t amount) {
     return value;
 }
 
+namespace {
+constexpr uint32_t kHeartPieceStockHash = 0x51ec97b3;  // PouchData.Obj_Heart_Piece.StockNum
+}  // namespace
+
+int32_t HeartPieces(std::uintptr_t main_base) {
+    void* manager = Manager(main_base);
+    int32_t value = 0;
+    if (!manager || !reinterpret_cast<GetIntFn>(main_base + kGetInt)(manager, &value, kHeartPieceStockHash)) return -1;
+    return value;
+}
+
+void SetHeartPieces(std::uintptr_t main_base, int32_t count) {
+    alignas(16) uint8_t node[0x50] = {};
+    static int32_t value;
+    value = count;
+    *reinterpret_cast<int32_t**>(node + 0x40) = &value;
+    reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, kHeartPieceStockHash);
+}
+
 int ApplyStartFlags(std::uintptr_t main_base) {
     auto set_bool = reinterpret_cast<SetBoolNodeFn>(main_base + kSetBoolNode);
     auto set_struct_bool = reinterpret_cast<SetStructBoolFn>(main_base + kSetStructBool);
