@@ -111,11 +111,10 @@ CONSUMABLES = (
 # Pont arc-en-ciel : le module GanonCastle_Level_Field_00_Prefab_14ba déclenche la scène du pont
 # (GanonCastle_Adult_Field_Rainbow) selon deux expressions de la quête « Defeat_Ganon ». Elles sont
 # remplacées (noms de même longueur) par des expressions qui décrivent la condition choisie.
-# ATTENTION (constaté en jeu avec le menu natif, 2026-11-10) : la scène se déclenche si « Ready » ET
-# NON « Step01 » ; remplacer les deux par la même condition empêche la scène, donc le pont. Le menu
-# natif ne remplace que « Ready » (ingame_menu.BRIDGE_MENU_EXP) ; ce chemin Python reste à corriger.
-BRIDGE_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_Bridge_Condition_Exp_A00",
-              "Defeat_Ganon_IsAfter_Step01_Exp": "OoTRR_Bridge_Condition_Exp_B000"}
+# La scène se déclenche si « Ready » ET NON « Step01 » (elle fait passer la quête à Step01) et le pont
+# existe une fois la scène vue : seule « Ready » est remplacée (remplacer les deux empêchait la scène,
+# constaté en jeu avec le menu natif, 2026-11-10).
+BRIDGE_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_Bridge_Condition_Exp_A00"}
 BRIDGE_MODULE = {"GanonCastle_Level_Field_00_Prefab_14ba": dict(BRIDGE_EXP)}
 STONE_FLAGS = [f"IsGet.Item_Stone_{x}" for x in ("Forest", "Fire", "Water")]
 MEDAL_FLAGS = [f"IsGet.Item_Medal_{x}" for x in ("Forest", "Fire", "Water", "Spirit", "Shadow", "Light")]

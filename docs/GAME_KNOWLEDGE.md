@@ -103,10 +103,14 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 
 ## Pont arc-en-ciel
 
-- Module `GanonCastle_Level_Field_00_Prefab_14ba` : expressions `Defeat_Ganon_IsAfter_Ready_Exp`
-  et `Defeat_Ganon_IsAfter_Step01_Exp` ; la scène `GanonCastle_Adult_Field_Rainbow` (script
-  `Defeat_Ganon`) fait avancer la quête. Les deux noms sont remplacés (même longueur) par des
-  expressions du randomizer **[fichiers]** — pas encore testé en jeu.
+- Module `GanonCastle_Level_Field_00_Prefab_14ba` : la scène `GanonCastle_Adult_Field_Rainbow`
+  (script `Defeat_Ganon`, fait passer la quête à Step01) se déclenche si `Defeat_Ganon_IsAfter_Ready_Exp`
+  ET NON `Defeat_Ganon_IsAfter_Step01_Exp` ; le pont (`Obj_GanonCastle_Bridge_A_01`) n'existe qu'une
+  fois la scène vue (`HavePlayedEvent`). **Remplacer seulement « Ready »** par la condition du
+  randomizer : remplacer les deux empêche la scène, donc le pont **[jeu]** (menu natif, condition
+  « ouvert », 2026-11-10). Menu natif : drapeaux sauvegardés `OoTRR.Bridge.<condition>` posés au départ.
+- Expressions BoolExp du jeu : 26 éléments au plus ; les longues conditions sont découpées en
+  sous-expressions (précaution, limite non vérifiée).
 
 ## Expressions booléennes (GameData `BoolExp`)
 
