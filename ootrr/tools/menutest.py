@@ -240,14 +240,15 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
 
     # textes, toutes les langues
     for path in sorted((romfs / "Mals").glob("*.sarc.zs")):
-        raw = mb.codec.decompress(path)
+        rel = path.relative_to(romfs).as_posix()
+        # mb.build a peut-être déjà écrit l'archive (messages des Peste Mojo) : repartir de sa version
+        raw = mb.codec.decompress(out / rel if (out / rel).exists() else path)
         sarc = Sarc(raw)
         old = sarc.files[menu.MESSAGES]
         sarc.files[menu.MESSAGES] = menu.messages(old, path.name[:4])
         if mb.restbl.has(menu.MESSAGES):
             mb.restbl.resize_like(menu.MESSAGES, len(old), len(sarc.files[menu.MESSAGES]))
         new = sarc.to_bytes()
-        rel = path.relative_to(romfs).as_posix()
         mb.restbl.resize_like(rel[:-3], len(raw), len(new))
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
         (out / rel).write_bytes(mb.codec.compress(path.name, new))
