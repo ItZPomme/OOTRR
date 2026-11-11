@@ -18,13 +18,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from ..modbuild import TITLE_ID
+from ..modbuild import TITLE_ID, emulator_root
 
 BACKUP_DIR = Path(__file__).resolve().parents[2] / "saves"
 
 
 def game_save_dir() -> Path:
-    root = Path(os.environ["APPDATA"]) / "eden" / "nand" / "user" / "save"
+    root = emulator_root() / "nand" / "user" / "save"
     found = [p for p in root.rglob(TITLE_ID) if p.is_dir()]
     if not found:
         raise SystemExit(f"Aucune sauvegarde du jeu trouvée sous {root}")

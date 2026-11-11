@@ -6,7 +6,7 @@
 2. Extraire **sa propre copie** du jeu (mise à jour comprise) : on a besoin du dossier `romfs` de
    la mise à jour (`.../updates/<version>/romfs`). Ne jamais l'ajouter au dépôt.
 3. Émulateur : Eden (ou dérivé de Yuzu). Les mods vont dans
-   `%APPDATA%\eden\load\0400486024DEC000\<nom du mod>`.
+   `<émulateur>\load\0400486024DEC000\<nom du mod>` (`%APPDATA%\fritchii` ou `%APPDATA%\eden`, voir `modbuild.emulator_root`).
 4. Vérifier : `python -m ootrr --check` puis `python -m unittest discover -s tests`.
 
 ## Façon de travailler

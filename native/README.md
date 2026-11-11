@@ -59,6 +59,8 @@ Module injecté dans le jeu avec [exlaunch](https://github.com/shadowninja108/ex
   +4 genre de ligne : 0 bascule, 1 choix, 2 amiibo, 3 séparateur ; +0x24 condition GameData).
   Accès : `FUN_0349c5a0` (nombre de lignes visibles), `FUN_0349c630` (ligne i), `FUN_0349c790`
   (ligne par type). Le comportement de chaque type d'option reste dans le code.
+  **Validé en jeu (2026-11-10, `python -m ootrr.tools.optiontest`)** : table réordonnée / ligne retirée
+  dans le pack Bootup et textes de `LayoutMsg/SystemOption_00` remplacés sont acceptés par le jeu.
 - Objet écran `UISystemOptionScreen` : boutons par genre en `+0x2b8/+0x2c0`, `+0x2c8/+0x2d0`,
   `+0x2d8/+0x2e0` (type d'option du bouton en +0x54 / +0x58), lignes affichées `+0x338/+0x340`
   (paires genre, index), option sélectionnée `+0x370`. Construction : `FUN_035011c0` (Ghidra,
@@ -100,7 +102,7 @@ Le make de devkitPro lancé depuis Git Bash ne voit pas `DEVKITPRO` : utiliser l
 ## Installer (Eden fermé)
 
 Copier seulement `deploy/subsdk9` dans
-`%APPDATA%\eden\load\0400486024DEC000\OoTRR-native\exefs\subsdk9`. **Ne pas** copier
+`<émulateur>\load\0400486024DEC000\OoTRR-native\exefs\subsdk9` (`%APPDATA%\fritchii` ou `%APPDATA%\eden`). **Ne pas** copier
 `deploy/main.npdm` : celui du jeu doit rester. Ce mod ne touche que l'exefs et peut rester
 actif avec un mod OoTRR (romfs).
 

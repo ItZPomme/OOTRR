@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from ..formats.byml import read_byml
-from ..modbuild import ModBuilder, install
+from ..modbuild import ModBuilder, emulator_root, install
 
 TESTS = {
     # test 1 : un objet quelconque dans un coffre (validé en jeu)
@@ -157,7 +157,7 @@ def main(argv=None) -> int:
     print("Relecture du mod : OK")
 
     if args.install:
-        target = install(out, Path(os.environ["APPDATA"]) / "eden", "OoTRR-test")
+        target = install(out, emulator_root(), "OoTRR-test")
         print(f"Installé dans {target}")
     return 0
 

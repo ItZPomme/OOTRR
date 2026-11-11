@@ -30,7 +30,7 @@ Il faut la RomFS extraite de **ta propre copie** du jeu (celle de la mise à jou
 python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --install
 ```
 
-- `--install` copie le mod dans `%APPDATA%\eden\load\0400486024DEC000\OoTRR` (Eden fermé).
+- `--install` copie le mod dans `<émulateur>\load\0400486024DEC000\OoTRR` (émulateur fermé). Dossier détecté : `%APPDATA%\fritchii` (Fritchii récent), sinon `%APPDATA%\eden` ; forcer avec la variable `OOTRR_EMU_DIR`.
 - `output\OoTRR_<seed>_<hash>_spoiler.txt` : objets requis, parcours par sphères, contenu de chaque lieu.
 - `output\OoTRR_<seed>_<hash>_patch.json` : tout ce que le mod applique.
 - Sans `--romfs`, seule la seed est générée (spoiler + patch).

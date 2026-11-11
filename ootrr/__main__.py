@@ -48,7 +48,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
               test_sets: list[str] | None = None, test_flags: list[str] | None = None,
               test_drops: list[str] | None = None, test_start: str | None = None,
               test_give: list[str] | None = None, test_scrubs: list[str] | None = None) -> None:
-    from .modbuild import ModBuilder, TITLE_ID
+    from .modbuild import ModBuilder, TITLE_ID, emulator_root
 
     changes = chest_changes(patch)
     ground_changes, pickups = pickup_changes(patch)
@@ -136,7 +136,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
             shutil.copytree(mod_dir, dest)
             print(f"Mod copié dans {dest}")
         if install:
-            load_dir = Path(os.environ["APPDATA"]) / "eden" / "load" / TITLE_ID
+            load_dir = emulator_root() / "load" / TITLE_ID
             load_dir.mkdir(parents=True, exist_ok=True)
             test_mod = load_dir / "OoTRR-test"
             dest = load_dir / mod_name

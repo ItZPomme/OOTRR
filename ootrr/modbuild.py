@@ -6,6 +6,7 @@ Les fichiers du jeu d'origine ne sont jamais modifiés.
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -677,8 +678,20 @@ class ModBuilder:
         return report
 
 
+def emulator_root() -> Path:
+    r"""Dossier de données de l'émulateur : $OOTRR_EMU_DIR, sinon %APPDATA%\fritchii (Fritchii récent)
+    s'il existe, sinon %APPDATA%\eden (Eden et anciennes versions de Fritchii)."""
+    if os.environ.get("OOTRR_EMU_DIR"):
+        return Path(os.environ["OOTRR_EMU_DIR"])
+    appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+    for name in ("fritchii", "eden"):
+        if (appdata / name / "load").is_dir():
+            return appdata / name
+    return appdata / "eden"
+
+
 def install(mod_dir: Path, eden_root: Path, name: str) -> Path:
-    """Copie le mod dans le dossier de mods d'Eden (load/<TitleID>/<nom>)."""
+    """Copie le mod dans le dossier de mods de l'émulateur (load/<TitleID>/<nom>)."""
     target = eden_root / "load" / TITLE_ID / name
     try:
         if target.exists():

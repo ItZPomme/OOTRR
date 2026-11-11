@@ -8,7 +8,7 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 
 - Moteur de *Tears of the Kingdom* : cartes BYML, scripts BFEVFL, modules de logique AINB,
   tables RSDB, sauvegarde GameData (drapeaux identifiés par MurmurHash3 de leur nom).
-- Titre : `0400486024DEC000`. Mods Eden : `%APPDATA%\eden\load\0400486024DEC000\<mod>\romfs\...`.
+- Titre : `0400486024DEC000`. Mods : `<émulateur>\load\0400486024DEC000\<mod>\romfs\...` (`%APPDATA%\fritchii` pour Fritchii récent, `%APPDATA%\eden` pour Eden).
 - Les réponses des **questions de script** valent **0 = oui, 1 = non** (ex. le script des Peste
   Mojo : « a le sac moyen ? » -> 0 = vend le grand sac). Un cas qui termine le script est **omis**
   du tableau de cas (jamais de saut vers 0xFFFF) **[jeu]**.
