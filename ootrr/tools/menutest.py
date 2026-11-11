@@ -54,7 +54,8 @@ def build_native(root_gamedata: dict) -> None:
     print("module natif compilé")
 
 
-def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None) -> list[str]:
+def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
+          give: list[str] | None = None) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
     # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
@@ -63,7 +64,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None)
     world = World(build_settings(dict(menu.STATIC_SETTINGS)))
     common = dict(start_flags=world.start_flags(), event_skips=world.event_skips(),
                   start_warp=tuple(start.split("=", 1)) if start else None,
-                  start_items=world.start_items())
+                  start_items=world.start_items() + list(give or []))
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}
     if tokens:
         # un jeton doit être un vrai acteur (le coffre lit aussi le nom ailleurs et refuse de s'ouvrir
@@ -208,12 +209,14 @@ def main(argv=None):
     p.add_argument("--install", action="store_true")
     p.add_argument("--no-tokens", action="store_true", help="coffres d'origine (pas de jetons)")
     p.add_argument("--test-start", metavar="BANC=POINT", help="point de départ de test (ex. HyruleField_Child=HyruleField_FrontOfMarket)")
+    p.add_argument("--test-give", action="append", default=[], metavar="OBJET",
+                   help="test : objet donné au début de la partie (répétable, ex. Item_Gauntlet_Goron)")
     a = p.parse_args(argv)
     if not NATIVE.is_file():
         raise SystemExit(f"module natif absent : {NATIVE} (compiler native/exlaunch, voir native/README.md)")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start):
+        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give):
             print(line)
         (root / "exefs").mkdir()
         shutil.copy2(NATIVE, root / "exefs" / "subsdk9")
