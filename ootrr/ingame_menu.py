@@ -408,10 +408,27 @@ def menu_header(root: dict) -> str:
               f"constexpr int kBridgeCountCount = {len(counts)};",
               "inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {"] + counts + ["};", ""]
     table, skipped = start_flag_table()
-    flags = [f"    {{{names.index(s)}, {value_index(s, v)}, 0x{flag_hash(f):08x}, {str(fv).lower()}}},  // {s}={v} : {f}"
-             for s, v, f, fv in table]
-    lines += ["// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau",
-              "struct StartFlag { int32_t setting; int32_t value; uint32_t flag; bool flag_value; };",
+    structs = {e["Hash"]: {m["Hash"]: m["Value"] for m in e["DefaultValue"]} for e in root["Data"]["Struct"]}
+
+    def struct_member(name: str) -> tuple[int, int]:
+        """(structure, membre) si le drapeau est un membre de structure (ex. DungeonInfo.X.IsGetMap), sinon (0, 0)."""
+        if "." not in name:
+            return 0, 0
+        parent, member = name.rsplit(".", 1)
+        members = structs.get(flag_hash(parent), {})
+        if members.get(flag_hash(member)) == flag_hash(name):
+            return flag_hash(parent), flag_hash(member)
+        return 0, 0
+
+    flags = []
+    for s, v, f, fv in table:
+        st, mb = struct_member(f)
+        flags.append(f"    {{{names.index(s)}, {value_index(s, v)}, 0x{flag_hash(f):08x}, 0x{st:08x}, 0x{mb:08x}, "
+                     f"{str(fv).lower()}}},  // {s}={v} : {f}")
+    lines += ["// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau ;",
+              "// membre de structure (structure != 0) : écrit via la poignée de la structure",
+              "struct StartFlag { int32_t setting; int32_t value; uint32_t flag; uint32_t structure; uint32_t member;",
+              "                   bool flag_value; };",
               f"constexpr int kStartFlagCount = {len(flags)};",
               "inline constexpr StartFlag kStartFlags[kStartFlagCount] = {"] + flags + ["};"]
     lines += [f"// non gérés (pas des booléens) : {s}" for s in skipped]

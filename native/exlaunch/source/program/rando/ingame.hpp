@@ -13,6 +13,7 @@ constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool
 constexpr std::intptr_t kGetInt = 0x163d20;               // (gestionnaire, s32* valeur, hachage) -> bool
 constexpr std::intptr_t kSetIntNode = 0xc25ce0;           // nœud SeqOneShotSetNonStructGameDataInt (nœud, hachage)
 constexpr std::intptr_t kSetBoolNode = 0x682b00;          // nœud SeqOneShotSetNonStructGameDataBool (nœud, hachage)
+constexpr std::intptr_t kSetStructBool = 0x608a10;        // (gestionnaire, valeur, poignée*, hachage du membre)
 
 // résultat de la lecture des réglages du menu (pour le journal)
 struct MenuRead {

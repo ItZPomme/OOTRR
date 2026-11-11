@@ -43,35 +43,37 @@ inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {
     {5, 10},  // hearts
 };
 
-// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau
-struct StartFlag { int32_t setting; int32_t value; uint32_t flag; bool flag_value; };
+// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau ;
+// membre de structure (structure != 0) : écrit via la poignée de la structure
+struct StartFlag { int32_t setting; int32_t value; uint32_t flag; uint32_t structure; uint32_t member;
+                   bool flag_value; };
 constexpr int kStartFlagCount = 25;
 inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
-    {2, 1, 0xe5dc5674, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
-    {2, 2, 0xe5dc5674, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
-    {2, 2, 0x502f6cea, false},  // open_forest=open : KokiriForest_Npc_Kokiri_Mido_Child_Blocker
-    {3, 1, 0x727c2cbd, true},  // open_door_of_time=True : Market_Child_TimeTempleDoor_Opened
-    {3, 1, 0xb81f590c, true},  // open_door_of_time=True : HavePlayedEvent.Dm_TimeTemple_0010
-    {5, 1, 0x89787395, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetMap
-    {5, 1, 0x06c51ff2, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetCompass
-    {5, 1, 0xa52c3a19, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetMap
-    {5, 1, 0x8b93edf9, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetCompass
-    {5, 1, 0xfcadd210, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetMap
-    {5, 1, 0x9a2218db, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetCompass
-    {5, 1, 0xe704f9b4, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetMap
-    {5, 1, 0xf240eeb2, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetCompass
-    {5, 1, 0x5b3ac0ba, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetMap
-    {5, 1, 0x0aa068b6, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetCompass
-    {5, 1, 0x4a4402ab, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetMap
-    {5, 1, 0x2e82c8fe, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetCompass
-    {5, 1, 0xf6177b93, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetMap
-    {5, 1, 0x1e2feec5, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetCompass
-    {5, 1, 0xb85002ba, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetMap
-    {5, 1, 0x9bd1181c, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetCompass
-    {5, 1, 0x77c47ec9, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetMap
-    {5, 1, 0x9d6efaac, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
-    {5, 1, 0x322f2a94, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
-    {5, 1, 0xea1846e6, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
+    {2, 1, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
+    {2, 2, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
+    {2, 2, 0x502f6cea, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_Mido_Child_Blocker
+    {3, 1, 0x727c2cbd, 0x00000000, 0x00000000, true},  // open_door_of_time=True : Market_Child_TimeTempleDoor_Opened
+    {3, 1, 0xb81f590c, 0x2b05cbb9, 0x82f1829f, true},  // open_door_of_time=True : HavePlayedEvent.Dm_TimeTemple_0010
+    {5, 1, 0x89787395, 0x64e53a1f, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetMap
+    {5, 1, 0x06c51ff2, 0x64e53a1f, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetCompass
+    {5, 1, 0xa52c3a19, 0x2bf2a024, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetMap
+    {5, 1, 0x8b93edf9, 0x2bf2a024, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetCompass
+    {5, 1, 0xfcadd210, 0x88da0fed, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetMap
+    {5, 1, 0x9a2218db, 0x88da0fed, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetCompass
+    {5, 1, 0xe704f9b4, 0x5b8d137d, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetMap
+    {5, 1, 0xf240eeb2, 0x5b8d137d, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetCompass
+    {5, 1, 0x5b3ac0ba, 0x33ec10b0, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetMap
+    {5, 1, 0x0aa068b6, 0x33ec10b0, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetCompass
+    {5, 1, 0x4a4402ab, 0x130436fc, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetMap
+    {5, 1, 0x2e82c8fe, 0x130436fc, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetCompass
+    {5, 1, 0xf6177b93, 0xf4484a0a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetMap
+    {5, 1, 0x1e2feec5, 0xf4484a0a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetCompass
+    {5, 1, 0xb85002ba, 0x9dc70937, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetMap
+    {5, 1, 0x9bd1181c, 0x9dc70937, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetCompass
+    {5, 1, 0x77c47ec9, 0x8308d4be, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetMap
+    {5, 1, 0x9d6efaac, 0x8308d4be, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
+    {5, 1, 0x322f2a94, 0x3876f97a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
+    {5, 1, 0xea1846e6, 0x3876f97a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
 };
 // non gérés (pas des booléens) : open_door_of_time=True: #931730378=Step06
 
