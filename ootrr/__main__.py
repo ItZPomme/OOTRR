@@ -128,7 +128,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,
                                 start_warp=tuple(test_start.split("=", 1)) if test_start else None,
                                 scrub_sales=scrub_sales or None,
-                                questions=patch.get("ingame_questions") or None)
+                                questions=patch.get("ingame_questions") or None,
+                                rsdb_changes=patch.get("rsdb_changes") or None)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():

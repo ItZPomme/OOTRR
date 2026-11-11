@@ -71,6 +71,16 @@ MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
 EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
                  "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0155")
 SARIA_GIFT = "LW Gift from Saria"
+# lieux dont la première découverte est faite par la scène d'arrivée (RSDB Location,
+# IsShowLocationUIFirstTimeInDemo = vrai) ; relevé dans la version 2.0.0
+LOCATIONS_SHOWN_IN_DEMO = (
+    "BottomOfTheWell", "DeathMountainCrater", "DeathMountainTrail", "DesertColossus", "DodongoCavern",
+    "DreamWorld", "FireTemple", "ForestTemple", "GanonCastle", "GerudoFortress", "GerudoTrainingGround",
+    "GerudoValley", "GoronCity", "Graveyard", "HyruleCastle", "HyruleField", "IceCavern", "IngoRanch",
+    "InsideJabuJabuBelly", "InsideTheDekuTree", "KakarikoVillage", "KokiriForest", "LakeHylia",
+    "LonLonRanch", "Market", "SacredForestMeadow", "ShadowTemple", "SpiritTemple", "TimeTemple",
+    "WaterTemple", "ZoraDomain", "ZoraFountain", "ZoraRiver",
+)
 # skip_cutscenes=safe : drapeaux « déjà fait » pour des interruptions sans objet
 SKIP_FLAGS = (
     # la Kokiri sur le toit de la boutique qui appelle Link au premier passage
@@ -543,6 +553,19 @@ class World:
     def start_items(self, placements: dict[str, str] | None = None) -> list[str]:
         """Objets ajoutés à l'inventaire dès la nouvelle partie (action insérée dans l'intro)."""
         return [(placements or {}).get(name, self.locations[name].vanilla) for name in self._start_location_names()]
+
+    def rsdb_changes(self, romfs_locations: list[str] | None = None) -> dict[str, dict[str, dict]]:
+        """Lignes des tables RSDB à modifier : {table: {__RowId: {champ: valeur}}}.
+
+        skip_cutscenes=safe : la première découverte d'un lieu (nom, carte et mini-carte) est faite
+        par sa scène d'arrivée (EventTriggerOpenLocationUI) quand IsShowLocationUIFirstTimeInDemo est
+        vrai ; la scène étant marquée vue, le lieu resterait « ??? ». Champ mis à faux : le jeu le
+        découvre à la première entrée (validé en jeu : sans ce champ, carte de l'Arbre Mojo absente)."""
+        if self.settings.get("skip_cutscenes") != "safe":
+            return {}
+        rows = romfs_locations if romfs_locations is not None else LOCATIONS_SHOWN_IN_DEMO
+        return {"Location": {f"Work/Location/{name}.game__location__Location.gyml":
+                             {"IsShowLocationUIFirstTimeInDemo": False} for name in rows}}
 
     def event_skips(self) -> dict[str, list[str]]:
         """Étapes d'événements à sauter : scènes jouées sans condition (ex. l'introduction), et

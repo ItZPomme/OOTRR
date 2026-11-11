@@ -75,7 +75,8 @@ def build(romfs: Path, out: Path, tokens: bool = True) -> list[str]:
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None
-    report += mb.build(actor_changes, out, pickups=tokens_actors, **common)
+    report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
+                       **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
