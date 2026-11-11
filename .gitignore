@@ -30,3 +30,6 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Programmes de test compilés pour le PC
+native/host/*.exe
