@@ -19,10 +19,12 @@ using GetEnumFn = bool (*)(void* manager, uint32_t* value, Handle* handle, uint3
 using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, uint32_t member_hash);
 using GetIntFn = bool (*)(void* manager, int32_t* value, uint32_t hash);
 using SetIntNodeFn = void (*)(void* node, uint32_t hash);
+using SetBoolNodeFn = void (*)(void* node, uint32_t hash);
 
 void* Manager(std::uintptr_t main_base) { return **reinterpret_cast<void***>(main_base + kGameDataManagerPtr); }
 
 SeedResult g_result;
+Settings g_settings;
 bool g_ready = false;
 uint32_t g_seed = 0;
 
@@ -59,9 +61,13 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
                 }
         }
     }
+    for (const menu::FixedSetting& f : menu::kFixedSettings) settings.values[f.setting] = f.value;
+    for (const menu::BridgeCount& b : menu::kBridgeCounts)
+        if (settings.values[menu::kBridgeSetting] == b.bridge) settings.values[menu::kBridgeCountSetting] = b.count;
     r.count = logic::kSettingCount < 16 ? logic::kSettingCount : 16;
     for (int i = 0; i < r.count; i++) r.values[i] = settings.values[i];
     g_seed = seed;
+    g_settings = settings;
     g_ready = Generate(settings, seed, g_result);
     return g_ready;
 }
@@ -80,6 +86,22 @@ void WriteSavedSeed(std::uintptr_t main_base, int32_t seed) {
     value = seed;
     *reinterpret_cast<int32_t**>(node + 0x40) = &value;
     reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, menu::kSeedHash);
+}
+
+int ApplyStartFlags(std::uintptr_t main_base) {
+    auto set_bool = reinterpret_cast<SetBoolNodeFn>(main_base + kSetBoolNode);
+    int count = 0;
+    for (const menu::StartFlag& f : menu::kStartFlags) {
+        if (g_settings.values[f.setting] != f.value) continue;
+        // la fonction du nœud lit la valeur via un pointeur en nœud + 0x40
+        alignas(16) uint8_t node[0x50] = {};
+        static uint8_t value;
+        value = f.flag_value ? 1 : 0;
+        *reinterpret_cast<uint8_t**>(node + 0x40) = &value;
+        set_bool(node, f.flag);
+        count++;
+    }
+    return count;
 }
 
 bool Ready() { return g_ready; }

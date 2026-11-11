@@ -60,7 +60,7 @@ def build(romfs: Path, out: Path, tokens: bool = True) -> list[str]:
     # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
     from ..settings import build as build_settings
     from ..world import World
-    world = World(build_settings({"skip_cutscenes": "safe"}))
+    world = World(build_settings(dict(menu.STATIC_SETTINGS)))
     common = dict(start_flags=world.start_flags(), event_skips=world.event_skips(),
                   start_items=world.start_items())
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}

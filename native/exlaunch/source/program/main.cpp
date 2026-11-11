@@ -122,6 +122,7 @@ void GenerateSeed() {
     if (ok) {
         ootrr::ingame::WriteSavedSeed(Main(), static_cast<s32>(seed));
         g_trust_memory = true;
+        LogValue("OoTRR: drapeaux de depart poses", static_cast<u64>(ootrr::ingame::ApplyStartFlags(Main())));
     }
 }
 

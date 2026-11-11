@@ -12,6 +12,7 @@ constexpr std::intptr_t kGetStructEnum = 0x404760;        // (gestionnaire, u32*
 constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool* valeur, poignée*, hachage du membre) -> bool
 constexpr std::intptr_t kGetInt = 0x163d20;               // (gestionnaire, s32* valeur, hachage) -> bool
 constexpr std::intptr_t kSetIntNode = 0xc25ce0;           // nœud SeqOneShotSetNonStructGameDataInt (nœud, hachage)
+constexpr std::intptr_t kSetBoolNode = 0x682b00;          // nœud SeqOneShotSetNonStructGameDataBool (nœud, hachage)
 
 // résultat de la lecture des réglages du menu (pour le journal)
 struct MenuRead {
@@ -27,6 +28,9 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read = 
 // seed enregistrée dans la partie (GameData OoTRR.Seed) ; 0 = aucune
 int32_t ReadSavedSeed(std::uintptr_t main_base);
 void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
+
+// drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre
+int ApplyStartFlags(std::uintptr_t main_base);
 
 bool Ready();
 uint32_t CurrentSeed();

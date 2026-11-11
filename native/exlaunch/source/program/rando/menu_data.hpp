@@ -13,7 +13,7 @@ constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 // structure cherchent le membre par ce hachage dans la table de la poignée
 struct MenuSetting { int32_t setting; uint32_t member; bool is_bool; int32_t count;
                      uint32_t game_values[8]; int32_t setting_values[8]; };
-constexpr int kMenuSettingCount = 10;
+constexpr int kMenuSettingCount = 9;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
@@ -23,8 +23,56 @@ inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {8, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
     {6, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
     {5, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode
-    {7, 0x02b4d56e, false, 2, {0xa3db7114, 0xdb209aaf}, {0, 1}},  // skip_cutscenes <- OcarinaKeyAssign
     {11, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
 };
+
+struct FixedSetting { int32_t setting; int32_t value; };
+constexpr int kFixedSettingCount = 1;
+inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {
+    {7, 1},  // skip_cutscenes = safe
+};
+
+constexpr int32_t kBridgeSetting = 0;
+constexpr int32_t kBridgeCountSetting = 1;
+struct BridgeCount { int32_t bridge; int32_t count; };
+constexpr int kBridgeCountCount = 4;
+inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {
+    {2, 3},  // stones
+    {3, 6},  // medallions
+    {4, 9},  // dungeons
+    {5, 10},  // hearts
+};
+
+// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau
+struct StartFlag { int32_t setting; int32_t value; uint32_t flag; bool flag_value; };
+constexpr int kStartFlagCount = 25;
+inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
+    {2, 1, 0xe5dc5674, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
+    {2, 2, 0xe5dc5674, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
+    {2, 2, 0x502f6cea, false},  // open_forest=open : KokiriForest_Npc_Kokiri_Mido_Child_Blocker
+    {3, 1, 0x727c2cbd, true},  // open_door_of_time=True : Market_Child_TimeTempleDoor_Opened
+    {3, 1, 0xb81f590c, true},  // open_door_of_time=True : HavePlayedEvent.Dm_TimeTemple_0010
+    {5, 1, 0x89787395, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetMap
+    {5, 1, 0x06c51ff2, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetCompass
+    {5, 1, 0xa52c3a19, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetMap
+    {5, 1, 0x8b93edf9, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetCompass
+    {5, 1, 0xfcadd210, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetMap
+    {5, 1, 0x9a2218db, true},  // maps_compasses=start_with : DungeonInfo.InsideJabuJabuBelly.IsGetCompass
+    {5, 1, 0xe704f9b4, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetMap
+    {5, 1, 0xf240eeb2, true},  // maps_compasses=start_with : DungeonInfo.ForestTemple.IsGetCompass
+    {5, 1, 0x5b3ac0ba, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetMap
+    {5, 1, 0x0aa068b6, true},  // maps_compasses=start_with : DungeonInfo.FireTemple.IsGetCompass
+    {5, 1, 0x4a4402ab, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetMap
+    {5, 1, 0x2e82c8fe, true},  // maps_compasses=start_with : DungeonInfo.WaterTemple.IsGetCompass
+    {5, 1, 0xf6177b93, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetMap
+    {5, 1, 0x1e2feec5, true},  // maps_compasses=start_with : DungeonInfo.ShadowTemple.IsGetCompass
+    {5, 1, 0xb85002ba, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetMap
+    {5, 1, 0x9bd1181c, true},  // maps_compasses=start_with : DungeonInfo.SpiritTemple.IsGetCompass
+    {5, 1, 0x77c47ec9, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetMap
+    {5, 1, 0x9d6efaac, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
+    {5, 1, 0x322f2a94, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
+    {5, 1, 0xea1846e6, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
+};
+// non gérés (pas des booléens) : open_door_of_time=True: #931730378=Step06
 
 }  // namespace ootrr::menu

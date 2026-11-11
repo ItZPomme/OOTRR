@@ -57,9 +57,16 @@ ROWS: list[tuple[str, str, list[str] | None]] = [
     ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
     ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
     (SEPARATOR, "", None),
-    ("skip_cutscenes", "OcarinaKeyAssign", ["none", "safe"]),
     ("logic_lens_required", "IsChangeJumpButton", None),
 ]
+# réglages fixés pour la partie générée dans le jeu (pas de ligne dans le menu)
+FIXED_SETTINGS = {"skip_cutscenes": "safe"}
+# nombre requis pour le pont selon sa condition (le menu n'a pas de ligne pour bridge_count ;
+# settings.build refuse un nombre au-delà du maximum de la condition)
+BRIDGE_COUNTS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 10}
+# base des fichiers du mod du menu : scènes passées, et Kokiri bloqueurs présents selon leur drapeau
+# (comme open_forest = ask) pour que la forêt s'ouvre en jeu selon le réglage
+STATIC_SETTINGS = {"skip_cutscenes": "safe", "open_forest": "ask"}
 SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR]
 SEPARATOR_BUTTON = flag_hash("Separator")
 
@@ -252,6 +259,30 @@ def menu_layout(buil: bytes) -> bytes:
     return bytes(data)
 
 
+def start_flag_table() -> tuple[list[tuple[str, object, str, bool]], list[str]]:
+    """Drapeaux à poser au début de la partie selon les réglages du menu : différence entre les
+    drapeaux de départ de chaque valeur et ceux de la base (STATIC_SETTINGS). Renvoie
+    ([(réglage, valeur, drapeau, valeur du drapeau)], [drapeaux non booléens ignorés])."""
+    from .settings import build
+    from .world import World
+
+    base = World(build(dict(STATIC_SETTINGS))).start_flags()
+    table, skipped = [], []
+    for setting, _option_type, values in SETTING_ROWS:
+        for value in (values if values is not None else [False, True]):
+            if setting == "bridge":
+                continue  # pas de drapeau de départ
+            flags = World(build({**STATIC_SETTINGS, setting: value})).start_flags()
+            for name, flag_value in flags.items():
+                if base.get(name) == flag_value:
+                    continue
+                if not isinstance(flag_value, bool) or name.startswith("#"):
+                    skipped.append(f"{setting}={value}: {name}={flag_value}")
+                    continue
+                table.append((setting, value, name, flag_value))
+    return table, skipped
+
+
 def title_sequence(raw: bytes) -> bytes:
     """NormalTitle : Nouvelle partie -> nouveau nœud Option.module -> ConfirmationNewGame -> partie,
     et le drapeau MENU_FLAG (vrai avant notre menu, faux avant l'écran Options et au début de la partie).
@@ -317,7 +348,10 @@ def title_sequence(raw: bytes) -> bytes:
     prepare_new_game.child_plugs.append(child(set_flag(True)))
     to_option[0].child_plugs.append(child(set_flag(False)))
     start.child_plugs.insert(0, child(set_flag(False)))
-    start.child_plugs.insert(1, child(set_flag(True, GENERATE_FLAG)))
+    # génération juste avant Opening.module : après la remise à zéro des données de la partie
+    # (SeqExecuteResetGameData), sinon les drapeaux posés au départ seraient effacés
+    opening = next(i for i, p in enumerate(start.child_plugs) if nodes[p.node_index].name == "Opening.module")
+    start.child_plugs.insert(opening, child(set_flag(True, GENERATE_FLAG)))
     return script.to_binary()
 
 
@@ -354,6 +388,32 @@ def menu_header(root: dict) -> str:
         ours = ", ".join(str(allowed.index(v)) for v in values)
         rows.append(f"    {{{sid}, {m}, false, {len(values)}, {{{game}}}, {{{ours}}}}},  // {setting} <- {option_type}")
     lines += [f"constexpr int kMenuSettingCount = {len(rows)};",
-              "inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {"] + rows + ["};", "",
-              "}  // namespace ootrr::menu", ""]
+              "inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {"] + rows + ["};", ""]
+
+    def value_index(setting, value):
+        allowed = SETTINGS[setting][1]
+        if allowed is bool:
+            return int(bool(value))
+        return allowed.index(value) if isinstance(allowed, tuple) else int(value)
+
+    fixed = [f"    {{{names.index(k)}, {value_index(k, v)}}},  // {k} = {v}" for k, v in FIXED_SETTINGS.items()]
+    lines += ["struct FixedSetting { int32_t setting; int32_t value; };",
+              f"constexpr int kFixedSettingCount = {len(fixed)};",
+              "inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {"] + fixed + ["};", ""]
+    bridge = SETTINGS["bridge"][1]
+    counts = [f"    {{{bridge.index(k)}, {v}}},  // {k}" for k, v in BRIDGE_COUNTS.items()]
+    lines += [f"constexpr int32_t kBridgeSetting = {names.index('bridge')};",
+              f"constexpr int32_t kBridgeCountSetting = {names.index('bridge_count')};",
+              "struct BridgeCount { int32_t bridge; int32_t count; };",
+              f"constexpr int kBridgeCountCount = {len(counts)};",
+              "inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {"] + counts + ["};", ""]
+    table, skipped = start_flag_table()
+    flags = [f"    {{{names.index(s)}, {value_index(s, v)}, 0x{flag_hash(f):08x}, {str(fv).lower()}}},  // {s}={v} : {f}"
+             for s, v, f, fv in table]
+    lines += ["// drapeaux posés au début de la partie : si réglage == valeur, drapeau = valeur du drapeau",
+              "struct StartFlag { int32_t setting; int32_t value; uint32_t flag; bool flag_value; };",
+              f"constexpr int kStartFlagCount = {len(flags)};",
+              "inline constexpr StartFlag kStartFlags[kStartFlagCount] = {"] + flags + ["};"]
+    lines += [f"// non gérés (pas des booléens) : {s}" for s in skipped]
+    lines += ["", "}  // namespace ootrr::menu", ""]
     return "\n".join(lines)
