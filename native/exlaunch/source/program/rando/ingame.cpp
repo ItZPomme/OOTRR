@@ -20,7 +20,15 @@ using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, uint32_t 
 using GetIntFn = bool (*)(void* manager, int32_t* value, uint32_t hash);
 using SetIntNodeFn = void (*)(void* node, uint32_t hash);
 using SetBoolNodeFn = void (*)(void* node, uint32_t hash);
-using PouchAddFn = void (*)(void* pouch, const char** name, uint64_t count, uint32_t type);
+// nom passé comme une chaîne du jeu : { char* texte ; s32 capacité }
+struct GameString {
+    const char* text;
+    int32_t capacity;
+    int32_t pad;
+};
+using PouchAddFn = uint64_t (*)(void* manager, GameString* name, int32_t variant, int32_t count, uint32_t reason,
+                                int32_t a5, int32_t a6, bool is_get_event, uint8_t a8);
+using PouchNotifyFn = void (*)(void* ui, GameString* name, bool added, uint32_t reason);
 using SetStructBoolFn = void (*)(void* manager, bool value, Handle* handle, uint32_t member_hash);
 
 void* Manager(std::uintptr_t main_base) { return **reinterpret_cast<void***>(main_base + kGameDataManagerPtr); }
@@ -119,9 +127,11 @@ int ApplyStartFlags(std::uintptr_t main_base) {
 }
 
 int GiveStartItems(std::uintptr_t main_base) {
-    void* pouch = *reinterpret_cast<void**>(main_base + kPouchPtr);
-    if (!pouch) return -1;
+    void* manager = **reinterpret_cast<void***>(main_base + kPouchManagerPtr);
+    if (!manager) return -1;
+    void* ui = *reinterpret_cast<void**>(main_base + kPouchNotifyPtr);
     auto add = reinterpret_cast<PouchAddFn>(main_base + kPouchAdd);
+    auto notify = reinterpret_cast<PouchNotifyFn>(main_base + kPouchNotify);
     // mêmes lieux que World._start_location_names (Porte du Temps ouverte ou Zelda enfant passée)
     const int32_t* list = nullptr;
     int count = 0;
@@ -133,8 +143,14 @@ int GiveStartItems(std::uintptr_t main_base) {
         count = sizeof(logic::kSkipChildZelda) / sizeof(logic::kSkipChildZelda[0]);
     }
     for (int i = 0; i < count; i++) {
+        static char text[128];
         const char* name = ItemFor(list[i]);
-        add(pouch, &name, 1, 7);
+        int n = 0;
+        for (; name[n] && n < 127; n++) text[n] = name[n];
+        text[n] = 0;
+        GameString s{text, 128, 0};
+        uint64_t added = add(manager, &s, 0, 1, kReasonEvent, 0, 0, false, 0);
+        if (ui) notify(ui, &s, (added & 1) != 0, kReasonEvent);
     }
     return count;
 }
