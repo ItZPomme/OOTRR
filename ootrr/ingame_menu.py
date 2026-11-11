@@ -193,7 +193,11 @@ def menu_layout(buil: bytes) -> bytes:
     import struct
 
     data = bytearray(buil)
-    pool = data.index(b"RootPane\0")
+    # les fiches numérotent les noms depuis le début de la réserve, qui commence par le nom de la mise
+    # en page (« SystemOption_00 »), juste avant « RootPane » (vérifié en jeu : un cran de décalage
+    # cache le bouton à choix modèle au lieu de l'amiibo)
+    root = data.index(b"RootPane\0")
+    pool = data.rindex(b"\0", 0, root - 1) + 1
     names = []
     off = pool
     while data[off] and len(names) < 64:

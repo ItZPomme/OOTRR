@@ -103,7 +103,9 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   ne sont pas touchées (vérifié en jeu).
 - Mise en page : `0x43a0e0` (nom de la mise en page en x4, 11 arguments) : `SystemOption_00` ->
   `OoTRRMenu_00`, copie où le modèle amiibo est invisible (bit 0 des drapeaux d'un élément .buil =
-  visible, vérifié en jeu). Un modèle sans ligne correspondante reste affiché à sa place dans la page.
+  visible, vérifié en jeu ; les fiches numérotent les noms depuis le début de la réserve de chaînes,
+  qui commence par le nom de la page, avant `RootPane`). Un modèle sans ligne correspondante reste
+  affiché à sa place : on cache l'amiibo, et la table contient deux séparateurs (le modèle sert).
 - Reste : utiliser les choix (au début de la partie) et générer la seed dans le jeu.
 
 ## Ghidra
