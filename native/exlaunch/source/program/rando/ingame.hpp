@@ -58,6 +58,9 @@ int ReadStructBool(std::uintptr_t main_base, uint32_t structure, uint32_t member
 // n'est prête, l'objet d'origine
 const char* ItemFor(int location);
 const char* VanillaItem(int location);
+// récompenses mélangées : objet à donner à la place de la récompense d'origine `name` (donnée par
+// la scène d'un boss, ou au départ pour la poche de Link) ; nullptr si rien ne change
+const char* RewardFor(const char* name);
 bool IsDropEvent(int location);
 bool IsConditional(int location);
 int LocationCount();

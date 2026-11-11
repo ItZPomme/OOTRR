@@ -194,6 +194,25 @@ int LocationCount() { return logic::kLocationCount; }
 
 const char* VanillaItem(int location) { return logic::kItems[logic::kLocations[location].vanilla].name; }
 
+namespace {
+bool SameText(const char* a, const char* b) {
+    while (*a && *a == *b) { a++; b++; }
+    return *a == *b;
+}
+}  // namespace
+
+const char* RewardFor(const char* name) {
+    if (!g_ready || !name || g_settings.values[logic::SET_shuffle_rewards] != logic::kRewardsShuffled) return nullptr;
+    // chaque récompense d'origine appartient à un seul lieu (boss, ou poche de Link pour le médaillon
+    // de lumière) : le lieu est retrouvé par son objet d'origine
+    for (int i = 0; i < logic::kLocationCount; i++) {
+        if (logic::kLocations[i].kind != logic::kKindReward || !SameText(VanillaItem(i), name)) continue;
+        const char* placed = ItemFor(i);
+        return placed && !SameText(placed, name) ? placed : nullptr;
+    }
+    return nullptr;
+}
+
 const char* ItemFor(int location) {
     if (location < 0 || location >= logic::kLocationCount) return nullptr;
     if (g_ready && g_result.placement[location] >= 0) return logic::kItems[g_result.placement[location]].name;

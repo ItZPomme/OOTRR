@@ -440,6 +440,42 @@ HOOK_DEFINE_TRAMPOLINE(InitDrop) {
  * autre que Step06 / Complete. */
 int g_challenge_logs = 20;
 
+/* Ajout d'un objet à l'inventaire (0x110d570 : gestionnaire, nom, 0, nombre, raison, …). Les scènes
+ * des boss (et le don de départ de la poche de Link) donnent la récompense d'origine par une action
+ * d'événement (raison 7) : récompenses mélangées, on donne celle de la seed à la place. */
+struct PouchName {
+    const char* text;
+    s32 capacity;
+    s32 pad;
+};
+int g_pouch_logs = 12;
+
+HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
+    static u64 Callback(void* manager, PouchName* name, s32 variant, s32 count, u32 reason, s32 a5, s32 a6,
+                        bool is_get_event, u8 a8) {
+        if (g_pouch_logs > 0 && name && name->text) {
+            g_pouch_logs--;
+            Log(name->text);
+            LogValue("OoTRR: ajout a l'inventaire, raison", reason);
+        }
+        if (name && name->text && reason == ootrr::ingame::kReasonEvent) {
+            if (const char* reward = ootrr::ingame::RewardFor(name->text)) {
+                static char text[128];
+                size_t n = 0;
+                for (; reward[n] && n < sizeof(text) - 1; n++) text[n] = reward[n];
+                text[n] = 0;
+                static PouchName replaced;
+                replaced = {text, static_cast<s32>(sizeof(text)), 0};
+                Log(name->text);
+                Log(text);
+                Log("OoTRR: recompense remplacee (avant / apres)");
+                return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
+            }
+        }
+        return Orig(manager, name, variant, count, reason, a5, a6, is_get_event, a8);
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(SetChallengeStep) {
     static u64 Callback(void* manager, u32 challenge, u32 step, u64 a3, u64 a4, u64 a5) {
         if (g_challenge_logs > 0) {
@@ -472,6 +508,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     GetStructHandle::InstallAtOffset(kGetStructHandle);
     LoadLayout::InstallAtOffset(kLoadLayout);
     SetChallengeStep::InstallAtOffset(0x2cf54a0);
+    PouchAdd::InstallAtOffset(ootrr::ingame::kPouchAdd);
     InitDrop::InstallAtOffset(kInitDrop);
     Log("OoTRR: module natif charge, crochets du menu installes");
 }
