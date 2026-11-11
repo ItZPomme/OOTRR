@@ -67,9 +67,11 @@ MOAT_CHEST = 0x007A7253_0000_0002        # nouvel acteur (hash libre dans la car
 MOAT_LAND_POS = [-2.5, 150.4, 55.5]      # sol, sortie du pont-levis, à côté du point d'arrivée StartPos_DoorOfTime (-0.08, 150.4, 54.2)
 MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
 # skip_cutscenes=safe : scènes de Kaepora Gaebora mises de côté par le tri automatique (elles posent
-# des drapeaux) mais sans objet, et la scène de Saria au pont (l'Ocarina des fées est donnée au départ)
+# des drapeaux) mais sans objet, la scène de Saria au pont (l'Ocarina des fées est donnée au départ)
+# et la découverte de la forêt à la sortie de la maison (Dm_Kokiri_0045 : caméra, nom du lieu ;
+# écartée par le tri car elle replace Link devant sa porte)
 EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
-                 "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0155")
+                 "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0155", "Dm_Kokiri_0045")
 SARIA_GIFT = "LW Gift from Saria"
 # lieux dont la première découverte est faite par la scène d'arrivée (RSDB Location,
 # IsShowLocationUIFirstTimeInDemo = vrai) ; relevé dans la version 2.0.0
@@ -83,6 +85,12 @@ LOCATIONS_SHOWN_IN_DEMO = (
 )
 # skip_cutscenes=safe : drapeaux « déjà fait » pour des interruptions sans objet
 SKIP_FLAGS = (
+    # forêt Kokiri déjà découverte : pas de carte « Forêt Kokiri » à la sortie de la maison (sa scène
+    # Dm_Kokiri_0045 est passée, le jeu montrerait la carte à la première entrée)
+    "IsVisitLocation.KokiriForest",
+    # porte de la maison de Link ouverte dès le départ : sinon elle joue Dm_Kokiri_0045 en s'ouvrant
+    # (OpenEventName de l'acteur, sans tenir compte du drapeau « déjà vue ») ; la scène pose ce drapeau
+    "KokiriForest_LinkHouseDoor_Open",
     # la Kokiri sur le toit de la boutique qui appelle Link au premier passage
     "KokiriForest_Kokiri_011_StopInFrontOfShop_00",
     "HaveTalked_Special.Npc_Kokiri_011_Child_BefoerStopInFrontOfShop_Talk_Event111",
@@ -586,10 +594,15 @@ class World:
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}
+
         if self.settings.get("open_door_of_time"):
             presence = {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False, "IsNegation": False}
             out[OCARINA_OF_TIME_ACTOR] = {"Presence": presence}
         return out
+
+    def pack_changes(self, romfs: Path | None = None, codec=None) -> dict[str, dict[str, dict]]:
+        """Paramètres modifiés dans des archives d'acteurs : {acteur: {fichier: {clé: valeur}}}."""
+        return {}
 
     def extra_pickups(self) -> dict[str, str]:
         return {}

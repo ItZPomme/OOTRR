@@ -162,6 +162,8 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         actor_changes.update(gate)
         for h in shops_mod.gated_board_hashes(romfs, mb.codec):
             actor_changes[h] = {"__delete": True}
+        for h in shops_mod.bombchu_keeper_hashes(romfs, mb.codec):
+            actor_changes.setdefault(h, {})["Presence"] = None  # remplacée plus bas (variantes du marchand)
         # article d'origine + copie jeton, présents selon OoTRR.Shop<rang> (posé au départ par le module)
         dual = shops_mod.dual_actor_changes(romfs, mb.codec, {h: v for h, v in shops.items() if h not in removed})
         for h, change in dual.items():
@@ -170,9 +172,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             actor_changes.setdefault(h, {}).update(change)
         report.append(f"boutiques : {len(dual)} acteurs, {len(set(t for t, _ in shops.values()))} jetons")
         # listes des marchands : tout débloqué ; une variante par nombre d'articles mélangés
-        common["pack_changes"] = shops_mod.shopkeeper_changes(romfs, mb.codec, shop_slots())
-        for h in shops_mod.bombchu_keeper_hashes(romfs, mb.codec):
-            actor_changes.setdefault(h, {})["Presence"] = None
+        common["pack_changes"] = {**world.pack_changes(), **shops_mod.shopkeeper_changes(romfs, mb.codec, shop_slots())}
         # Peste Mojo vendeuses : elles vendent leur jeton (prix unique) ; au paiement, le module natif
         # donne l'objet placé (ou l'objet d'origine si le réglage est désactivé). La Peste Mojo de la
         # plaine a sa propre vente directe (entrée « Secret »).
@@ -202,6 +202,8 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
                                          if i["ground"]} | {"Item_StickBag_Medium", "Item_StickBag_Large", "Item_NutBag_Medium"}
                                         | {t for t, _ in scrub_tokens().values()})
         common["scrub_sales"] = scrub_sales
+        from ..native_logic import scrub_price_entries
+        mb.scrub_price_entries = scrub_price_entries()  # prix choisi en jeu (réglage scrub_prices)
         report.append(f"Peste Mojo : {len(scrub_sales)} jetons vendus")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:

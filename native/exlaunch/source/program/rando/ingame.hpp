@@ -39,6 +39,10 @@ int32_t ReadSavedSeed(std::uintptr_t main_base);
 // seed manuelle du menu (ligne « Seed manuelle ») : clavier virtuel ; vrai et *seed rempli si saisie
 bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed);
 void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
+// entier GameData (non structuré) : écrit via le nœud SeqOneShotSetNonStructGameDataInt
+void WriteGameDataInt(std::uintptr_t main_base, uint32_t hash, int32_t value);
+// Peste Mojo : prix / 5 dans leur entier GameData (le script de vente choisit la vente à ce prix)
+void WriteScrubPrices(std::uintptr_t main_base);
 
 // rubis (Obj_Rupee_* / TBox_Rupee_*) : valeur en rubis, 0 si ce n'est pas un rubis
 int32_t RupeeValue(const char* item);

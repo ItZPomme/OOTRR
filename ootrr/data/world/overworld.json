@@ -21,7 +21,7 @@
 
     "Kokiri Forest": {
       "locations": {
-        "KF Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Medium", "hashes": [182031956235860994, 7488448334396031424], "scrub": true, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
+        "KF Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Medium", "hashes": [182031956235860994, 7488448334396031424], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
         "Lost Woods": "True",
@@ -43,7 +43,7 @@
         "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
         "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
         "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium"},
-        "LW Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
+        "LW Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
         "Kokiri Forest": "True",
@@ -54,7 +54,7 @@
     },
     "LW Beyond Mido": {
       "locations": {
-        "LW Deku Scrub Nut Upgrade": {"rule": "True", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
+        "LW Deku Scrub Nut Upgrade": {"rule": "True", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
         "Lost Woods": "True",
@@ -78,7 +78,7 @@
     "Hyrule Field": {
       "locations": {
         "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time"},
-        "HF Deku Scrub Heart Piece": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
+        "HF Deku Scrub Heart Piece": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
         "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and has_all_stones", "vanilla": "Item_Melody_TimeSong"},
         "HF Tektite Grotto Freestanding PoH": {"rule": "can_open_grotto and (can_use(Iron_Boots) or has_gold_scale)", "vanilla": "Obj_Heart_Piece"},
         "HF Child Freestanding PoH": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [9814903750835309225], "pickup": "freestanding", "no_progression": true, "_note": "près des ruines côté Lon Lon, carte enfant seulement ; accès exact à confirmer"}
@@ -230,7 +230,7 @@
     "DMC Lower": {
       "locations": {
         "DMC Great Fairy Reward": {"rule": "can_use(Megaton_Hammer) and great_fairy", "vanilla": "Item_FairyBless_MPDouble"},
-        "DMC Deku Scrub Heart Piece": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
+        "DMC Deku Scrub Heart Piece": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
         "Goron City": "True",

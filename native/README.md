@@ -118,13 +118,17 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
 - **Pages (validé en jeu, 2026-11-11)** : `NormalTitle` enchaîne une copie du nœud d'options par page ;
   chaque page a sa structure (`OoTRRMenu`, `OoTRRMenu2`…), sa table et son préfixe de textes
   (`OoTRR_`, `OoTRR2_`…). Le module compte les chargements de la mise en page `SystemOption_00`
-  pendant le menu pour savoir quelle page est affichée (`menu_data.hpp` : `kPage*`).
+  pendant le menu pour savoir quelle page est affichée (`menu_data.hpp` : `kPage*`). Chaque page doit
+  avoir au moins une liste, une bascule et un séparateur : un modèle de ligne sans ligne de son genre
+  reste affiché seul (constaté).
 
 ### Boutiques (validé en jeu, 2026-11-11 : boutique Kokiri, 0 / 2 / 4 articles)
 
 - Chaque article mélangeable reste dans la carte (présent si `OoTRR.Shop<rang>` est faux) avec une
   copie jeton au même endroit (présente s'il est vrai) ; le module pose ces drapeaux au départ. Le
-  marchand désigne ses articles par des liens `ForSale` et `Reference` : la copie en reçoit aussi.
+  marchand désigne ses articles par des liens `ForSale` et `Reference`, et un lien vers un acteur
+  absent bloque le curseur (constaté) : une copie du marchand par nombre n d'articles mélangés,
+  présente si `OoTRR.ShopCount<n>`, reliée aux bons articles ; le marchand d'origine sert pour 0.
 - Liste du marchand (`Component/ShopParam/…`, recherchée par `0x32ade0`) : variante `X_C<n>` choisie
   par le module selon le nombre d'articles mélangés.
 - Prix : la boutique lit `BuyingPrice` dans la ligne RSDB `PouchActorInfo` de l'acteur, pas dans
@@ -132,6 +136,10 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   (`__RowId`), +200 prix (s32). Le module note l'adresse de la ligne de chaque jeton et y écrit le prix
   des réglages dès que la seed est générée ou rechargée (écrit au chargement de la boutique : trop tard
   pour une partie des articles, constaté).
+- Peste Mojo : la vente (`SimpleShopSub_Scrub_Business_OneTime`) affiche et encaisse
+  `SimpleShop_Price` mais vérifie la bourse avec la constante du script. Le script inséré se branche
+  (`EventQueryGameDataIntBranch`, modèle `Minigame_CatchCucco`) sur l'entier `OoTRR.Price.<jeton>`
+  (prix / 5, non sauvegardé, écrit par le module) vers 20 copies de la vente (0 à 95 rubis).
 - Pièges : prix de base 0 dans la ligne RSDB, ou décalages `PriceOffset` /
   `ConditionalPriceOffsetList` ajoutés à la liste du marchand -> blocage au chargement de la forêt.
 

@@ -41,6 +41,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "start_flags": world.start_flags(),
         "event_skips": world.event_skips(),
         "rsdb_changes": world.rsdb_changes(),
+        "pack_changes": world.pack_changes(),
         "start_items": world.start_items(result.placements),
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
         "event_changes": world.reward_event_changes(result.placements),

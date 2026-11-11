@@ -42,6 +42,7 @@ def actor_path(actor: str) -> str:
 
 MAX_RANK = 4  # articles mélangeables par boutique (réglage shuffle_shops : off, 1 à 4)
 SHOP_FLAG = "OoTRR.Shop{}"  # vrai si shuffle_shops >= N : le jeton de rang N remplace l'article
+SHOP_COUNT_FLAG = "OoTRR.ShopCount{}"  # vrai si shuffle_shops == N (1 à 4) : marchand de cette variante
 
 
 def shop_flags() -> list[str]:
@@ -116,15 +117,15 @@ def dual_actor_changes(romfs: Path, codec, tokens: dict[int, tuple[str, int]]) -
     """Articles mélangeables : l'article d'origine reste, présent tant que OoTRR.Shop<rang> est faux ;
     une copie (jeton) à la même place, présente quand il est vrai. Les étiquettes de quantité liées à
     l'article (lien Reference -> Shop_Board_*) suivent l'article d'origine.
+    Le marchand désigne ses articles par des liens (ForSale, Reference) et ne supporte pas un lien vers
+    un acteur absent (curseur bloqué, constaté) : une copie du marchand par nombre n d'articles
+    mélangés (1 à 4), présente si OoTRR.ShopCount<n>, reliée aux jetons de rang <= n et aux articles
+    d'origine sinon ; le marchand d'origine n'est présent qu'avec 0 (OoTRR.Shop1 faux).
     tokens : {hash d'article: (jeton, rang)}. Renvoie les changements d'acteurs (à fusionner)."""
     changes: dict[int, dict] = {}
     for path in sorted((romfs / "Banc").rglob("*Static.bcett.byml.zs")):
         actors = read_byml(codec.decompress(path)).get("Actors", [])
-        # le marchand désigne ses articles par des liens (ForSale, Reference) : la copie en reçoit aussi
-        links_to: dict[int, list[tuple[int, dict]]] = {}
-        for npc in actors:
-            for link in npc.get("Links", []):
-                links_to.setdefault(link["Dst"], []).append((npc["Hash"], link))
+        item_clones: dict[int, tuple[int, int]] = {}  # article -> (copie jeton, rang)
         for a in actors:
             if a["Hash"] not in tokens:
                 continue
@@ -133,13 +134,29 @@ def dual_actor_changes(romfs: Path, codec, tokens: dict[int, tuple[str, int]]) -
             clone_hash = (a["Hash"] * 0x9E3779B1 + rank) & 0xFFFFFFFFFFFFFFFF
             changes[a["Hash"]] = {"Presence": presence(flag, True),
                                   "__clone": [{"Hash": clone_hash, "Gyaml": token, "Presence": presence(flag, False)}]}
-            for npc_hash, link in links_to.get(a["Hash"], []):
-                new = dict(link)
-                new["Dst"] = type(link["Dst"])(clone_hash)
-                changes.setdefault(npc_hash, {}).setdefault("__add_links", []).append(new)
+            item_clones[a["Hash"]] = (clone_hash, rank)
             for link in a.get("Links", []):
                 if link.get("Name") == "Reference":
                     changes[link["Dst"]] = {"Presence": presence(flag, True)}
+        # marchands : une copie par nombre d'articles mélangés
+        for npc in actors:
+            links = npc.get("Links", [])
+            if not any(l["Dst"] in item_clones for l in links):
+                continue
+            clones = []
+            for count in range(1, MAX_RANK + 1):
+                clone_hash = (npc["Hash"] * 0x9E3779B1 + 100 + count) & 0xFFFFFFFFFFFFFFFF
+                new_links = []
+                for l in links:
+                    l = dict(l)
+                    target = item_clones.get(l["Dst"])
+                    if target and target[1] <= count:
+                        l["Dst"] = type(l["Dst"])(target[0])
+                    l["Src"] = type(l["Src"])(clone_hash)
+                    new_links.append(l)
+                clones.append({"Hash": clone_hash, "Links": new_links,
+                               "Presence": presence(SHOP_COUNT_FLAG.format(count), False)})
+            changes[npc["Hash"]] = {"Presence": presence(SHOP_FLAG.format(1), True), "__clone": clones}
     return changes
 
 

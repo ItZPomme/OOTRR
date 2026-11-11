@@ -6,7 +6,7 @@ namespace ootrr::logic {
 
 enum Op : int32_t { T_TRUE, T_FALSE, T_IS_CHILD, T_IS_ADULT, T_HAS, T_HELPER, T_SET_BOOL, T_SET_IS, T_NOT, T_AND, T_OR, T_CMP, N_CONST, N_COUNT, N_HEARTS, N_SETTING };
 
-constexpr int kSettingCount = 17;
+constexpr int kSettingCount = 18;
 enum SettingKind : int32_t { S_BOOL, S_ENUM, S_INT };
 struct SettingInfo { const char* name; SettingKind kind; int32_t value_count; const char* const* values; int32_t def; };
 inline constexpr const char* kValues_bridge[] = {"open", "vanilla", "stones", "medallions", "dungeons", "hearts"};
@@ -15,6 +15,7 @@ inline constexpr const char* kValues_maps_compasses[] = {"vanilla", "start_with"
 inline constexpr const char* kValues_shuffle_hearts[] = {"none", "freestanding", "all"};
 inline constexpr const char* kValues_shuffle_shops[] = {"off", "1", "2", "3", "4"};
 inline constexpr const char* kValues_shop_prices[] = {"vanilla", "affordable", "random"};
+inline constexpr const char* kValues_scrub_prices[] = {"vanilla", "affordable", "random"};
 inline constexpr const char* kValues_shuffle_skulltulas[] = {"off", "overworld", "all"};
 inline constexpr const char* kValues_skip_cutscenes[] = {"none", "safe"};
 inline constexpr const char* kValues_shuffle_rewards[] = {"vanilla", "shuffled"};
@@ -30,6 +31,7 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"shuffle_scrubs", S_BOOL, 2, nullptr, 0},
     {"shuffle_shops", S_ENUM, 5, kValues_shuffle_shops, 0},
     {"shop_prices", S_ENUM, 3, kValues_shop_prices, 0},
+    {"scrub_prices", S_ENUM, 3, kValues_scrub_prices, 0},
     {"shuffle_skulltulas", S_ENUM, 3, kValues_shuffle_skulltulas, 0},
     {"skip_cutscenes", S_ENUM, 2, kValues_skip_cutscenes, 0},
     {"shuffle_rewards", S_ENUM, 2, kValues_shuffle_rewards, 0},
@@ -38,7 +40,7 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"logic_lens_required", S_BOOL, 2, nullptr, 1},
     {"accessibility", S_ENUM, 2, kValues_accessibility, 0},
 };
-enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic_lens_required, SET_accessibility };
+enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_scrub_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic_lens_required, SET_accessibility };
 
 constexpr int32_t kRoot = 14;
 constexpr int32_t kTempleOfTime = 26;
@@ -191,17 +193,17 @@ inline constexpr LocationInfo kLocations[kLocationCount] = {
     {"Bongo Bongo", 8, 2, 953, 52, 7, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"Spirit Temple Twinrova Heart", 13, 0, 955, 70, 10, true, 0, 2, false, 0, false, false, false, 0, "", 0},
     {"Twinrova", 13, 2, 957, 51, 10, false, 0, 0, false, 0, false, false, false, 0, "", 0},
-    {"KF Deku Scrub Stick Upgrade", 16, 0, 959, 65, -1, true, 0, 0, false, 0, false, true, false, 0, "", 0},
+    {"KF Deku Scrub Stick Upgrade", 16, 0, 959, 65, -1, true, 0, 0, false, 0, false, true, false, 0, "", 40},
     {"LW Gift from Saria", 17, 0, 960, 14, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"LW Skull Kid", 18, 0, 966, 69, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"LW Ocarina Memory Game", 18, 0, 977, 69, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"LW Target in Woods", 18, 0, 983, 63, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
-    {"LW Deku Scrub Stick Upgrade", 18, 0, 989, 66, -1, true, 0, 0, false, 0, false, true, false, 0, "", 0},
-    {"LW Deku Scrub Nut Upgrade", 19, 0, 990, 67, -1, true, 0, 0, false, 0, false, true, false, 0, "", 0},
+    {"LW Deku Scrub Stick Upgrade", 18, 0, 989, 66, -1, true, 0, 0, false, 0, false, true, false, 0, "", 40},
+    {"LW Deku Scrub Nut Upgrade", 19, 0, 990, 67, -1, true, 0, 0, false, 0, false, true, false, 0, "", 40},
     {"Song from Saria", 20, 1, 991, 35, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"Sheik in Forest", 20, 1, 997, 39, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"HF Ocarina of Time Item", 21, 0, 998, 15, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
-    {"HF Deku Scrub Heart Piece", 21, 0, 1003, 69, -1, true, 0, 0, false, 0, false, true, false, 0, "", 0},
+    {"HF Deku Scrub Heart Piece", 21, 0, 1003, 69, -1, true, 0, 0, false, 0, false, true, false, 0, "", 40},
     {"Song from Ocarina of Time", 21, 1, 1004, 37, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"HF Tektite Grotto Freestanding PoH", 21, 0, 1009, 69, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"HF Child Freestanding PoH", 21, 0, 1023, 69, -1, true, 0, 1, true, 0, false, false, false, 0, "", 0},
@@ -232,7 +234,7 @@ inline constexpr LocationInfo kLocations[kLocationCount] = {
     {"DMC Wall Freestanding PoH", 33, 0, 1140, 69, -1, true, 0, 1, false, 0, false, false, false, 0, "", 0},
     {"Sheik in Crater", 33, 1, 1149, 40, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"DMC Great Fairy Reward", 34, 0, 1150, 13, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
-    {"DMC Deku Scrub Heart Piece", 34, 0, 1160, 69, -1, true, 0, 0, false, 0, false, true, false, 0, "", 0},
+    {"DMC Deku Scrub Heart Piece", 34, 0, 1160, 69, -1, true, 0, 0, false, 0, false, true, false, 0, "", 40},
     {"DMC Volcano Freestanding PoH", 35, 0, 1161, 69, -1, true, 0, 1, false, 0, false, false, false, 0, "", 0},
     {"GC Darunias Joy", 36, 0, 1167, 2, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
     {"GC Rolling Goron as Child", 36, 0, 1178, 8, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0},
@@ -528,6 +530,9 @@ inline constexpr LocationInfo kLocations[kLocationCount] = {
     {"ZR GS 3", 38, 0, 3003, 68, -1, true, 0, 0, false, 0, false, false, true, 0, "", 0},
     {"ZR GS 4", 38, 0, 3012, 68, -1, true, 0, 0, false, 0, false, false, true, 0, "", 0},
 };
+struct ScrubPrice { int32_t location; uint32_t entry; };
+constexpr int kScrubPriceCount = 5;
+inline constexpr ScrubPrice kScrubPrices[kScrubPriceCount] = {{18, 0xef4c79c7}, {23, 0x97ceb012}, {24, 0xee6c0abe}, {28, 0x93b9f481}, {59, 0x437ff8b1}};
 constexpr int kHelperCount = 30;
 inline constexpr int32_t kHelpers[kHelperCount] = {0, 8, 18, 20, 28, 50, 55, 56, 59, 62, 65, 68, 79, 90, 96, 109, 123, 130, 141, 149, 165, 172, 183, 198, 206, 221, 260, 298, 328, 344};
 constexpr int kCodeSize = 3013;
@@ -536,7 +541,7 @@ inline constexpr int32_t kCode[kCodeSize] = {
     1, 4, 9, 1, 10, 2, 9, 2, 4, 19, 1, 4, 6, 1, 9, 4, 3, 4, 20, 1, 4, 4, 1, 4,
     6, 1, 10, 2, 5, 4, 2, 2, 4, 2, 1, 4, 2, 2, 4, 1, 2, 4, 1, 3, 9, 2, 9, 2,
     3, 4, 0, 1, 4, 0, 2, 9, 2, 3, 9, 2, 4, 7, 1, 4, 25, 1, 10, 2, 5, 12, 5, 11,
-    10, 2, 8, 6, 15, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9, 2, 2,
+    10, 2, 8, 6, 16, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9, 2, 2,
     4, 10, 1, 10, 2, 5, 0, 4, 1, 1, 9, 3, 4, 38, 1, 4, 39, 1, 4, 40, 1, 9, 2, 4,
     39, 1, 4, 40, 1, 10, 2, 6, 3, 9, 2, 9, 2, 4, 7, 1, 4, 28, 1, 5, 18, 10, 2, 6,
     4, 4, 23, 1, 10, 3, 7, 2, 1, 7, 2, 2, 4, 47, 1, 10, 2, 7, 2, 2, 9, 2, 9, 2,

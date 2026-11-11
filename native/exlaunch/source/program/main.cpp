@@ -786,6 +786,7 @@ void WriteTokenPrice(int location) {
 void WriteAllTokenPrices() {
     for (int location = 0; location < 1024 && location < ootrr::ingame::LocationCount(); location++)
         WriteTokenPrice(location);
+    ootrr::ingame::WriteScrubPrices(Main());
 }
 
 HOOK_DEFINE_TRAMPOLINE(ParsePouchRow) {

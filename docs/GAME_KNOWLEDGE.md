@@ -100,6 +100,12 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 
 ## Forêt Kokiri
 
+- Porte de la maison de Link (`Obj_Kokiri_Door_A_01`, seul acteur de ce type) : elle joue
+  `Dm_Kokiri_0045` (découverte de la forêt) en s'ouvrant, sans tenir compte du drapeau « déjà vue ».
+  Drapeau `KokiriForest_LinkHouseDoor_Open` vrai au départ : porte ouverte, pas de scène **[jeu]**.
+  (Retirer la porte laisse un mur invisible ; vider `OpenEventName` l'empêche de s'ouvrir.)
+- Carte de première découverte d'un lieu : `IsVisitLocation.<lieu>` vrai = déjà découvert **[jeu]**.
+
 - Bloqueurs : `Npc_Kokiri_007_Child` (sortie vers le pont), `Npc_Kokiri_Mido_Child` (Arbre Mojo),
   murs invisibles `FldObj_AirWall_Player_GenerateNavMesh` présents selon
   `KokiriForest_Npc_Kokiri_007_Child_Blocker_00` / `KokiriForest_Npc_Kokiri_Mido_Child_Blocker`

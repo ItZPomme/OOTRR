@@ -36,6 +36,9 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "shop_prices": ("vanilla", ("vanilla", "affordable", "random"),
                     "Prix des articles mélangés : vanilla = prix de l'article remplacé ; affordable = 10 rubis ; "
                     "random = 0 à 95 rubis tirés par la seed (achetables sans bourse)"),
+    "scrub_prices": ("vanilla", ("vanilla", "affordable", "random"),
+                     "Prix des Peste Mojo mélangées : vanilla = 40 rubis ; affordable = 10 rubis ; "
+                     "random = 0 à 95 rubis tirés par la seed"),
     "shuffle_skulltulas": ("off", ("off", "overworld", "all"),
                            "Skulltulas d'or : overworld = les Skulltulas hors donjons lâchent l'objet placé à la "
                            "place de leur jeton ; all = aussi celles des donjons (règles prudentes : jamais d'objet "

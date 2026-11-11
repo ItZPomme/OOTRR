@@ -358,6 +358,9 @@ class ModBuilder:
         (« l'objet à vendre est-il X ? » ; 0 = oui) qui mène à la vente unique de X à son prix."""
         from .formats.evfl import _flowchart_full, _q, _string_at, _header, EVENT_SIZE, find_query, insert_flow
         import struct as _st
+        if self.scrub_price_entries:  # question « entier GameData » (prix choisi en jeu)
+            from .formats.evfl import ensure_actor_member
+            flow = ensure_actor_member(flow, "GameDataActor", "query", "EventQueryGameDataIntBranch")
 
         reloc, _ = _header(flow)
         fc = _flowchart_full(flow)
@@ -408,27 +411,59 @@ class ModBuilder:
                       if "SimpleShopSub_Scrub_Business_OneTime" in line and "'Obj_Heart_Piece'" in line]
             if len(direct) != 1:
                 raise KeyError(f"vente du quart de cœur (entrée Secret) : {len(direct)} candidates")
-            flow, secret_report = insert_flow(flow, None, [{
-                "copy_event": set_name, "next": 1, "set": {"Value": item}}, {
-                "copy_event": direct[0], "next": None,
-                "set": {"ActorName": item, "Price": int(price),
-                        "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{item}"}}],
-                before=direct[0])
+            secret_nodes = [{"copy_event": set_name, "next": 1, "set": {"Value": item}}]
+            secret_nodes += self._scrub_sale_nodes(flow, direct[0], item, int(price), base=1)
+            flow, secret_report = insert_flow(flow, None, secret_nodes, before=direct[0])
             report += secret_report
             fc = _flowchart_full(flow)
             ask = (flow, _q(flow, fc["events"] + compare * EVENT_SIZE + 0x10))
-        nodes = []
         items = sorted(sales)
-        for k, item in enumerate(items):
+        blocks = []
+        for item in items:
             sold = self.scrub_sold.get(item, item)
-            nodes.append({"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
-                          "set": {"Value": item}, "cases": {0: 3 * k + 1, 1: 3 * k + 3 if k + 1 < len(items) else "old"}})
-            nodes.append({"copy_event": set_name, "next": 3 * k + 2, "set": {"Value": sold}})
-            nodes.append({"copy_event": sale, "next": None,
-                          "set": {"ActorName": sold, "Price": int(sales[item]),
-                                  "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{sold}"}})
+            block = [{"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
+                      "set": {"Value": item}, "cases": {}},
+                     {"copy_event": set_name, "next": 2, "set": {"Value": sold}}]
+            block += self._scrub_sale_nodes(flow, sale, sold, int(sales[item]), base=2)
+            blocks.append(block)
+        nodes = []
+        for k, block in enumerate(blocks):
+            start = len(nodes)
+            nxt = start + len(block) if k + 1 < len(blocks) else None
+            for node in block:
+                node = dict(node)
+                if "cases" in node and not node["cases"]:  # question « objet = X ? »
+                    node["cases"] = {0: start + 1, 1: nxt if nxt is not None else "old"}
+                elif "cases" in node:
+                    node["cases"] = {v: start + t for v, t in node["cases"].items()}
+                elif node.get("next") is not None:
+                    node["next"] = start + node["next"]
+                nodes.append(node)
         flow, sale_report = insert_flow(flow, None, nodes, before=compare)
         return flow, report + sale_report
+
+    # prix des Peste Mojo choisi en jeu : {jeton: entier GameData (prix / 5)} (menu natif) ; sans lui,
+    # prix fixe
+    scrub_price_entries: dict[str, str] | None = None
+    PRICE_LEVELS = 20  # 0 à 95 rubis par pas de 5
+    INT_BRANCH_TEMPLATE = "Minigame_CatchCucco"  # EventQueryGameDataIntBranch avec un nom fixe
+
+    def _scrub_sale_nodes(self, flow: bytes, sale: int, sold: str, price: int, base: int) -> list[dict]:
+        """Vente unique de `sold` (étapes relatives : la première a l'indice `base`). Prix choisi en jeu :
+        une question sur l'entier GameData du jeton, puis une vente par prix (5 x valeur)."""
+        message = f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{sold}"
+        entry = (self.scrub_price_entries or {}).get(sold)
+        if not entry:
+            return [{"copy_event": sale, "next": None, "set": {"ActorName": sold, "Price": price, "SellerMessageId": message}}]
+        from .formats.evfl import find_query
+        template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.INT_BRANCH_TEMPLATE}.bfevfl.zs")
+        branch = (template, find_query(template, "GameDataActor", "EventQueryGameDataIntBranch"))
+        nodes = [{"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch", "template": branch,
+                  "set": {"GameDataName": entry}, "cases": {v: base + 1 + v for v in range(self.PRICE_LEVELS)}}]
+        for v in range(self.PRICE_LEVELS):
+            nodes.append({"copy_event": sale, "next": None,
+                          "set": {"ActorName": sold, "Price": 5 * v, "SellerMessageId": message}})
+        return nodes
 
     def _guard_fairy_ocarina(self, flow: bytes) -> tuple[bytes, list[str]]:
         from .formats.evfl import ensure_actor_member, find_action_event, find_query, insert_flow
@@ -695,6 +730,8 @@ class ModBuilder:
                     new_actor["Phive"] = {"Placement": {"ID": U64(clone["Hash"])}}
                 new_actor["Gyaml"] = clone.get("Gyaml", source["Gyaml"])
                 new_actor.pop("Links", None)
+                if "Links" in clone:  # liens propres à la copie (ex. marchand -> articles de la variante)
+                    new_actor["Links"] = [dict(l) for l in clone["Links"]]
                 if "Translate" in clone:
                     new_actor["Translate"] = [float(v) for v in clone["Translate"]]
                 else:

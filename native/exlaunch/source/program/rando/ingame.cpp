@@ -131,13 +131,21 @@ int32_t ReadSavedSeed(std::uintptr_t main_base) {
     return value;
 }
 
-void WriteSavedSeed(std::uintptr_t main_base, int32_t seed) {
+void WriteGameDataInt(std::uintptr_t main_base, uint32_t hash, int32_t value) {
     // la fonction du nœud lit la valeur via un pointeur en nœud + 0x40 (2 bits de poids faible = étiquette)
     alignas(16) uint8_t node[0x50] = {};
-    static int32_t value;
-    value = seed;
-    *reinterpret_cast<int32_t**>(node + 0x40) = &value;
-    reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, menu::kSeedHash);
+    static int32_t stored;
+    stored = value;
+    *reinterpret_cast<int32_t**>(node + 0x40) = &stored;
+    reinterpret_cast<SetIntNodeFn>(main_base + kSetIntNode)(node, hash);
+}
+
+void WriteSavedSeed(std::uintptr_t main_base, int32_t seed) { WriteGameDataInt(main_base, menu::kSeedHash, seed); }
+
+void WriteScrubPrices(std::uintptr_t main_base) {
+    if (!g_ready) return;
+    for (const logic::ScrubPrice& s : logic::kScrubPrices)
+        WriteGameDataInt(main_base, s.entry, ShopPrice(s.location) / 5);
 }
 
 namespace {
@@ -307,7 +315,7 @@ bool KeepsToken(int location) { return logic::kLocations[location].skulltula; }
 bool IsShop(int location) { return logic::kLocations[location].shop > 0; }
 
 int32_t ShopPrice(int location) {
-    int mode = g_settings.values[logic::SET_shop_prices];
+    int mode = g_settings.values[logic::kLocations[location].scrub ? logic::SET_scrub_prices : logic::SET_shop_prices];
     if (mode == logic::kShopPricesAffordable) return 10;
     if (mode == logic::kShopPricesRandom) {
         uint64_t h = static_cast<uint64_t>(CurrentSeed()) * 0x9E3779B97F4A7C15ull +

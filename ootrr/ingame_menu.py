@@ -68,18 +68,23 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         ("skip_child_zelda", "IsUseGyro", None),
         (SEPARATOR, "", None),
         ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
-        (SEPARATOR, "", None),
-        ("logic_lens_required", "IsChangeJumpButton", None),
     ],
     [  # page 2 : ce qui est mélangé
         ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
         ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
-        ("shuffle_scrubs", "IsDisplayTextRuby", None),
         ("shuffle_skulltulas", "OcarinaSongEstimateMode", ["off", "overworld", "all"]),
         ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
+        # un modèle de ligne (liste, bascule, séparateur) reste affiché si la page n'en a aucun :
+        # chaque page a au moins une liste, une bascule et un séparateur
         (SEPARATOR, "", None),
+        ("logic_lens_required", "IsChangeJumpButton", None),
+    ],
+    [  # page 3 : boutiques et Peste Mojo
         ("shuffle_shops", "CameraRotateSpeed", ["off", "1", "2", "3", "4"]),
         ("shop_prices", "VoiceLanguage", ["vanilla", "affordable", "random"]),
+        (SEPARATOR, "", None),
+        ("shuffle_scrubs", "IsDisplayTextRuby", None),
+        ("scrub_prices", "DisplayMode", ["vanilla", "affordable", "random"]),
     ],
 ]
 # par page : structure GameData, table de lignes, préfixe des textes (le module natif cherche
@@ -120,8 +125,10 @@ TEXTS_EN = {
                         {"vanilla": "Vanilla", "shuffled": "Shuffled"}),
     "shuffle_shops": ("Shops", "Number of items per shop (8 shops, not the mask shop) that sell\nan item of the seed instead, once.",
                       {"off": "Off", "1": "1", "2": "2", "3": "3", "4": "4"}),
-    "shop_prices": ("Shop Prices", "Price of the shuffled shop items. Vanilla: price of the replaced item.\nAffordable: 10 rupees. Random: 0 to 95 rupees, chosen by the seed.",
+    "shop_prices": ("Shop Prices", "Price of the shuffled shop items. Vanilla: price of the replaced item\n(99 at most). Affordable: 10 rupees. Random: 0 to 95 rupees, chosen by the seed.",
                     {"vanilla": "Vanilla", "affordable": "Affordable", "random": "Random"}),
+    "scrub_prices": ("Deku Scrub Prices", "Price of the shuffled Deku Scrubs. Vanilla: 40 rupees.\nAffordable: 10 rupees. Random: 0 to 95 rupees, chosen by the seed.",
+                     {"vanilla": "Vanilla", "affordable": "Affordable", "random": "Random"}),
     "shuffle_skulltulas": ("Gold Skulltulas", "Off: tokens. Overworld / All: Gold Skulltulas outside dungeons (or all)\ndrop an item of the seed.",
                            {"off": "Off", "overworld": "Overworld", "all": "All"}),
     "shuffle_scrubs": ("Deku Scrubs", "The 5 Deku Scrubs selling a unique item sell an item of the seed\ninstead, once, for 40 rupees.", {}),
@@ -147,8 +154,10 @@ TEXTS_FR = {
                         {"vanilla": "Original", "shuffled": "Mélangées"}),
     "shuffle_shops": ("Boutiques", "Nombre d'articles par boutique (8 boutiques, sans les masques) qui vendent\nun objet de la seed à la place, une seule fois.",
                       {"off": "Désactivé", "1": "1", "2": "2", "3": "3", "4": "4"}),
-    "shop_prices": ("Prix des boutiques", "Prix des articles mélangés. Origine : prix de l'article remplacé.\nAbordable : 10 rubis. Aléatoire : 0 à 95 rubis, tirés par la seed.",
+    "shop_prices": ("Prix des boutiques", "Prix des articles mélangés. Origine : prix de l'article remplacé\n(99 au plus). Abordable : 10 rubis. Aléatoire : 0 à 95 rubis, tirés par la seed.",
                     {"vanilla": "Origine", "affordable": "Abordable", "random": "Aléatoire"}),
+    "scrub_prices": ("Prix des Peste Mojo", "Prix des Peste Mojo mélangées. Origine : 40 rubis.\nAbordable : 10 rubis. Aléatoire : 0 à 95 rubis, tirés par la seed.",
+                     {"vanilla": "Origine", "affordable": "Abordable", "random": "Aléatoire"}),
     "shuffle_skulltulas": ("Skulltulas d'or", "Désactivé : jetons. Extérieur / Toutes : les Skulltulas hors donjons (ou toutes)\nlâchent un objet de la seed.",
                            {"off": "Désactivé", "overworld": "Extérieur", "all": "Toutes"}),
     "shuffle_scrubs": ("Peste Mojo", "Les 5 Peste Mojo qui vendent un objet unique vendent un objet de la seed\nà la place, une fois, pour 40 rubis.", {}),
@@ -223,6 +232,13 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     seed.update({"Hash": U32(flag_hash(SEED_ENTRY)), "DefaultValue": 0, "ResetTypeValue": 0})
     data["Int"].append(seed)
     report.append(f"GameData : entier {SEED_ENTRY} (sauvegardé)")
+    # prix des Peste Mojo : non sauvegardés, réécrits par le module à chaque génération / rechargement
+    from .native_logic import scrub_price_entries
+    for name in sorted(scrub_price_entries().values()):
+        entry = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == -1))
+        entry.update({"Hash": U32(flag_hash(name)), "DefaultValue": 0, "ResetTypeValue": 0})
+        data["Int"].append(entry)
+        report.append(f"GameData : entier {name}")
     saved = sum(1 for _ in SETTING_ROWS) + 1 + len(EXTRA_SAVED_FLAGS)
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
@@ -297,11 +313,14 @@ def bridge_module(raw: bytes) -> bytes:
 
 # boutiques : OoTRR.Shop<n> vrai si au moins n articles par boutique sont mélangés (ootrr.shops)
 SHOP_FLAGS = [f"OoTRR.Shop{n}" for n in range(1, 5)]
-EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,) + tuple(BRIDGE_FLAGS.values()) + tuple(SHOP_FLAGS)
+# et OoTRR.ShopCount<n> vrai si exactement n : la copie du marchand de cette variante est présente
+SHOP_COUNT_FLAGS = [f"OoTRR.ShopCount{n}" for n in range(1, 5)]
+EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,) + tuple(BRIDGE_FLAGS.values()) + tuple(SHOP_FLAGS) + tuple(SHOP_COUNT_FLAGS)
 # drapeaux de départ propres au menu : (réglage, valeur, drapeau, valeur du drapeau)
 EXTRA_START_FLAGS = [("free_time_travel", True, FREE_TIME_FLAG, True)] + [
     ("bridge", mode, flag, True) for mode, flag in BRIDGE_FLAGS.items()] + [
-    ("shuffle_shops", str(count), SHOP_FLAGS[n - 1], True) for count in range(1, 5) for n in range(1, count + 1)]
+    ("shuffle_shops", str(count), SHOP_FLAGS[n - 1], True) for count in range(1, 5) for n in range(1, count + 1)] + [
+    ("shuffle_shops", str(count), SHOP_COUNT_FLAGS[count - 1], True) for count in range(1, 5)]
 
 
 def return_module(raw: bytes) -> bytes:

@@ -349,6 +349,13 @@ class Exporter:
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
                          f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}}},")
         lines.append("};")
+        # Peste Mojo : entier GameData du prix (prix / 5), écrit par le module selon les réglages
+        from .formats.gamedata import flag_hash
+        scrubs = [(i, flag_hash(SCRUB_PRICE_ENTRY.format(token(i)))) for i, l in enumerate(w["locations"]) if l["scrub"]]
+        lines.append("struct ScrubPrice { int32_t location; uint32_t entry; };")
+        lines.append(f"constexpr int kScrubPriceCount = {len(scrubs)};")
+        lines.append("inline constexpr ScrubPrice kScrubPrices[kScrubPriceCount] = {"
+                     + ", ".join(f"{{{i}, 0x{h:08x}}}" for i, h in scrubs) + "};")
         # règles
         lines.append(f"constexpr int kHelperCount = {len(self.helper_offsets)};")
         lines.append("inline constexpr int32_t kHelpers[kHelperCount] = {" + ", ".join(map(str, self.helper_offsets)) + "};")
@@ -401,6 +408,15 @@ def skulltula_tokens() -> dict[int, str]:
     le module natif donne l'objet placé au ramassage (modèle, textes et ajout redirigés)."""
     w = Exporter().world()
     return {h: token(i) for i, l in enumerate(w["locations"]) if l["skulltula"] for h in l["hashes"]}
+
+
+SCRUB_PRICE_ENTRY = "OoTRR.Price.{}"  # entier GameData : prix / 5 de la Peste Mojo (choisi par le module)
+
+
+def scrub_price_entries() -> dict[str, str]:
+    """{jeton: entier GameData} pour les Peste Mojo vendeuses : le script de vente choisit la vente au
+    prix (5 x valeur) selon cet entier, écrit par le module natif selon les réglages de prix."""
+    return {t: SCRUB_PRICE_ENTRY.format(t) for t, _ in scrub_tokens().values()}
 
 
 def scrub_tokens() -> dict[str, tuple[str, list[int]]]:

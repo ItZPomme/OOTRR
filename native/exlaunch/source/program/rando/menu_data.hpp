@@ -14,25 +14,26 @@ constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 struct MenuSetting { int32_t setting; uint32_t structure; uint32_t member; bool is_bool; int32_t count;
                      uint32_t game_values[8]; int32_t setting_values[8]; };
 // pages du menu : structure GameData, table de lignes, préfixe des textes
-constexpr int kPageCount = 2;
-inline constexpr uint32_t kPageStructs[kPageCount] = {0x068ab00a, 0x4140784a};
-inline constexpr const char* kPageTables[kPageCount] = {"UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu2.game__ui__OptionSetTable.bgyml"};
-inline constexpr const char* kPagePrefixes[kPageCount] = {"OoTRR_", "OoTRR2_"};
-constexpr int kMenuSettingCount = 13;
+constexpr int kPageCount = 3;
+inline constexpr uint32_t kPageStructs[kPageCount] = {0x068ab00a, 0x4140784a, 0x2e65116d};
+inline constexpr const char* kPageTables[kPageCount] = {"UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu2.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu3.game__ui__OptionSetTable.bgyml"};
+inline constexpr const char* kPagePrefixes[kPageCount] = {"OoTRR_", "OoTRR2_", "OoTRR3_"};
+constexpr int kMenuSettingCount = 14;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x068ab00a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0x068ab00a, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
-    {13, 0x068ab00a, 0x8c5522fc, true, 0, {}, {}},  // free_time_travel <- IsCameraRightLeftReverse
-    {14, 0x068ab00a, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
+    {14, 0x068ab00a, 0x8c5522fc, true, 0, {}, {}},  // free_time_travel <- IsCameraRightLeftReverse
+    {15, 0x068ab00a, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
     {0, 0x068ab00a, 0x74b1edd9, false, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {0, 1, 2, 3, 4, 5}},  // bridge <- VoiceLanguage
-    {15, 0x068ab00a, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
-    {12, 0x4140784a, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
+    {13, 0x4140784a, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
     {6, 0x4140784a, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
-    {7, 0x4140784a, 0xc587a7b1, true, 0, {}, {}},  // shuffle_scrubs <- IsDisplayTextRuby
-    {10, 0x4140784a, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
+    {11, 0x4140784a, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
     {5, 0x4140784a, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode
-    {8, 0x4140784a, 0x0ae99f60, false, 5, {0x0c415b69, 0xfbe02251, 0x390b012d, 0x18ca6654, 0xa7b47b7b}, {0, 1, 2, 3, 4}},  // shuffle_shops <- CameraRotateSpeed
-    {9, 0x4140784a, 0x74b1edd9, false, 3, {0x69b014ce, 0x82591fa9, 0x2498c397}, {0, 1, 2}},  // shop_prices <- VoiceLanguage
+    {16, 0x4140784a, 0x3b0fc63f, true, 0, {}, {}},  // logic_lens_required <- IsChangeJumpButton
+    {8, 0x2e65116d, 0x0ae99f60, false, 5, {0x0c415b69, 0xfbe02251, 0x390b012d, 0x18ca6654, 0xa7b47b7b}, {0, 1, 2, 3, 4}},  // shuffle_shops <- CameraRotateSpeed
+    {9, 0x2e65116d, 0x74b1edd9, false, 3, {0x69b014ce, 0x82591fa9, 0x2498c397}, {0, 1, 2}},  // shop_prices <- VoiceLanguage
+    {7, 0x2e65116d, 0xc587a7b1, true, 0, {}, {}},  // shuffle_scrubs <- IsDisplayTextRuby
+    {10, 0x2e65116d, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 2}},  // scrub_prices <- DisplayMode
 };
 
 // seed manuelle : bascule ; activée, le clavier virtuel s'ouvre au lancement de la partie
@@ -42,7 +43,7 @@ constexpr uint32_t kSeedMax = 999999;  // seeds aléatoires : 1-999999 (courtes 
 struct FixedSetting { int32_t setting; int32_t value; };
 constexpr int kFixedSettingCount = 1;
 inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {
-    {11, 1},  // skip_cutscenes = safe
+    {12, 1},  // skip_cutscenes = safe
 };
 
 constexpr int32_t kBridgeSetting = 0;
@@ -60,7 +61,7 @@ inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {
 // membre de structure (structure != 0) : écrit via la poignée de la structure
 struct StartFlag { int32_t setting; int32_t value; uint32_t flag; uint32_t structure; uint32_t member;
                    bool flag_value; };
-constexpr int kStartFlagCount = 42;
+constexpr int kStartFlagCount = 46;
 inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {2, 1, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
     {2, 2, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
@@ -87,7 +88,7 @@ inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {5, 1, 0x9d6efaac, 0x8308d4be, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.BottomOfTheWell.IsGetCompass
     {5, 1, 0x322f2a94, 0x3876f97a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
     {5, 1, 0xea1846e6, 0x3876f97a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
-    {13, 1, 0xdb242fa0, 0x00000000, 0x00000000, true},  // free_time_travel=True : OoTRR.FreeTimeTravel
+    {14, 1, 0xdb242fa0, 0x00000000, 0x00000000, true},  // free_time_travel=True : OoTRR.FreeTimeTravel
     {0, 0, 0xe38b96ef, 0x00000000, 0x00000000, true},  // bridge=open : OoTRR.Bridge.open
     {0, 1, 0x2ac765f3, 0x00000000, 0x00000000, true},  // bridge=vanilla : OoTRR.Bridge.vanilla
     {0, 2, 0x58d1d8ce, 0x00000000, 0x00000000, true},  // bridge=stones : OoTRR.Bridge.stones
@@ -104,6 +105,10 @@ inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {8, 4, 0xf454afbd, 0x00000000, 0x00000000, true},  // shuffle_shops=4 : OoTRR.Shop2
     {8, 4, 0x6f680911, 0x00000000, 0x00000000, true},  // shuffle_shops=4 : OoTRR.Shop3
     {8, 4, 0x867fc0b2, 0x00000000, 0x00000000, true},  // shuffle_shops=4 : OoTRR.Shop4
+    {8, 1, 0xae805bdc, 0x00000000, 0x00000000, true},  // shuffle_shops=1 : OoTRR.ShopCount1
+    {8, 2, 0xdc0381e7, 0x00000000, 0x00000000, true},  // shuffle_shops=2 : OoTRR.ShopCount2
+    {8, 3, 0x343e2e44, 0x00000000, 0x00000000, true},  // shuffle_shops=3 : OoTRR.ShopCount3
+    {8, 4, 0x2ec637fb, 0x00000000, 0x00000000, true},  // shuffle_shops=4 : OoTRR.ShopCount4
 };
 // énumérations posées au début de la partie (valeur = hachage du nom de la valeur)
 struct StartEnum { int32_t setting; int32_t value; uint32_t flag; uint32_t enum_value; };

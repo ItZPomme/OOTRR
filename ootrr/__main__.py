@@ -144,7 +144,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 start_warp=tuple(test_start.split("=", 1)) if test_start else None,
                                 scrub_sales=scrub_sales or None,
                                 questions=patch.get("ingame_questions") or None,
-                                rsdb_changes=patch.get("rsdb_changes") or None)
+                                rsdb_changes=patch.get("rsdb_changes") or None,
+                                pack_changes=patch.get("pack_changes") or None)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():
