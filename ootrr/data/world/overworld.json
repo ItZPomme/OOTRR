@@ -59,6 +59,9 @@
       "exits": {
         "Lost Woods": "True",
         "Sacred Forest Meadow": "True"
+      },
+      "events": {
+        "LW_Bean_Planted": "is_child and Magic_Bean"
       }
     },
     "Sacred Forest Meadow": {
@@ -273,6 +276,9 @@
         "ZR Front": "True",
         "Lost Woods": "can_dive",
         "Zoras Domain": "can_play(Zeldas_Lullaby) or can_use(Hover_Boots)"
+      },
+      "events": {
+        "Magic_Bean": "is_child"
       }
     },
     "Zoras Domain": {
