@@ -37,6 +37,8 @@ bool Ready();
 uint32_t CurrentSeed();
 // valeur d'un réglage de la dernière génération (logic::SettingId)
 int32_t SettingValue(int setting);
+// diagnostic : booléen d'un membre de structure GameData (-1 = illisible)
+int ReadStructBool(std::uintptr_t main_base, uint32_t structure, uint32_t member);
 
 // objet à donner pour l'emplacement `location` (index de logic::kLocations) ; si aucune seed
 // n'est prête, l'objet d'origine

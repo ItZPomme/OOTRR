@@ -119,6 +119,15 @@ int ApplyStartFlags(std::uintptr_t main_base) {
 
 bool Ready() { return g_ready; }
 int32_t SettingValue(int setting) { return g_settings.values[setting]; }
+
+int ReadStructBool(std::uintptr_t main_base, uint32_t structure, uint32_t member) {
+    void* manager = Manager(main_base);
+    Handle handle;
+    bool value = false;
+    if (!manager || !reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle)(manager, &handle, structure)) return -1;
+    if (!reinterpret_cast<GetBoolFn>(main_base + kGetStructBool)(manager, &value, &handle, member)) return -1;
+    return value ? 1 : 0;
+}
 uint32_t CurrentSeed() { return g_seed; }
 int LocationCount() { return logic::kLocationCount; }
 

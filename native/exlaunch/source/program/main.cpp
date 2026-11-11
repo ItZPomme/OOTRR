@@ -350,9 +350,16 @@ namespace {
         if (!first) return;
         void* dungeon = reinterpret_cast<void* (*)(void*)>(Main() + kCurrentDungeon)(first);
         if (!dungeon) return;
+        // donjon reconnu par sa structure GameData (poignée en +0x268, premier mot = structure) : l'objet
+        // « donjon » est réutilisé d'une zone à l'autre (la forêt Kokiri en a un aussi)
+        void* key = *reinterpret_cast<void**>(static_cast<u8*>(dungeon) + 0x268);
+        if (!key) return;
         for (int i = 0; i < g_dungeons_done_count; i++)
-            if (g_dungeons_done[i] == dungeon) return;
-        if (g_dungeons_done_count < 16) g_dungeons_done[g_dungeons_done_count++] = dungeon;
+            if (g_dungeons_done[i] == key) return;
+        if (g_dungeons_done_count < 16) g_dungeons_done[g_dungeons_done_count++] = key;
+        // diagnostic : IsGetMap de l'Arbre Mojo (posé à 1 au départ ; 0 = remis à zéro à l'entrée)
+        LogValue("OoTRR: nouveau donjon, IsGetMap Arbre Mojo (+1)", static_cast<u64>(
+            ootrr::ingame::ReadStructBool(Main(), 0x64e53a1f, 0x58aeb8fb) + 1));
         reinterpret_cast<void (*)(void*, bool)>(Main() + kDungeonGetMap)(dungeon, true);
         reinterpret_cast<void (*)(void*, bool)>(Main() + kDungeonGetCompass)(dungeon, true);
         Log("OoTRR: carte et boussole du donjon donnees");
