@@ -383,6 +383,31 @@ HOOK_DEFINE_TRAMPOLINE(InitDrop) {
     }
 };
 
+/* Porte du Temps ouverte : la quête DoorOfTime démarre à Step06 ; les scènes (ocarina des douves…)
+ * la feraient reculer et la porte se refermerait. La fonction qui change l'étape d'une quête
+ * (0x2cf54a0 : gestionnaire, hachage de la quête, hachage de l'étape, …) ignore alors toute étape
+ * autre que Step06 / Complete. */
+int g_challenge_logs = 20;
+
+HOOK_DEFINE_TRAMPOLINE(SetChallengeStep) {
+    static u64 Callback(void* manager, u32 challenge, u32 step, u64 a3, u64 a4, u64 a5) {
+        if (g_challenge_logs > 0) {
+            g_challenge_logs--;
+            LogValue("OoTRR: etape de quete (quete << 32 | etape)", (static_cast<u64>(challenge) << 32) | step);
+        }
+        bool door = challenge == ootrr::menu::kDoorChallengeHash || challenge == ootrr::menu::kDoorChallengePathHash;
+        if (door && ootrr::ingame::Ready() && ootrr::ingame::SettingValue(ootrr::menu::kOpenDoorSetting)) {
+            bool open = false;
+            for (u32 s : ootrr::menu::kDoorOpenSteps) open = open || s == step;
+            if (!open) {
+                LogValue("OoTRR: recul de la Porte du Temps bloque, etape", step);
+                return 0;
+            }
+        }
+        return Orig(manager, challenge, step, a3, a4, a5);
+    }
+};
+
 extern "C" void exl_main(void* x0, void* x1) {
     exl::hook::Initialize();
     SetBoolNode::InstallAtOffset(kSetBoolNode);
@@ -395,6 +420,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     FindMessage::InstallAtOffset(kFindMessage);
     GetStructHandle::InstallAtOffset(kGetStructHandle);
     LoadLayout::InstallAtOffset(kLoadLayout);
+    SetChallengeStep::InstallAtOffset(0x2cf54a0);
     InitDrop::InstallAtOffset(kInitDrop);
     Log("OoTRR: module natif charge, crochets du menu installes");
 }

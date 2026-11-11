@@ -19,6 +19,7 @@ constexpr std::intptr_t kPouchManagerPtr = 0x4c7e0d0;     // pointeur vers le po
 constexpr std::intptr_t kPouchNotify = 0x110d0b0;         // (interface, nom*, ajouté, raison) : objet « nouveau »
 constexpr std::intptr_t kPouchNotifyPtr = 0x4e6b718;      // pointeur vers l'interface d'inventaire
 constexpr uint32_t kReasonEvent = 7;                      // PickUp 0, Use 1, … Event 7
+constexpr std::intptr_t kSetEnum = 0x3e0980;               // (gestionnaire, valeur, hachage)
 constexpr std::intptr_t kSetStructBool = 0x608a10;        // (gestionnaire, valeur, poignée*, hachage du membre)
 
 // résultat de la lecture des réglages du menu (pour le journal)

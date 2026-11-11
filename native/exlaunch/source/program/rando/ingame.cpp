@@ -20,6 +20,7 @@ using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, uint32_t 
 using GetIntFn = bool (*)(void* manager, int32_t* value, uint32_t hash);
 using SetIntNodeFn = void (*)(void* node, uint32_t hash);
 using SetBoolNodeFn = void (*)(void* node, uint32_t hash);
+using SetEnumFn = void (*)(void* manager, uint32_t value, uint32_t hash);
 // nom passé comme une chaîne du jeu : { char* texte ; s32 capacité }
 struct GameString {
     const char* text;
@@ -121,6 +122,12 @@ int ApplyStartFlags(std::uintptr_t main_base) {
         value = f.flag_value ? 1 : 0;
         *reinterpret_cast<uint8_t**>(node + 0x40) = &value;
         set_bool(node, f.flag);
+        count++;
+    }
+    auto set_enum = reinterpret_cast<SetEnumFn>(main_base + kSetEnum);
+    for (const menu::StartEnum& e : menu::kStartEnums) {
+        if (e.setting < 0 || g_settings.values[e.setting] != e.value || !manager) continue;
+        set_enum(manager, e.enum_value, e.flag);
         count++;
     }
     return count;

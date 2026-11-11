@@ -283,6 +283,31 @@ def start_flag_table() -> tuple[list[tuple[str, object, str, bool]], list[str]]:
     return table, skipped
 
 
+MOAT_MODULE = "Logic/HyruleField_Child_Prefab_91f9.logic.module.ainb"
+
+
+def moat_module(raw: bytes) -> bytes:
+    """Ocarina des douves : le module le crée si l'étape de la quête DoorOfTime **est** Step04.
+    Devient « après Step03 » (= Step04 ou plus) : porte fermée, comme le jeu d'origine (l'ocarina
+    disparaît une fois obtenu) ; porte ouverte (Step06), il existe aussi, avec la condition de
+    présence « 3 pierres ». Python, lui, remplaçait Step04 par Step06 (porte ouverte seulement)."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    check = next(n for n in script.nodes if n.name == "HoldChallengeCurrentStepCheckOrder")
+    step = next(p for p in check.params.string_inputs if p.name == "ChallengeStepName")
+    if step.default_value != "Step04":
+        raise ValueError(f"{MOAT_MODULE} : étape inattendue {step.default_value}")
+    step.default_value = "Step03"
+    outputs = [o.name for o in check.params.bool_outputs]
+    ocarina = next(n for n in script.nodes if n.name == "ActorLogicOcarinaTime")
+    create = next(p for p in ocarina.params.bool_inputs if p.name == "Logic_Create")
+    if create.source.src_node_index != check.index or outputs[create.source.src_output_index] != "IsEqual":
+        raise ValueError(f"{MOAT_MODULE} : branchement inattendu")
+    create.source.src_output_index = outputs.index("IsAfter")
+    return script.to_binary()
+
+
 def title_sequence(raw: bytes) -> bytes:
     """NormalTitle : Nouvelle partie -> nouveau nœud Option.module -> ConfirmationNewGame -> partie,
     et le drapeau MENU_FLAG (vrai avant notre menu, faux avant l'écran Options et au début de la partie).
@@ -434,6 +459,24 @@ def menu_header(root: dict) -> str:
               "                   bool flag_value; };",
               f"constexpr int kStartFlagCount = {len(flags)};",
               "inline constexpr StartFlag kStartFlags[kStartFlagCount] = {"] + flags + ["};"]
-    lines += [f"// non gérés (pas des booléens) : {s}" for s in skipped]
+    enums = []
+    for entry in skipped:
+        # "réglage=valeur: drapeau=valeur" ; drapeau "#hachage" ou nom, valeur = nom de la valeur d'énumération
+        head, flag = entry.split(": ", 1)
+        s, v = head.split("=", 1)
+        name, value = flag.rsplit("=", 1)
+        h = int(name[1:]) if name.startswith("#") else flag_hash(name)
+        v = {"True": True, "False": False}.get(v, v)
+        enums.append(f"    {{{names.index(s)}, {value_index(s, v)}, 0x{h:08x}, 0x{flag_hash(value):08x}}},  // {entry}")
+    lines += ["// énumérations posées au début de la partie (valeur = hachage du nom de la valeur)",
+              "struct StartEnum { int32_t setting; int32_t value; uint32_t flag; uint32_t enum_value; };",
+              f"constexpr int kStartEnumCount = {len(enums)};",
+              "inline constexpr StartEnum kStartEnums[kStartEnumCount] = {"] + (enums or ["    {-1, 0, 0, 0},"]) + ["};"]
+    from .world import DOOR_OF_TIME_STEP
+    lines += ["// Porte du Temps ouverte : la quête ne doit pas reculer sous Step06",
+              f"constexpr uint32_t kDoorChallengeHash = 0x{flag_hash('DoorOfTime'):08x};  // DoorOfTime",
+              f"constexpr uint32_t kDoorChallengePathHash = 0x{flag_hash('Work/Challenge/DoorOfTime.game__challenge__Challenge.gyml'):08x};",
+              f"constexpr uint32_t kDoorOpenSteps[] = {{0x{flag_hash('Step06'):08x}, 0x{flag_hash('Complete'):08x}}};  // Step06, Complete",
+              f"constexpr int32_t kOpenDoorSetting = {names.index('open_door_of_time')};"]
     lines += ["", "}  // namespace ootrr::menu", ""]
     return "\n".join(lines)

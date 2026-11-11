@@ -75,6 +75,16 @@ inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {5, 1, 0x322f2a94, 0x3876f97a, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetMap
     {5, 1, 0xea1846e6, 0x3876f97a, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.IceCavern.IsGetCompass
 };
-// non gérés (pas des booléens) : open_door_of_time=True: #931730378=Step06
+// énumérations posées au début de la partie (valeur = hachage du nom de la valeur)
+struct StartEnum { int32_t setting; int32_t value; uint32_t flag; uint32_t enum_value; };
+constexpr int kStartEnumCount = 1;
+inline constexpr StartEnum kStartEnums[kStartEnumCount] = {
+    {3, 1, 0x378913ca, 0x21d6fa38},  // open_door_of_time=True: #931730378=Step06
+};
+// Porte du Temps ouverte : la quête ne doit pas reculer sous Step06
+constexpr uint32_t kDoorChallengeHash = 0xe8dafe6c;  // DoorOfTime
+constexpr uint32_t kDoorChallengePathHash = 0xa2beab0d;
+constexpr uint32_t kDoorOpenSteps[] = {0x21d6fa38, 0x4c0a63f4};  // Step06, Complete
+constexpr int32_t kOpenDoorSetting = 3;
 
 }  // namespace ootrr::menu

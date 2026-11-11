@@ -75,8 +75,13 @@ def build(romfs: Path, out: Path, tokens: bool = True) -> list[str]:
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None
+    # Porte du Temps (fichiers valables porte ouverte comme fermée) : ocarina des douves visible avec les
+    # 3 pierres, dons directs dans la scène des douves ; module des douves modifié plus bas
+    from ..world import BOOL_EXPS, HAS_ALL_STONES_EXP, OCARINA_OF_TIME_ACTOR
+    actor_changes[OCARINA_OF_TIME_ACTOR] = {"Presence": {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False,
+                                                         "IsNegation": False}}
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
-                       **common)
+                       bool_exps=dict(BOOL_EXPS), moat_gate=True, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
@@ -148,6 +153,14 @@ def build(romfs: Path, out: Path, tokens: bool = True) -> list[str]:
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
         (out / rel).write_bytes(mb.codec.compress(path.name, new))
     report.append(f"{menu.MESSAGES}: textes OoTRR_* ajoutés")
+
+    # module des douves
+    raw = (romfs / menu.MOAT_MODULE).read_bytes()
+    new = menu.moat_module(raw)
+    mb.restbl.resize_like(menu.MOAT_MODULE, len(raw), len(new))
+    (out / menu.MOAT_MODULE).parent.mkdir(parents=True, exist_ok=True)
+    (out / menu.MOAT_MODULE).write_bytes(new)
+    report.append(f"{menu.MOAT_MODULE}: ocarina dès l'étape Step04")
 
     # écran titre
     raw = (romfs / menu.TITLE).read_bytes()
