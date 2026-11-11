@@ -27,6 +27,7 @@ from .formats.msbt import add_messages, read_labels
 
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
 GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
+SEED_ENTRY = "OoTRR.Seed"  # seed de la partie (entier, sauvegardé) : régénérée au chargement
 STRUCT = "OoTRRMenu"
 OPTION_STRUCT = "OptionData"
 BOOTUP = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs"
@@ -146,7 +147,11 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         data["Bool"].append(flag)
         report.append(f"GameData : drapeau {name}")
     report.append(f"GameData : structure {STRUCT} ({len(members)} membres)")
-    saved = sum(1 for _ in SETTING_ROWS)
+    seed = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
+    seed.update({"Hash": U32(flag_hash(SEED_ENTRY)), "DefaultValue": 0, "ResetTypeValue": 0})
+    data["Int"].append(seed)
+    report.append(f"GameData : entier {SEED_ENTRY} (sauvegardé)")
+    saved = sum(1 for _ in SETTING_ROWS) + 1
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
 
@@ -330,6 +335,7 @@ def menu_header(root: dict) -> str:
              f"constexpr uint32_t kStructHash = 0x{flag_hash(STRUCT):08x};  // {STRUCT}",
              f"constexpr uint32_t kMenuFlagHash = 0x{flag_hash(MENU_FLAG):08x};  // {MENU_FLAG}",
              f"constexpr uint32_t kGenerateFlagHash = 0x{flag_hash(GENERATE_FLAG):08x};  // {GENERATE_FLAG}",
+             f"constexpr uint32_t kSeedHash = 0x{flag_hash(SEED_ENTRY):08x};  // {SEED_ENTRY}",
              "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
              "struct MenuSetting { int32_t setting; int32_t member; bool is_bool; int32_t count;",
              "                     uint32_t game_values[8]; int32_t setting_values[8]; };"]

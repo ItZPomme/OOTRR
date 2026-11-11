@@ -7,6 +7,7 @@ namespace ootrr::menu {
 constexpr uint32_t kStructHash = 0x068ab00a;  // OoTRRMenu
 constexpr uint32_t kMenuFlagHash = 0xa7ce2e71;  // OoTRR.IsRandomizerMenu
 constexpr uint32_t kGenerateFlagHash = 0x81969956;  // OoTRR.GenerateSeed
+constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 // valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu
 struct MenuSetting { int32_t setting; int32_t member; bool is_bool; int32_t count;
                      uint32_t game_values[8]; int32_t setting_values[8]; };

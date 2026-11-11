@@ -95,10 +95,49 @@ u64 ReadTick() {
     return value;
 }
 
+bool g_trust_memory = false;  // seed de nouvelle partie pas encore visible dans GameData (écriture différée)
+
+void LogMenuRead(const ootrr::ingame::MenuRead& r) {
+    char buf[96] = "OoTRR: reglages lus ";
+    size_t n = 20;
+    buf[n++] = r.handle ? 'H' : '-';
+    buf[n++] = static_cast<char>('0' + (r.read / 10) % 10);
+    buf[n++] = static_cast<char>('0' + r.read % 10);
+    buf[n++] = ' ';
+    for (int i = 0; i < r.count && n < sizeof(buf) - 3; i++) {
+        buf[n++] = static_cast<char>('0' + (r.values[i] % 10));
+        buf[n++] = ',';
+    }
+    buf[n] = 0;
+    Log(buf);
+}
+
 void GenerateSeed() {
     u32 seed = static_cast<u32>(ReadTick() ^ (ReadTick() >> 32)) & 0x7fffffffu;
-    bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed);
+    if (!seed) seed = 1;
+    ootrr::ingame::MenuRead read;
+    bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed, &read);
+    LogMenuRead(read);
     LogValue(ok ? "OoTRR: seed generee" : "OoTRR: echec de la generation, seed", seed);
+    if (ok) {
+        ootrr::ingame::WriteSavedSeed(Main(), static_cast<s32>(seed));
+        g_trust_memory = true;
+    }
+}
+
+// partie chargée : régénère la seed enregistrée (et ses réglages) si ce n'est pas celle en mémoire
+void EnsureSeedForCurrentGame() {
+    s32 saved = ootrr::ingame::ReadSavedSeed(Main());
+    if (g_trust_memory) {
+        if (static_cast<u32>(saved) == ootrr::ingame::CurrentSeed()) g_trust_memory = false;
+        return;
+    }
+    if (saved == 0) return;
+    if (ootrr::ingame::Ready() && static_cast<u32>(saved) == ootrr::ingame::CurrentSeed()) return;
+    ootrr::ingame::MenuRead read;
+    bool ok = ootrr::ingame::GenerateFromMenu(Main(), static_cast<u32>(saved), &read);
+    LogMenuRead(read);
+    LogValue(ok ? "OoTRR: seed rechargee" : "OoTRR: echec de la regeneration, seed", static_cast<u32>(saved));
 }
 
 void OnSetBool(void* node, u32 hash) {
@@ -258,6 +297,7 @@ void ReplaceTokenAtSource(u8* info) {
         if (!key || !value || !SameString(key, "Drop__DropActor")) continue;
         int index = TokenIndex(value);
         if (index < 0) return;
+        EnsureSeedForCurrentGame();
         const char* real = ootrr::ingame::ItemFor(index);
         params->values[i] = real;
         // objet différent de l'original : retirer la scène de l'objet d'origine (event « drop ») et,
