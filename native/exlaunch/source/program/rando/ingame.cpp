@@ -15,8 +15,8 @@ struct Handle {
 };
 
 using GetHandleFn = bool (*)(void* manager, Handle* handle, uint32_t hash);
-using GetEnumFn = bool (*)(void* manager, uint32_t* value, Handle* handle, int32_t member);
-using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, int32_t member);
+using GetEnumFn = bool (*)(void* manager, uint32_t* value, Handle* handle, uint32_t member_hash);
+using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, uint32_t member_hash);
 using GetIntFn = bool (*)(void* manager, int32_t* value, uint32_t hash);
 using SetIntNodeFn = void (*)(void* node, uint32_t hash);
 

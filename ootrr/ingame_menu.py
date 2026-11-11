@@ -337,12 +337,14 @@ def menu_header(root: dict) -> str:
              f"constexpr uint32_t kGenerateFlagHash = 0x{flag_hash(GENERATE_FLAG):08x};  // {GENERATE_FLAG}",
              f"constexpr uint32_t kSeedHash = 0x{flag_hash(SEED_ENTRY):08x};  // {SEED_ENTRY}",
              "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
-             "struct MenuSetting { int32_t setting; int32_t member; bool is_bool; int32_t count;",
+             "// member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une",
+             "// structure cherchent le membre par ce hachage dans la table de la poignée",
+             "struct MenuSetting { int32_t setting; uint32_t member; bool is_bool; int32_t count;",
              "                     uint32_t game_values[8]; int32_t setting_values[8]; };"]
     rows = []
     for setting, option_type, values in SETTING_ROWS:
-        m = member[flag_hash(option_type)]
-        section, entry = idx[src["DefaultValue"][m]["Value"]]
+        section, entry = idx[src["DefaultValue"][member[flag_hash(option_type)]]["Value"]]
+        m = f"0x{flag_hash(option_type):08x}"
         sid = names.index(setting)
         if values is None:
             rows.append(f"    {{{sid}, {m}, true, 0, {{}}, {{}}}},  // {setting} <- {option_type}")

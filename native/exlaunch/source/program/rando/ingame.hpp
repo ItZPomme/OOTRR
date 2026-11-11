@@ -8,8 +8,8 @@ namespace ootrr::ingame {
 // adresses relatives au module main (version 2.0.0)
 constexpr std::intptr_t kGameDataManagerPtr = 0x4c7e180;  // pointeur vers le pointeur du gestionnaire GameData
 constexpr std::intptr_t kGetStructHandle = 0x9b3eb0;      // (gestionnaire, poignée*, hachage) -> bool
-constexpr std::intptr_t kGetStructEnum = 0x404760;        // (gestionnaire, u32* valeur, poignée*, membre) -> bool
-constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool* valeur, poignée*, membre) -> bool
+constexpr std::intptr_t kGetStructEnum = 0x404760;        // (gestionnaire, u32* valeur, poignée*, hachage du membre) -> bool
+constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool* valeur, poignée*, hachage du membre) -> bool
 constexpr std::intptr_t kGetInt = 0x163d20;               // (gestionnaire, s32* valeur, hachage) -> bool
 constexpr std::intptr_t kSetIntNode = 0xc25ce0;           // nœud SeqOneShotSetNonStructGameDataInt (nœud, hachage)
 
