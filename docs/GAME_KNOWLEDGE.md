@@ -91,6 +91,8 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   vu -> voyage direct, la récompense de la poche de Link est donnée au départ **[jeu]**.
 - Retour enfant : `Market_Adult_Prefab_89da` exige `SageOfForest_IsCompleted_Exp` (Temple de la
   Forêt fini). Remplacé par une expression toujours vraie si `free_time_travel` **[jeu]**.
+  Menu natif : le module lit `OoTRR_FreeTimeTravel_Exp` (drapeau sauvegardé `OoTRR.FreeTimeTravel`,
+  posé par le menu, OU `SageOfForest_IsCompleted_Exp`) **[jeu]** (2026-11-10).
 
 ## Récompenses de boss
 
