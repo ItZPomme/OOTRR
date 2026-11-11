@@ -99,11 +99,12 @@
   "Dm_Zora_0000",
   "Dm_Zora_0020"
  ],
- "_event_skips": "Scènes jouées sans vérifier le drapeau « déjà vue » : l'étape qui les joue est sautée dans l'événement indiqué (ex. narration de la tapisserie et réveil par Navi au démarrage).",
+ "_event_skips": "Scènes jouées sans vérifier le drapeau « déjà vue » : l'étape qui les joue est sautée dans l'événement indiqué (ex. narration de la tapisserie et réveil par Navi au démarrage). « #N » = étape numéro N (OpeningEvent #28 : caméra placée pour la scène du réveil, qui resterait loin de Link).",
  "event_skips": {
   "OpeningEvent": [
    "Dm_Kokiri_0000",
-   "Dm_Kokiri_0030"
+   "Dm_Kokiri_0030",
+   "#28"
   ]
  }
 }

@@ -84,7 +84,8 @@ def _flowchart(d: bytes) -> dict:
 
 
 def skip_event_steps(d: bytes, scene_names: list[str]) -> tuple[bytes, list[str]]:
-    """Fait sauter les étapes « action » dont les paramètres citent une de ces scènes.
+    """Fait sauter les étapes « action » dont les paramètres citent une de ces scènes
+    (« #N » : l'étape numéro N, ex. un mouvement de caméra sans nom).
 
     Tout ce qui menait à l'étape (point d'entrée, étape précédente, cas d'une
     condition, branche d'un fork) mène désormais à l'étape suivante. La structure
@@ -98,7 +99,9 @@ def skip_event_steps(d: bytes, scene_names: list[str]) -> tuple[bytes, list[str]
     report = []
     for scene in scene_names:
         targets = set()
-        for slot in pointer_slots(d):
+        if scene.startswith("#"):
+            targets.add(int(scene[1:]))
+        for slot in pointer_slots(d) if not scene.startswith("#") else []:
             t = struct.unpack_from("<Q", d, slot)[0]
             if 0 < t < reloc and _string_at(d, t, reloc) == scene:
                 owner = None
