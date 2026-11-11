@@ -1,6 +1,7 @@
 #include "lib.hpp"
 #include "rando/ingame.hpp"
 #include "rando/menu_data.hpp"
+#include "rando/logic_data.hpp"
 
 /* OoTRR : menu du randomizer dans l'écran d'options du jeu (voir native/README.md).
  *
@@ -310,7 +311,8 @@ void ReplaceTokenAtSource(u8* info) {
                 bool clear = (ootrr::ingame::IsDropEvent(index) && SameString(other, "GetEventName")) ||
                              (ootrr::ingame::IsConditional(index) &&
                               (SameString(other, "Drop__CheckActor") || SameString(other, "Drop__DropActor_Substitute")));
-                if (clear) params->values[k] = "";
+                // retirer le paramètre : renommer sa clé (une valeur vide empêche le coffre de s'ouvrir)
+                if (clear) params->keys[k] = "OoTRR_Removed";
             }
         }
         char buf[96] = "OoTRR: emplacement ";
@@ -326,10 +328,42 @@ void ReplaceTokenAtSource(u8* info) {
     }
 }
 
+/* Cartes et boussoles « au départ » : obtenir une carte = drapeau IsGetMap de la structure du donjon
+ * + objet Item_Dungeon_Map dans l'inventaire (fonctions du nœud OneShotDungeonGetMap). L'objet du donjon
+ * n'existe qu'une fois dedans : on les donne au chargement d'une salle de donjon, une fois par donjon. */
+namespace {
+    constexpr ptrdiff_t kDungeonOwnerPtr = 0x4c7e178;  // pointeur vers le pointeur du gestionnaire de scène
+    constexpr ptrdiff_t kDungeonOwner = 0xb2af20;      // (gestionnaire) -> objet intermédiaire
+    constexpr ptrdiff_t kCurrentDungeon = 0xb2afc0;    // (objet) -> donjon courant ou nul
+    constexpr ptrdiff_t kDungeonGetMap = 0x3282fe0;    // (donjon, bool)
+    constexpr ptrdiff_t kDungeonGetCompass = 0x3283060;
+
+    void* g_dungeons_done[16];
+    int g_dungeons_done_count = 0;
+
+    void GiveDungeonItems() {
+        if (!ootrr::ingame::Ready()) return;
+        if (ootrr::ingame::SettingValue(ootrr::logic::SET_maps_compasses) != 1) return;  // start_with
+        void* owner = **reinterpret_cast<void***>(Main() + kDungeonOwnerPtr);
+        if (!owner) return;
+        void* first = reinterpret_cast<void* (*)(void*)>(Main() + kDungeonOwner)(owner);
+        if (!first) return;
+        void* dungeon = reinterpret_cast<void* (*)(void*)>(Main() + kCurrentDungeon)(first);
+        if (!dungeon) return;
+        for (int i = 0; i < g_dungeons_done_count; i++)
+            if (g_dungeons_done[i] == dungeon) return;
+        if (g_dungeons_done_count < 16) g_dungeons_done[g_dungeons_done_count++] = dungeon;
+        reinterpret_cast<void (*)(void*, bool)>(Main() + kDungeonGetMap)(dungeon, true);
+        reinterpret_cast<void (*)(void*, bool)>(Main() + kDungeonGetCompass)(dungeon, true);
+        Log("OoTRR: carte et boussole du donjon donnees");
+    }
+}
+
 HOOK_DEFINE_TRAMPOLINE(InitDrop) {
     static void Callback(u8* component, u8* info) {
         ReplaceTokenAtSource(info);
         Orig(component, info);
+        GiveDungeonItems();
     }
 };
 

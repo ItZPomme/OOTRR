@@ -35,6 +35,8 @@ int ApplyStartFlags(std::uintptr_t main_base);
 
 bool Ready();
 uint32_t CurrentSeed();
+// valeur d'un réglage de la dernière génération (logic::SettingId)
+int32_t SettingValue(int setting);
 
 // objet à donner pour l'emplacement `location` (index de logic::kLocations) ; si aucune seed
 // n'est prête, l'objet d'origine

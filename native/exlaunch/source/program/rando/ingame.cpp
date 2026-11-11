@@ -118,6 +118,7 @@ int ApplyStartFlags(std::uintptr_t main_base) {
 }
 
 bool Ready() { return g_ready; }
+int32_t SettingValue(int setting) { return g_settings.values[setting]; }
 uint32_t CurrentSeed() { return g_seed; }
 int LocationCount() { return logic::kLocationCount; }
 
