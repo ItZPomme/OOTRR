@@ -53,6 +53,14 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 
 ## Boutiques, Peste Mojo, Skulltulas
 
+- **Boutiques mélangées (menu natif) [jeu]** (2026-11-11) : voir native/README.md (« Boutiques »).
+  Liste des articles d'un marchand : `Component/ShopParam/…` dans son archive, `GoodsList` dans
+  l'ordre de `ShopItemIndex` ; `Release` = condition d'apparition (« Coming Soon » : boutique Kokiri
+  avant l'Arbre Mojo ; « épuisé » : bombes du bazar avant la pierre du feu). Le marchand des Missiles
+  n'apparaît qu'après la pierre du feu (présence retirée). Un article doit être dans la liste ET relié
+  au marchand (liens `ForSale`, `Reference`) pour être choisi. Le prix vient de la ligne RSDB
+  `PouchActorInfo.BuyingPrice`.
+
 - Article de boutique = acteur `Shop_*` ; `ActorInfo.ActorName` = objet vendu ; prix dans
   `PriceParam` de l'archive. Copie d'un article = autre objet vendu **[jeu]** ; `ActorGameDataSetting`
   = `NoRespawn` pour une vente unique **[jeu]**.

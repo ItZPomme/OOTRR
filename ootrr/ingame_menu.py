@@ -28,11 +28,9 @@ from .formats.msbt import add_messages, read_labels
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
 GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
 SEED_ENTRY = "OoTRR.Seed"  # seed de la partie (entier, sauvegardé) : régénérée au chargement
-STRUCT = "OoTRRMenu"
 OPTION_STRUCT = "OptionData"
 BOOTUP = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs"
 GAME_TABLE = "UI/OptionSetTable/OptionSetTable.game__ui__OptionSetTable.bgyml"
-MENU_TABLE = "UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml"
 MESSAGES = "LayoutMsg/SystemOption_00.msbt"
 TITLE = "Sequence/NormalTitle.module.ainb"
 COMMON_LAYOUTS = "UI/Layout2Archive/Common.Product.100.Nin_Ounce_NVN2.blarc.zs"
@@ -52,30 +50,46 @@ SEED_MANUAL = "seed_manual"
 SEED_ROW_NAMES = (SEED_MANUAL,)
 # repère remplacé par le module natif (texte lu) par la seed aléatoire tirée à l'ouverture du menu
 SEED_PLACEHOLDER = "######"
-ROWS: list[tuple[str, str, list[str] | None]] = [
-    (SEED_MANUAL, "VoiceSubtitle", None),
-    (SEPARATOR, "", None),
-    ("open_forest", "CameraRotateSpeed", ["closed", "closed_deku", "open"]),
-    ("open_door_of_time", "IsCameraUpDownReverse", None),
-    ("free_time_travel", "IsCameraRightLeftReverse", None),
-    ("skip_child_zelda", "IsUseGyro", None),
-    (SEPARATOR, "", None),
-    ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
-    ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
-    ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
-    # VoiceSubtitleSpeakerName est grisé tant que VoiceSubtitle (seed manuelle) est désactivé : IsDisplayTextRuby
-    ("shuffle_scrubs", "IsDisplayTextRuby", None),
-    ("shuffle_skulltulas", "OcarinaSongEstimateMode", ["off", "overworld", "all"]),
-    ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
-    (SEPARATOR, "", None),
-    # OcarinaKeyAssign n'a que 2 valeurs dans le jeu : notre copie en reçoit d'autres (EXTRA_VALUES).
-    # MessageWindowTransparency : type d'option connu du code (table des noms) mais sans ligne ni
-    # donnée dans OptionData : ligne et membre créés (EXTRA_MEMBERS).
-    ("shuffle_shops", "OcarinaKeyAssign", ["off", "1", "2", "3", "4"]),
-    ("shop_prices", "MessageWindowTransparency", ["vanilla", "affordable", "random"]),
-    (SEPARATOR, "", None),
-    ("logic_lens_required", "IsChangeJumpButton", None),
+# Pages : l'écran d'options s'enchaîne une fois par page (Nouvelle partie -> page 1 -> page 2 ->
+# confirmation). L'écran ne connaît que ses types d'option (table fixe dans le code) et, pour une
+# liste, le nombre de valeurs de son type dans le jeu (un choix de plus s'affiche mais ne s'enregistre
+# pas : constaté) ; chaque page a sa structure GameData (copie d'OptionData), sa table et ses textes,
+# donc chaque type sert une fois par page. Nombre de valeurs par type : VoiceLanguage 9,
+# CameraRotateSpeed 5, DisplayMode / OcarinaSongEstimateMode / ControllerRumble 3, LockOnType /
+# OcarinaKeyAssign 2 ; bascules : IsCamera*Reverse, IsUseGyro, IsChangeJumpButton, IsDisplayTextRuby,
+# VoiceSubtitle, VoiceSubtitleSpeakerName (grisé tant que VoiceSubtitle est désactivé).
+PAGES: list[list[tuple[str, str, list[str] | None]]] = [
+    [  # page 1 : le monde
+        (SEED_MANUAL, "VoiceSubtitle", None),
+        (SEPARATOR, "", None),
+        ("open_forest", "CameraRotateSpeed", ["closed", "closed_deku", "open"]),
+        ("open_door_of_time", "IsCameraUpDownReverse", None),
+        ("free_time_travel", "IsCameraRightLeftReverse", None),
+        ("skip_child_zelda", "IsUseGyro", None),
+        (SEPARATOR, "", None),
+        ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
+        (SEPARATOR, "", None),
+        ("logic_lens_required", "IsChangeJumpButton", None),
+    ],
+    [  # page 2 : ce qui est mélangé
+        ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
+        ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
+        ("shuffle_scrubs", "IsDisplayTextRuby", None),
+        ("shuffle_skulltulas", "OcarinaSongEstimateMode", ["off", "overworld", "all"]),
+        ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
+        (SEPARATOR, "", None),
+        ("shuffle_shops", "CameraRotateSpeed", ["off", "1", "2", "3", "4"]),
+        ("shop_prices", "VoiceLanguage", ["vanilla", "affordable", "random"]),
+    ],
 ]
+# par page : structure GameData, table de lignes, préfixe des textes (le module natif cherche
+# d'abord « <préfixe><étiquette du jeu> »)
+STRUCTS = ["OoTRRMenu"] + [f"OoTRRMenu{p + 1}" for p in range(1, len(PAGES))]
+STRUCT = STRUCTS[0]
+MENU_TABLES = [f"UI/OptionSetTable/{s}.game__ui__OptionSetTable.bgyml" for s in STRUCTS]
+MENU_TABLE = MENU_TABLES[0]
+PREFIXES = ["OoTRR_"] + [f"OoTRR{p + 1}_" for p in range(1, len(PAGES))]
+ROWS = [r for page in PAGES for r in page]
 # réglages fixés pour la partie générée dans le jeu (pas de ligne dans le menu)
 FIXED_SETTINGS = {"skip_cutscenes": "safe"}
 # nombre requis pour le pont selon sa condition (le menu n'a pas de ligne pour bridge_count ;
@@ -86,6 +100,10 @@ BRIDGE_COUNTS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 10}
 STATIC_SETTINGS = {"skip_cutscenes": "safe", "open_forest": "ask"}
 SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR and r[0] not in SEED_ROW_NAMES]
 SEED_ROWS = [r for r in ROWS if r[0] in SEED_ROW_NAMES]
+
+
+def page_of(setting: str) -> int:
+    return next(p for p, rows in enumerate(PAGES) for r in rows if r[0] == setting)
 SEPARATOR_BUTTON = flag_hash("Separator")
 
 # textes : réglage -> (titre, description, {valeur: libellé}) ; anglais puis français
@@ -156,51 +174,45 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     data = root["Data"]
     idx = index(root)
     src = next(e for e in data["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
-    if any(e["Hash"] == flag_hash(STRUCT) for e in data["Struct"]):
-        raise KeyError(f"GameData : structure {STRUCT} déjà présente")
-    types = {flag_hash(t): t for _, t, _ in SETTING_ROWS + SEED_ROWS}
-    by_type = {t: (s, values) for s, t, values in SETTING_ROWS}
-    members = []
     report = []
-    sources = [(m["Hash"], idx[m["Value"]]) for m in src["DefaultValue"]]
-    for name, template in EXTRA_MEMBERS.items():
-        sources.append((U32(flag_hash(name)), idx[flag_hash(f"{OPTION_STRUCT}.{template}")]))
-    for member_hash, (section, entry) in sources:
-        m = {"Hash": member_hash}
-        name = types.get(m["Hash"], f"{m['Hash']:08x}")
-        new = copy.deepcopy(entry)
-        new["Hash"] = U32(flag_hash(f"{STRUCT}.{name}"))
-        setting, values = by_type.get(name, (None, None))
-        if section == "Enum" and values is not None and (name in EXTRA_MEMBERS or len(values) > len(new["RawValues"])):
-            raw = list(new["RawValues"]) if name not in EXTRA_MEMBERS else []
-            raw += [f"OoTRR_{name}_{i:02d}" for i in range(len(raw), len(values))]
-            new["RawValues"] = raw
-            new["Values"] = [U32(flag_hash(v)) for v in raw]
-            new["DefaultValue"] = new["Values"][0]
-            entry = new
-        new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
-        new["ResetTypeValue"] = 0
-        if any(r[1] == name for r in SEED_ROWS):
-            new["DefaultValue"] = False
-            report.append(f"GameData {STRUCT}.{name} (seed)")
-        if defaults is not None and setting in defaults:
-            value = defaults[setting]
-            if values is None and section == "Bool":
-                new["DefaultValue"] = bool(value)
-            elif values is not None and value in values and section == "Enum":
-                new["DefaultValue"] = type(entry["DefaultValue"])(entry["Values"][values.index(value)])
-        data[section].append(new)
-        members.append({"Hash": m["Hash"], "Value": new["Hash"]})
-        if setting:
-            report.append(f"GameData {STRUCT}.{name} ({setting}) défaut={new['DefaultValue']}")
-    data["Struct"].append({"DefaultValue": members, "Hash": U32(flag_hash(STRUCT)),
-                           "ResetTypeValue": 0, "SaveFileIndex": -1})
+    for page, struct in enumerate(STRUCTS):
+        if any(e["Hash"] == flag_hash(struct) for e in data["Struct"]):
+            raise KeyError(f"GameData : structure {struct} déjà présente")
+        rows = [r for r in PAGES[page] if r[0] != SEPARATOR]
+        types = {flag_hash(t): t for _, t, _ in rows}
+        by_type = {t: (s, values) for s, t, values in rows if s not in SEED_ROW_NAMES}
+        members = []
+        for m in src["DefaultValue"]:
+            section, entry = idx[m["Value"]]
+            name = types.get(m["Hash"], f"{m['Hash']:08x}")
+            new = copy.deepcopy(entry)
+            new["Hash"] = U32(flag_hash(f"{struct}.{name}"))
+            setting, values = by_type.get(name, (None, None))
+            if section == "Enum" and values is not None and len(values) > len(new["RawValues"]):
+                raise ValueError(f"{name} : {len(new['RawValues'])} valeurs dans le jeu pour {len(values)} choix ({setting})")
+            new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
+            new["ResetTypeValue"] = 0
+            if any(r[1] == name and r[0] in SEED_ROW_NAMES for r in rows):
+                new["DefaultValue"] = False
+                report.append(f"GameData {struct}.{name} (seed)")
+            if defaults is not None and setting in defaults:
+                value = defaults[setting]
+                if values is None and section == "Bool":
+                    new["DefaultValue"] = bool(value)
+                elif values is not None and value in values and section == "Enum":
+                    new["DefaultValue"] = type(entry["DefaultValue"])(entry["Values"][values.index(value)])
+            data[section].append(new)
+            members.append({"Hash": m["Hash"], "Value": new["Hash"]})
+            if setting:
+                report.append(f"GameData {struct}.{name} ({setting}) défaut={new['DefaultValue']}")
+        data["Struct"].append({"DefaultValue": members, "Hash": U32(flag_hash(struct)),
+                               "ResetTypeValue": 0, "SaveFileIndex": -1})
+        report.append(f"GameData : structure {struct} ({len(members)} membres)")
     for name in (MENU_FLAG, GENERATE_FLAG):
         flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == -1))
         flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
         data["Bool"].append(flag)
         report.append(f"GameData : drapeau {name}")
-    report.append(f"GameData : structure {STRUCT} ({len(members)} membres)")
     # drapeaux posés selon le menu et lus par des expressions (sauvegardés : ils doivent tenir au chargement)
     for name in EXTRA_SAVED_FLAGS:
         flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
@@ -283,10 +295,13 @@ def bridge_module(raw: bytes) -> bytes:
     return script.to_binary()
 
 
-EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,) + tuple(BRIDGE_FLAGS.values())
+# boutiques : OoTRR.Shop<n> vrai si au moins n articles par boutique sont mélangés (ootrr.shops)
+SHOP_FLAGS = [f"OoTRR.Shop{n}" for n in range(1, 5)]
+EXTRA_SAVED_FLAGS = (FREE_TIME_FLAG,) + tuple(BRIDGE_FLAGS.values()) + tuple(SHOP_FLAGS)
 # drapeaux de départ propres au menu : (réglage, valeur, drapeau, valeur du drapeau)
 EXTRA_START_FLAGS = [("free_time_travel", True, FREE_TIME_FLAG, True)] + [
-    ("bridge", mode, flag, True) for mode, flag in BRIDGE_FLAGS.items()]
+    ("bridge", mode, flag, True) for mode, flag in BRIDGE_FLAGS.items()] + [
+    ("shuffle_shops", str(count), SHOP_FLAGS[n - 1], True) for count in range(1, 5) for n in range(1, count + 1)]
 
 
 def return_module(raw: bytes) -> bytes:
@@ -326,24 +341,18 @@ def add_saved_entries(root: dict, save_index: int, count: int) -> list[str]:
             f"taille {old[1]} -> {meta['SaveDataSize'][save_index]})"]
 
 
-# types d'option sans membre dans OptionData : membre créé dans OoTRRMenu, copie du membre indiqué
-# (même section), et ligne copiée d'une ligne de ce type
-EXTRA_MEMBERS = {"MessageWindowTransparency": "DisplayMode"}
-
-
-def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
+def option_table(game_table: bytes, enum_values: dict[str, list[str]], page: int = 0) -> bytes:
     """Notre table de lignes, construite à partir des lignes du jeu (même forme, sans conditions)."""
     tree = read_byml(game_table)
     rows = {r.get("OptionType"): r for r in tree["OptionSetArray"]
             if "OptionType" in r and r.get("ButtonType") != SEPARATOR_BUTTON}
     separator = next(r for r in tree["OptionSetArray"] if r.get("ButtonType") == SEPARATOR_BUTTON)
     out = []
-    for setting, option_type, values in ROWS:
+    for setting, option_type, values in PAGES[page]:
         if setting == SEPARATOR:
             out.append(copy.deepcopy(separator))
             continue
-        row = copy.deepcopy(rows[flag_hash(EXTRA_MEMBERS.get(option_type, option_type))])
-        row["OptionType"] = U32(flag_hash(option_type))
+        row = copy.deepcopy(rows[flag_hash(option_type)])
         row.pop("CheckGameData", None)
         row.pop("IsCheckDisplayGameData", None)
         if values is not None:
@@ -359,12 +368,16 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
 def messages(msbt: bytes, language: str) -> bytes:
     texts = TEXTS_FR if language in FRENCH else TEXTS_EN
     new = {}
-    for setting, option_type, values in SETTING_ROWS + SEED_ROWS:
-        title, caption, labels = texts[setting]
-        new[f"OoTRR_{option_type}_Title"] = title.encode()
-        new[f"OoTRR_{option_type}_Caption"] = caption.encode()
-        for i, v in enumerate(values or []):
-            new[f"OoTRR_{option_type}_{i:02d}"] = labels.get(v, v).encode()
+    for page, rows in enumerate(PAGES):
+        prefix = PREFIXES[page]
+        for setting, option_type, values in rows:
+            if setting == SEPARATOR:
+                continue
+            title, caption, labels = texts[setting]
+            new[f"{prefix}{option_type}_Title"] = title.encode()
+            new[f"{prefix}{option_type}_Caption"] = caption.encode()
+            for i, v in enumerate(values or []):
+                new[f"{prefix}{option_type}_{i:02d}"] = labels.get(v, v).encode()
     have = read_labels(msbt)
     clash = [k for k in new if k in have]
     if clash:
@@ -481,19 +494,24 @@ def title_sequence(raw: bytes) -> bytes:
     yes = next(t for t in confirm.transition_plugs if t.transition.command_name == "Yes")
     start = nodes[yes.node_index]
 
-    menu = copy.deepcopy(option)
-    menu.index = len(nodes)
-    menu.guid = new_guid()
-    end = menu.transition_plugs[0]
-    end.node_index = confirm.index
-    end.transition = Transition(transition_type=end.transition.transition_type,
-                                update_post_calc=end.transition.update_post_calc,
-                                command_name=end.transition.command_name)
-    nodes.append(menu)
-    before[0].node_index = menu.index
+    # une copie du nœud d'options par page : page 1 -> page 2 -> … -> confirmation
+    pages = []
+    for _ in PAGES:
+        menu = copy.deepcopy(option)
+        menu.index = len(nodes)
+        menu.guid = new_guid()
+        nodes.append(menu)
+        pages.append(menu)
+    for k, menu in enumerate(pages):
+        end = menu.transition_plugs[0]
+        end.node_index = pages[k + 1].index if k + 1 < len(pages) else confirm.index
+        end.transition = Transition(transition_type=end.transition.transition_type,
+                                    update_post_calc=end.transition.update_post_calc,
+                                    command_name=end.transition.command_name)
+    before[0].node_index = pages[0].index
     for m in script.modules:
         if m.path == "Option.module.ainb":
-            m.instance_count += 1
+            m.instance_count += len(pages)
 
     template = next(n for n in nodes if n.name == "SeqOneShotSetNonStructGameDataBool")
 
@@ -535,7 +553,7 @@ def menu_header(root: dict) -> str:
     from .settings import SETTINGS
 
     idx = index(root)
-    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(STRUCT))
+    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
     member = {m["Hash"]: i for i, m in enumerate(src["DefaultValue"])}
     names = list(SETTINGS)
     lines = ["// Généré par ootrr/ingame_menu.py (menu_header) : ne pas modifier à la main.", "#pragma once",
@@ -547,12 +565,20 @@ def menu_header(root: dict) -> str:
              "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
              "// member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une",
              "// structure cherchent le membre par ce hachage dans la table de la poignée",
-             "struct MenuSetting { int32_t setting; uint32_t member; bool is_bool; int32_t count;",
-             "                     uint32_t game_values[8]; int32_t setting_values[8]; };"]
+             "struct MenuSetting { int32_t setting; uint32_t structure; uint32_t member; bool is_bool; int32_t count;",
+             "                     uint32_t game_values[8]; int32_t setting_values[8]; };",
+             "// pages du menu : structure GameData, table de lignes, préfixe des textes",
+             f"constexpr int kPageCount = {len(PAGES)};",
+             "inline constexpr uint32_t kPageStructs[kPageCount] = {"
+             + ", ".join(f"0x{flag_hash(s):08x}" for s in STRUCTS) + "};",
+             "inline constexpr const char* kPageTables[kPageCount] = {"
+             + ", ".join(f'"{t}"' for t in MENU_TABLES) + "};",
+             "inline constexpr const char* kPagePrefixes[kPageCount] = {"
+             + ", ".join(f'"{p}"' for p in PREFIXES) + "};"]
     rows = []
     for setting, option_type, values in SETTING_ROWS:
         section, entry = idx[src["DefaultValue"][member[flag_hash(option_type)]]["Value"]]
-        m = f"0x{flag_hash(option_type):08x}"
+        m = f"0x{flag_hash(STRUCTS[page_of(setting)]):08x}, 0x{flag_hash(option_type):08x}"
         sid = names.index(setting)
         if values is None:
             rows.append(f"    {{{sid}, {m}, true, 0, {{}}, {{}}}},  // {setting} <- {option_type}")

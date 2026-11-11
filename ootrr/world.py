@@ -189,6 +189,30 @@ class DataError(ValueError):
     """Erreur dans les fichiers de données."""
 
 
+
+def shop_count(settings) -> int:
+    """Nombre d'articles mélangés par boutique (réglage shuffle_shops : off, 1 à 4)."""
+    value = settings.get("shuffle_shops", "off")
+    return 0 if value == "off" else int(value)
+
+
+SHOP_AFFORDABLE = 10
+SHOP_MAX_PRICE = 99  # sans bourse dans la logique : jamais plus que la bourse d'enfant
+
+
+def shop_price(settings, seed: int, location_index: int, vanilla_price: int) -> int:
+    """Prix d'un article mélangé (même calcul que le module natif, ShopPrice)."""
+    mode = settings.get("shop_prices", "vanilla")
+    if mode == "affordable":
+        return SHOP_AFFORDABLE
+    if mode == "random":
+        h = (seed * 0x9E3779B97F4A7C15 + (location_index + 1) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 31
+        h = (h * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 29
+        return (h % 20) * 5
+    return min(vanilla_price, SHOP_MAX_PRICE)
+
 @dataclass
 class Item:
     """Un objet réel du jeu (nom d'acteur) et la capacité logique qu'il donne."""
@@ -219,10 +243,13 @@ class Location:
     no_progression: bool = False  # emplacement incertain : jamais d'objet nécessaire pour finir
     scrub: bool = False  # Peste Mojo vendeuse : hashes = l'acteur Enemy_Scrub_Business (enfant / adulte)
     skulltula: bool = False  # Skulltula d'or : hashes = l'acteur Enemy_Skulltula_Gold, l'objet remplace le jeton
+    shop: int = 0  # article de boutique : rang (mélangé si rang <= shuffle_shops), hashes = l'acteur Shop_*
+    shop_actor: str | None = None  # article d'origine (Shop_*)
+    price: int = 0  # prix d'origine de l'article
 
     @property
     def is_chest(self) -> bool:
-        return bool(self.hashes) and not self.pickup and not self.scrub and not self.skulltula
+        return bool(self.hashes) and not self.pickup and not self.scrub and not self.skulltula and not self.shop
 
 
 @dataclass
@@ -357,6 +384,9 @@ class World:
             no_progression=bool(lbody.get("no_progression", False)),
             scrub=bool(lbody.get("scrub", False)),
             skulltula=bool(lbody.get("skulltula", False)),
+            shop=int(lbody.get("shop", 0)),
+            shop_actor=lbody.get("shop_actor"),
+            price=int(lbody.get("price", 0)),
         )
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
@@ -368,6 +398,8 @@ class World:
         if loc.skulltula:
             mode = self.settings.get("shuffle_skulltulas", "off")
             loc.shuffle = mode == "all" or (mode == "overworld" and loc.dungeon is None)
+        if loc.shop:
+            loc.shuffle = loc.shop <= shop_count(self.settings)
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -602,6 +634,8 @@ class World:
             return False
         if loc.skulltula and item not in self.ground and item not in self.ground_native:
             return False  # lâché par la Skulltula : objet ramassable (objet sur mesure ou version au sol)
+        if loc.shop and item not in self.ground and item not in self.ground_native:
+            return False  # article de boutique : objet donné par le jeton (le module natif ajoute les rubis)
         if loc.scrub and (item not in self.ground and item not in self.ground_native
                           or item.startswith("TBox_Rupee_")):
             return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)

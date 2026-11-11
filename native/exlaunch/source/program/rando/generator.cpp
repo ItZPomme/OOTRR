@@ -53,6 +53,7 @@ struct World {
                 int mode = s[SET_shuffle_skulltulas];
                 shuffle = mode == kSkulltulasAll || (mode == kSkulltulasOverworld && info.dungeon < 0);
             }
+            if (info.shop) shuffle = info.shop <= s[SET_shuffle_shops];  // valeur 0..4 = nombre d'articles
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -79,6 +80,7 @@ struct World {
         if (info.skulltula && !kItems[item].ground) return false;  // lâché par la Skulltula : ramassable
         // Peste Mojo : objets « au sol », sauf les rubis (un rubis vendu n'irait pas dans la bourse)
         if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name))) return false;
+        if (info.shop && !kItems[item].ground) return false;  // vendu par le jeton (rubis ajoutés par le module)
         if (info.no_progression && IsProgression(item)) return false;
         return true;
     }

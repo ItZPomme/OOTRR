@@ -33,6 +33,8 @@ PRESETS = {
     "pont cœurs": {"bridge": "hearts", "bridge_count": 8, "shuffle_hearts": "freestanding"},
     "pont récompenses": {"bridge": "dungeons", "bridge_count": 5, "shuffle_rewards": "shuffled"},
     "Skulltulas extérieur": {"shuffle_skulltulas": "overworld", "shuffle_scrubs": True},
+    "boutiques": {"shuffle_shops": "4", "shop_prices": "random", "shuffle_scrubs": True},
+    "boutiques et Skulltulas": {"shuffle_shops": "2", "shuffle_skulltulas": "all", "shuffle_hearts": "all"},
     "Skulltulas toutes": {"shuffle_skulltulas": "all", "shuffle_hearts": "freestanding", "open_forest": "open"},
 }
 

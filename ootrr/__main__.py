@@ -216,6 +216,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         settings = settings_mod.load(args.settings, args.set)
+        if settings.get("shuffle_shops", "off") != "off":
+            # les boutiques ne sont appliquées que par le menu dans le jeu (module natif)
+            raise settings_mod.SettingsError("shuffle_shops : boutiques disponibles seulement avec le menu "
+                                             "dans le jeu (python -m ootrr.tools.menutest)")
         world = World(settings)
     except (settings_mod.SettingsError, DataError) as exc:
         print(f"Erreur : {exc}", file=sys.stderr)

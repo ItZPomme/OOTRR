@@ -14,8 +14,11 @@ Par ordre de priorité. Chaque point : état actuel -> prochaine étape.
   puis le pont `tokens` (la valeur `PouchData.Item_Token_Gold.StockNum` est connue).
 
 ## Boutiques (shopsanity)
-- Article de boutique sur mesure validé en jeu (vente unique).
-- **À faire** : liste des articles par boutique (enfant/adulte), logique, prix, réglage.
+- Menu natif : 4 articles par boutique (8 boutiques), réglage 0 à 4, prix Origine / Abordable /
+  Aléatoire ; validé en jeu dans la boutique Kokiri.
+- **À faire** : vérifier les autres boutiques, la vente unique après sauvegarde, le modèle des objets
+  qui traverse la tablette, la version Python (mod sans menu), et des bourses dans la logique pour
+  des prix au-delà de 99.
 
 ## Pont arc-en-ciel
 - Conditions implémentées (open, vanilla, stones, medallions, dungeons, hearts) : **à tester en jeu**.

@@ -87,6 +87,9 @@ def ground_models_header(table: list[tuple[str, str, str]]) -> str:
     return "\n".join(lines)
 
 
+SHOP_TOKEN_BASE = "Shop_Weapon_Shield_Deku"  # article toujours affiché, vendu à l'unité
+
+
 def build_native(root_gamedata: dict) -> None:
     """Écrit les en-têtes générés (logique, réglages du menu) et compile le module natif."""
     import os
@@ -147,6 +150,29 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             actor_changes[h] = {"Drop__DropActor": t}
             tokens_actors[t] = "SELF@Obj_Token_Gold"
         report.append(f"Skulltulas d'or : {len(gs)} acteurs, {len(set(gs.values()))} jetons")
+        # boutiques : les articles mélangeables deviennent des jetons (copie de l'article bouclier Mojo, toujours
+        # affiché) ; le module natif donne l'objet placé à l'achat
+        from .. import shops as shops_mod
+        from ..native_logic import shop_slots, shop_tokens
+        shops = shop_tokens()
+        for t, _rank in shops.values():
+            tokens_actors[t] = f"SELF@{SHOP_TOKEN_BASE}"
+        # boutique Kokiri : jeux d'articles avant / après l'Arbre Mojo fusionnés (tout est débloqué)
+        gate, removed = shops_mod.kokiri_gate_changes(romfs, mb.codec)
+        actor_changes.update(gate)
+        for h in shops_mod.gated_board_hashes(romfs, mb.codec):
+            actor_changes[h] = {"__delete": True}
+        # article d'origine + copie jeton, présents selon OoTRR.Shop<rang> (posé au départ par le module)
+        dual = shops_mod.dual_actor_changes(romfs, mb.codec, {h: v for h, v in shops.items() if h not in removed})
+        for h, change in dual.items():
+            if h in removed:
+                continue
+            actor_changes.setdefault(h, {}).update(change)
+        report.append(f"boutiques : {len(dual)} acteurs, {len(set(t for t, _ in shops.values()))} jetons")
+        # listes des marchands : tout débloqué ; une variante par nombre d'articles mélangés
+        common["pack_changes"] = shops_mod.shopkeeper_changes(romfs, mb.codec, shop_slots())
+        for h in shops_mod.bombchu_keeper_hashes(romfs, mb.codec):
+            actor_changes.setdefault(h, {})["Presence"] = None
         # Peste Mojo vendeuses : elles vendent leur jeton (prix unique) ; au paiement, le module natif
         # donne l'objet placé (ou l'objet d'origine si le réglage est désactivé). La Peste Mojo de la
         # plaine a sa propre vente directe (entrée « Secret »).
@@ -200,7 +226,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     enum_values = {}
     from ..formats.gamedata import flag_hash, index
     idx = index(root)
-    st = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(menu.STRUCT))
+    st = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(menu.OPTION_STRUCT))
     names = {flag_hash(t): t for _, t, _ in menu.SETTING_ROWS}
     for m in st["DefaultValue"]:
         if m["Hash"] in names:
@@ -217,15 +243,16 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     raw = mb.codec.decompress(path)
     sarc = Sarc(raw)
     game_table = sarc.files[menu.GAME_TABLE]
-    table = menu.option_table(game_table, enum_values)
-    sarc.files[menu.MENU_TABLE] = table
     margin = mb.restbl.get(menu.GAME_TABLE) - len(game_table)
-    mb.restbl.set(menu.MENU_TABLE, len(table) + margin)
+    for page, table_path in enumerate(menu.MENU_TABLES):
+        table = menu.option_table(game_table, enum_values, page)
+        sarc.files[table_path] = table
+        mb.restbl.set(table_path, len(table) + margin)
     new = sarc.to_bytes()
     mb.restbl.resize_like(menu.BOOTUP[:-3], len(raw), len(new))
     (out / menu.BOOTUP).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.BOOTUP).write_bytes(mb.codec.compress(path.name, new))
-    report.append(f"{menu.MENU_TABLE}: {len(menu.ROWS)} lignes")
+    report.append(f"tables du menu : {len(menu.PAGES)} pages, {len(menu.ROWS)} lignes")
 
     # mise en page : copie de l'écran d'options sans les modèles inutilisés
     path = romfs / menu.COMMON_LAYOUTS

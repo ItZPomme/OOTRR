@@ -109,6 +109,31 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
 - Choix enregistrés dans la partie (validé : relu dans progress.sav) : les membres « réglage » de
   `OoTRRMenu` ont SaveFileIndex 0 et ResetTypeValue 0 ; MetaData décalé de 8 octets par entrée
   (`ingame_menu.add_saved_entries`). Le menu repart des valeurs par défaut après un retour au titre.
+- **Limites de l'écran** (constaté en jeu, 2026-11-11) : les types d'option viennent d'une table fixe du
+  code (17 noms, `0x3f13780` : `IsUseAmiibo` … `ControllerRumble`) ; un type absent d'`OptionData`
+  (`MessageWindowTransparency`) n'enregistre rien, et une liste n'enregistre que les valeurs de son
+  type dans le jeu (choix ajoutés affichés mais perdus). Valeurs par type : VoiceLanguage 9,
+  CameraRotateSpeed 5, DisplayMode / OcarinaSongEstimateMode / ControllerRumble 3, LockOnType /
+  OcarinaKeyAssign 2.
+- **Pages (validé en jeu, 2026-11-11)** : `NormalTitle` enchaîne une copie du nœud d'options par page ;
+  chaque page a sa structure (`OoTRRMenu`, `OoTRRMenu2`…), sa table et son préfixe de textes
+  (`OoTRR_`, `OoTRR2_`…). Le module compte les chargements de la mise en page `SystemOption_00`
+  pendant le menu pour savoir quelle page est affichée (`menu_data.hpp` : `kPage*`).
+
+### Boutiques (validé en jeu, 2026-11-11 : boutique Kokiri, 0 / 2 / 4 articles)
+
+- Chaque article mélangeable reste dans la carte (présent si `OoTRR.Shop<rang>` est faux) avec une
+  copie jeton au même endroit (présente s'il est vrai) ; le module pose ces drapeaux au départ. Le
+  marchand désigne ses articles par des liens `ForSale` et `Reference` : la copie en reçoit aussi.
+- Liste du marchand (`Component/ShopParam/…`, recherchée par `0x32ade0`) : variante `X_C<n>` choisie
+  par le module selon le nombre d'articles mélangés.
+- Prix : la boutique lit `BuyingPrice` dans la ligne RSDB `PouchActorInfo` de l'acteur, pas dans
+  `PriceParam`. `0x5a7c60` remplit une ligne (ligne, nœud BYML) au démarrage du jeu : +0 nom
+  (`__RowId`), +200 prix (s32). Le module note l'adresse de la ligne de chaque jeton et y écrit le prix
+  des réglages dès que la seed est générée ou rechargée (écrit au chargement de la boutique : trop tard
+  pour une partie des articles, constaté).
+- Pièges : prix de base 0 dans la ligne RSDB, ou décalages `PriceOffset` /
+  `ConditionalPriceOffsetList` ajoutés à la liste du marchand -> blocage au chargement de la forêt.
 
 ### Placement pendant le jeu (validé en jeu, 2026-11-10 : coffres de Mido)
 

@@ -20,7 +20,6 @@ namespace {
 
     constexpr u32 kMenuFlagHash = 0xa7ce2e71;   // MurmurHash3("OoTRR.IsRandomizerMenu")
     constexpr u32 kOptionDataHash = 0x834d9d9e; // MurmurHash3("OptionData")
-    constexpr u32 kMenuStructHash = 0x068ab00a; // MurmurHash3("OoTRRMenu")
 
     constexpr ptrdiff_t kSetBoolNode = 0x682b00;         // nœud SeqOneShotSetNonStructGameDataBool (nœud, hachage)
     constexpr ptrdiff_t kSetBoolNodeIndexed = 0x32e6910; // variante avec index (nœud, hachage, index)
@@ -35,17 +34,20 @@ namespace {
     constexpr ptrdiff_t kInitDrop = 0xbd1c00;           // composant « drop » : lit Drop__DropActor (composant, infos de création)
     constexpr ptrdiff_t kLoadLayout = 0x43a0e0;          // construit une mise en page ; 5e argument = nom ("SystemOption_00")
 
-    const char* const kMenuTablePath = "UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml";
     const char* const kOptionMessages = "LayoutMsg/SystemOption_00";
-    const char* const kPrefix = "OoTRR_";
     const char* const kGameLayout = "SystemOption_00";
     const char* const kMenuLayout = "OoTRRMenu_00"; // copie sans les modèles amiibo / séparateur
 
     bool g_menu = false;
     bool g_loading_menu_table = false;
-    bool g_menu_table_ready = false;
-    const char* g_menu_table_path = kMenuTablePath;
-    alignas(16) u8 g_menu_table[0x40] = {}; // même forme que la table du jeu : u32 nombre, lignes en +8
+    bool g_menu_tables_ready = false;
+    const char* g_menu_table_path = ootrr::menu::kPageTables[0];
+    // une table par page, même forme que la table du jeu : u32 nombre, lignes en +8
+    alignas(16) u8 g_menu_tables[ootrr::menu::kPageCount][0x40] = {};
+    bool g_page_ready[ootrr::menu::kPageCount] = {};
+    // page affichée : l'écran d'options s'ouvre une fois par page (mise en page chargée à chaque fois)
+    int g_page = 0;
+    int g_layouts = 0;
 
     uintptr_t Main() { return exl::util::modules::GetTargetStart(); }
 
@@ -75,12 +77,12 @@ namespace {
     int g_trace = 0; // nombre de traces restantes depuis l'ouverture du menu
 
     void* PickTable(void* table) {
-        bool mine = g_menu && g_menu_table_ready;
+        bool mine = g_menu && g_page_ready[g_page];
         if (g_menu && g_trace > 0) {
             g_trace--;
             LogValue(mine ? "OoTRR: table remplacee, table du jeu" : "OoTRR: table du jeu gardee", reinterpret_cast<u64>(table));
         }
-        return mine ? static_cast<void*>(g_menu_table) : table;
+        return mine ? static_cast<void*>(g_menu_tables[g_page]) : table;
     }
 
     // seed aléatoire tirée à l'ouverture du menu (affichée dans la description de « Seed manuelle »,
@@ -98,6 +100,8 @@ namespace {
         if (on && !g_menu) {
             g_trace = 4;
             g_menu_seed = RollSeed();
+            g_page = 0;
+            g_layouts = 0;
         }
         g_menu = on;
     }
@@ -137,6 +141,8 @@ namespace {
 
 }
 
+void WriteAllTokenPrices();  // prix des articles jetons (plus bas)
+
 u64 ReadTick() {
     u64 value;
     asm volatile("mrs %0, cntpct_el0" : "=r"(value));
@@ -170,6 +176,7 @@ void GenerateSeed() {
     bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed, &read);
     LogMenuRead(read);
     LogValue(ok ? "OoTRR: seed generee" : "OoTRR: echec de la generation, seed", seed);
+    if (ok) WriteAllTokenPrices();
     if (ok) {
         ootrr::ingame::WriteSavedSeed(Main(), static_cast<s32>(seed));
         g_trust_memory = true;
@@ -191,6 +198,7 @@ void EnsureSeedForCurrentGame() {
     bool ok = ootrr::ingame::GenerateFromMenu(Main(), static_cast<u32>(saved), &read);
     LogMenuRead(read);
     LogValue(ok ? "OoTRR: seed rechargee" : "OoTRR: echec de la regeneration, seed", static_cast<u32>(saved));
+    if (ok) WriteAllTokenPrices();
 }
 
 void OnSetBool(void* node, u32 hash) {
@@ -221,6 +229,7 @@ struct ResourceHandle {
 };
 
 int TokenLocation(const char* text);
+void WriteTokenPrice(int location);
 const char* GroundItem(const char* item);
 int g_model_logs = 24;
 
@@ -253,6 +262,35 @@ struct PathString {
 
 HOOK_DEFINE_TRAMPOLINE(ArchiveEntry) {
     static s64 Callback(void* archive, PathString* path) {
+        // liste d'un marchand : variante selon le nombre d'articles mélangés (X_C<n>, ootrr.shops)
+        if (path && path->text && path->text[0] == 'C' && ootrr::ingame::Ready()) {
+            const char* prefix = "Component/ShopParam/";
+            int k = 0;
+            while (prefix[k] && path->text[k] == prefix[k]) k++;
+            int count = ootrr::ingame::SettingValue(ootrr::logic::SET_shuffle_shops);
+            if (!prefix[k] && count > 0) {
+                static char variant[160];
+                int n = 0, dot = -1;
+                for (const char* p = path->text; *p && n < 150; p++) {
+                    if (*p == '.' && dot < 0) {
+                        dot = n;
+                        variant[n++] = '_';
+                        variant[n++] = 'C';
+                        variant[n++] = static_cast<char>('0' + count);
+                    }
+                    variant[n++] = *p;
+                }
+                variant[n] = 0;
+                PathString replaced{variant};
+                s64 found = Orig(archive, &replaced);
+                if (g_model_logs > 0) {
+                    g_model_logs--;
+                    Log(variant);
+                    LogValue("OoTRR: liste du marchand, variante", static_cast<u64>(found));
+                }
+                if (found >= 0) return found;
+            }
+        }
         if (path && path->text && path->text[0] == 'C') {
             if (const char* other = TokenModelPath(path->text)) {
                 if (g_model_logs > 0) {
@@ -302,12 +340,17 @@ HOOK_DEFINE_TRAMPOLINE(LoadResource) {
 HOOK_DEFINE_TRAMPOLINE(LoadOptionTable) {
     static bool Callback(void* table, void* heap) {
         bool ok = Orig(table, heap);
-        if (!g_menu_table_ready) {
-            g_loading_menu_table = true;
-            bool mine = Orig(g_menu_table, heap);
-            g_loading_menu_table = false;
-            g_menu_table_ready = mine && *reinterpret_cast<u32*>(g_menu_table) > 0;
-            Log(g_menu_table_ready ? "OoTRR: table du menu chargee" : "OoTRR: table du menu introuvable");
+        if (!g_menu_tables_ready) {
+            g_menu_tables_ready = true;
+            for (int p = 0; p < ootrr::menu::kPageCount; p++) {
+                g_menu_table_path = ootrr::menu::kPageTables[p];
+                g_loading_menu_table = true;
+                bool mine = Orig(g_menu_tables[p], heap);
+                g_loading_menu_table = false;
+                g_page_ready[p] = mine && *reinterpret_cast<u32*>(g_menu_tables[p]) > 0;
+                LogValue(g_page_ready[p] ? "OoTRR: table du menu chargee, page" : "OoTRR: table du menu introuvable, page",
+                         static_cast<u64>(p + 1));
+            }
         }
         return ok;
     }
@@ -455,7 +498,7 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
         if (g_menu && file && *file && label && *label && SameString(*file, kOptionMessages)) {
             char name[160];
             size_t n = 0;
-            for (const char* p = kPrefix; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+            for (const char* p = ootrr::menu::kPagePrefixes[g_page]; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
             for (const char* p = *label; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
             name[n] = 0;
             const char* mine = name;
@@ -476,7 +519,7 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
 
 HOOK_DEFINE_TRAMPOLINE(GetStructHandle) {
     static u64 Callback(void* manager, void* handle, u32 hash) {
-        if (g_menu && hash == kOptionDataHash) hash = kMenuStructHash;
+        if (g_menu && hash == kOptionDataHash) hash = ootrr::menu::kPageStructs[g_page];
         return Orig(manager, handle, hash);
     }
 };
@@ -487,7 +530,11 @@ HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
                         u64 a8, u64 a9, u64 a10) {
         if (g_menu && name && SameString(name, kGameLayout)) {
             name = kMenuLayout;
-            Log("OoTRR: mise en page du menu");
+            // une ouverture de l'écran d'options par page
+            g_page = g_layouts < ootrr::menu::kPageCount ? g_layouts : ootrr::menu::kPageCount - 1;
+            g_layouts++;
+            g_trace = 4;
+            LogValue("OoTRR: mise en page du menu, page", static_cast<u64>(g_page + 1));
         }
         return Orig(layout, a1, a2, a3, name, a5, a6, a7, a8, a9, a10);
     }
@@ -717,6 +764,50 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
     }
 };
 
+/* Prix des articles jetons : la boutique lit le prix d'achat dans la ligne PouchActorInfo de l'acteur
+ * (RSDB, copie de celle du bouclier Mojo pour un jeton), pas dans PriceParam. 0x5a7c60 remplit une
+ * ligne (ligne, nœud BYML) : +0 = nom (__RowId), +200 = BuyingPrice (s32). On note l'adresse de la
+ * ligne de chaque jeton et on y écrit le prix des réglages (à la lecture, et quand la boutique charge). */
+constexpr int kRowPriceOffset = 200;
+// une ligne peut être lue plusieurs fois (copies) : jusqu'à 4 adresses par jeton
+constexpr int kRowCopies = 4;
+s32* g_token_price[1024][kRowCopies] = {};
+int g_row_logs = 8;
+int g_shop_row_logs = 24;
+
+void WriteTokenPrice(int location) {
+    if (location < 0 || location >= 1024) return;
+    if (!ootrr::ingame::Ready() || !ootrr::ingame::IsShop(location)) return;
+    for (s32* price : g_token_price[location])
+        if (price) *price = ootrr::ingame::ShopPrice(location);
+}
+
+// prix de tous les articles jetons : dès que la seed est prête, avant qu'une boutique ne charge
+void WriteAllTokenPrices() {
+    for (int location = 0; location < 1024 && location < ootrr::ingame::LocationCount(); location++)
+        WriteTokenPrice(location);
+}
+
+HOOK_DEFINE_TRAMPOLINE(ParsePouchRow) {
+    static void Callback(void* row, void* node) {
+        Orig(row, node);
+        const char* name = *reinterpret_cast<const char**>(row);
+        int location = name ? TokenLocation(name) : -1;
+        if (location >= 0 && location < 1024) {
+            s32* price = reinterpret_cast<s32*>(static_cast<u8*>(row) + kRowPriceOffset);
+            int slot = 0;
+            while (slot < kRowCopies && g_token_price[location][slot] && g_token_price[location][slot] != price) slot++;
+            if (slot < kRowCopies) g_token_price[location][slot] = price;
+            if (ootrr::ingame::IsShop(location) && g_shop_row_logs > 0) {
+                g_shop_row_logs--;
+                Log(name);
+                LogValue("OoTRR: ligne PouchActorInfo d'un article jeton, copie", static_cast<u64>(slot));
+            }
+            WriteTokenPrice(location);
+        }
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(SetChallengeStep) {
     static u64 Callback(void* manager, u32 challenge, u32 step, u64 a3, u64 a4, u64 a5) {
         if (g_challenge_logs > 0) {
@@ -753,6 +844,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     PouchAdd::InstallAtOffset(ootrr::ingame::kPouchAdd);
     ArchiveEntry::InstallAtOffset(0x32ade0);
     InitDrop::InstallAtOffset(kInitDrop);
+    ParsePouchRow::InstallAtOffset(0x5a7c60);
     Log("OoTRR: module natif charge, crochets du menu installes");
 }
 

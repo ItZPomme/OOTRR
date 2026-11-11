@@ -75,5 +75,9 @@ bool IsConditional(int location);
 // remplacement à la source, l'objet est donné au ramassage
 bool KeepsToken(int location);
 int LocationCount();
+// article de boutique (rang > 0)
+bool IsShop(int location);
+// prix d'un article de boutique mélangé (réglage shop_prices ; même calcul que world.shop_price)
+int32_t ShopPrice(int location);
 
 }  // namespace ootrr::ingame

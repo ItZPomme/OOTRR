@@ -26,6 +26,9 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "pickup": loc.pickup,
             "scrub": loc.scrub,
             "skulltula": loc.skulltula,
+            "shop": loc.shop,
+            "shop_actor": loc.shop_actor,
+            "price": loc.price,
         })
     return {
         "format": PATCH_FORMAT,
@@ -61,7 +64,7 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
     d'origine (sinon l'animation de l'ancien objet se joue, ex. l'épée dans le dos)."""
     changes: dict[int, dict] = {}
     for chest in patch["chests"]:
-        if chest["item"] == chest["vanilla"] or chest.get("pickup") or chest.get("scrub") or chest.get("skulltula"):
+        if chest["item"] == chest["vanilla"] or chest.get("pickup") or chest.get("scrub") or chest.get("skulltula") or chest.get("shop"):
             continue
         change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
         if chest["event"] == "drop":

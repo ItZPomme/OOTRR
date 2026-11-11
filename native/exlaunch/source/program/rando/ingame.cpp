@@ -65,13 +65,22 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     auto get_bool = reinterpret_cast<GetBoolFn>(main_base + kGetStructBool);
 
     Settings settings = Settings::Defaults();
-    Handle handle;
+    Handle handles[menu::kPageCount];
+    bool have[menu::kPageCount] = {};
     MenuRead local{};
     MenuRead& r = read ? *read : local;
     r = MenuRead{};
-    r.handle = manager && get_handle(manager, &handle, menu::kStructHash);
-    if (r.handle) {
+    r.handle = manager != nullptr;
+    for (int p = 0; p < menu::kPageCount && manager; p++) {
+        have[p] = get_handle(manager, &handles[p], menu::kPageStructs[p]);
+        r.handle = r.handle && have[p];
+    }
+    if (manager) {
         for (const menu::MenuSetting& m : menu::kMenuSettings) {
+            int page = 0;
+            while (page < menu::kPageCount && menu::kPageStructs[page] != m.structure) page++;
+            if (page >= menu::kPageCount || !have[page]) continue;
+            Handle& handle = handles[page];
             if (m.is_bool) {
                 bool value = false;
                 if (get_bool(manager, &value, &handle, m.member)) {
@@ -294,5 +303,22 @@ const char* ItemFor(int location) {
 bool IsDropEvent(int location) { return logic::kLocations[location].event == 2; }
 bool IsConditional(int location) { return logic::kLocations[location].conditional; }
 bool KeepsToken(int location) { return logic::kLocations[location].skulltula; }
+
+bool IsShop(int location) { return logic::kLocations[location].shop > 0; }
+
+int32_t ShopPrice(int location) {
+    int mode = g_settings.values[logic::SET_shop_prices];
+    if (mode == logic::kShopPricesAffordable) return 10;
+    if (mode == logic::kShopPricesRandom) {
+        uint64_t h = static_cast<uint64_t>(CurrentSeed()) * 0x9E3779B97F4A7C15ull +
+                     static_cast<uint64_t>(location + 1) * 0xBF58476D1CE4E5B9ull;
+        h ^= h >> 31;
+        h *= 0x94D049BB133111EBull;
+        h ^= h >> 29;
+        return static_cast<int32_t>(h % 20) * 5;
+    }
+    int32_t price = logic::kLocations[location].price;
+    return price > 99 ? 99 : price;  // sans bourse dans la logique
+}
 
 }  // namespace ootrr::ingame

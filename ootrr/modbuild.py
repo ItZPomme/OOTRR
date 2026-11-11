@@ -162,6 +162,11 @@ class ModBuilder:
             raw = self.codec.decompress(path)
             sarc = Sarc(raw)
             for fname, fields in inner.items():
+                fields = dict(fields)
+                source = fields.pop("__copy_from", None)  # nouveau fichier : copie d'un fichier de l'archive
+                if source is not None and fname not in sarc.files:
+                    sarc.files[fname] = sarc.files[source]
+                    sarc.align[fname] = sarc.align.get(source, 8)
                 if fname not in sarc.files:
                     raise KeyError(f"{actor} : fichier interne introuvable {fname}")
                 data = sarc.files[fname]
@@ -655,6 +660,14 @@ class ModBuilder:
                 dyn = actor.setdefault("Dynamic", {})
                 for key, value in change.items():
                     if key == "__clone":
+                        continue
+                    if key == "__add_links":  # liens ajoutés (ex. marchand -> copie d'un article)
+                        actor.setdefault("Links", []).extend(dict(l) for l in value)
+                        report.append(f"{path.parent.name}/{path.name}: {actor['Hash']} {len(value)} liens ajoutés")
+                        continue
+                    if key == "Presence" and value is None:  # condition d'apparition retirée
+                        actor.pop("Presence", None)
+                        report.append(f"{path.parent.name}/{path.name}: {actor['Hash']} Presence retirée")
                         continue
                     if key in ("Presence", "Rotate", "Translate"):  # champs de l'acteur lui-même
                         actor[key] = type(actor.get(key, value))(value) if key != "Presence" else dict(value)

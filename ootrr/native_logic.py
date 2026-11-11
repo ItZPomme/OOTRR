@@ -231,7 +231,9 @@ class Exporter:
                 no_progression=bool(lbody.get("no_progression", False)),
                 event={"keep": 1, "drop": 2}.get(lbody.get("event"), 0),
                 conditional=bool(lbody.get("conditional", False)), scrub=bool(lbody.get("scrub", False)),
-                skulltula=bool(lbody.get("skulltula", False)),
+                skulltula=bool(lbody.get("skulltula", False)), shop=int(lbody.get("shop", 0)),
+                shop_actor=lbody.get("shop_actor") or "", price=int(lbody.get("price", 0)),
+                slot=int(lbody.get("slot", -1)),
                 hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
@@ -307,6 +309,8 @@ class Exporter:
             "kHeartsFreestanding": enum_value("shuffle_hearts", "freestanding"),
             "kSkulltulasOverworld": enum_value("shuffle_skulltulas", "overworld"),
             "kSkulltulasAll": enum_value("shuffle_skulltulas", "all"),
+            "kShopPricesAffordable": enum_value("shop_prices", "affordable"),
+            "kShopPricesRandom": enum_value("shop_prices", "random"),
             "kSkipSafe": enum_value("skip_cutscenes", "safe"),
             "kRewardsVanilla": enum_value("shuffle_rewards", "vanilla"),
             "kRewardsShuffled": enum_value("shuffle_rewards", "shuffled"),
@@ -337,13 +341,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}}},")
         lines.append("};")
         # règles
         lines.append(f"constexpr int kHelperCount = {len(self.helper_offsets)};")
@@ -370,9 +374,25 @@ def chest_tokens() -> dict[int, str]:
     w = Exporter().world()
     out = {}
     for i, l in enumerate(w["locations"]):
-        if l["hashes"] and l["shuffle"] and not l["pickup"] and not l["scrub"] and not l["skulltula"]:
+        if l["hashes"] and l["shuffle"] and not l["pickup"] and not l["scrub"] and not l["skulltula"] and not l["shop"]:
             for h in l["hashes"]:
                 out[h] = token(i)
+    return out
+
+
+def shop_tokens() -> dict[int, tuple[str, int]]:
+    """{hash d'article: (jeton, rang)} pour les articles de boutique mélangeables (ootrr.shops)."""
+    w = Exporter().world()
+    return {h: (token(i), l["shop"]) for i, l in enumerate(w["locations"]) if l["shop"] for h in l["hashes"]}
+
+
+def shop_slots() -> dict[str, dict[int, tuple[str, int]]]:
+    """{boutique: {index d'article: (jeton, rang)}} (listes des marchands, ootrr.shops)."""
+    w = Exporter().world()
+    out: dict[str, dict[int, tuple[str, int]]] = {}
+    for i, l in enumerate(w["locations"]):
+        if l["shop"]:
+            out.setdefault(l["name"].rsplit(" Item ", 1)[0], {})[l["slot"]] = (token(i), l["shop"])
     return out
 
 
