@@ -27,6 +27,9 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "shuffle_hearts": ("none", ("none", "freestanding", "all"),
                        "Cœurs posés au sol : freestanding = les 13 quarts de cœur libres deviennent des "
                        "emplacements mélangés ; all = aussi les 8 réceptacles des boss (vérifié en jeu avec Gohma)"),
+    "shuffle_scrubs": (False, bool,
+                       "Peste Mojo vendeurs : les 5 qui vendent un objet unique (quarts de cœur de la plaine et du "
+                       "cratère, améliorations des bâtons et des noix) vendent une fois l'objet placé, 40 rubis"),
     "skip_cutscenes": ("none", ("none", "safe"),
                        "safe : les cinématiques sans effet sur la partie (liste data/cutscenes.json) "
                        "sont marquées comme déjà vues dès la nouvelle partie"),

@@ -92,6 +92,7 @@
     "Item_FaroreWind": {}, "Item_NayruLove": {}, "Item_Arrow_Ice": {}, "Item_AgonyStone": {},
     "Item_Wallet_Medium": {}, "Item_Wallet_Large": {}, "Item_FairyBless_DefenseDouble": {},
     "Item_Quiver_Medium": {}, "Item_Quiver_Large": {}, "Item_BulletBag_Medium": {}, "Item_BulletBag_Large": {},
+    "Item_StickBag_Medium": {}, "Item_StickBag_Large": {}, "Item_NutBag_Medium": {},
     "Obj_Heart_Piece": {"logic": "Heart_Piece"}, "Obj_Heart_Container": {"logic": "Heart_Container"},
     "Item_ScrubBusinessSeed": {}, "Item_DekuStickBundle_Small": {}, "Item_BombchuBundle_Small": {}, "Item_BombBundle_Small": {},
     "Tbox_MagicJar_Large": {}, "TBox_DekuNutBundle": {}, "TBox_ArrowBundle_Large": {}, "TBox_ArrowBundle_Medium": {},

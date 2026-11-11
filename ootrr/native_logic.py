@@ -230,7 +230,8 @@ class Exporter:
                 pickup={"freestanding": 1, "boss": 2}.get(lbody.get("pickup"), 0),
                 no_progression=bool(lbody.get("no_progression", False)),
                 event={"keep": 1, "drop": 2}.get(lbody.get("event"), 0),
-                conditional=bool(lbody.get("conditional", False)), hashes=[int(h) for h in hashes]))
+                conditional=bool(lbody.get("conditional", False)), scrub=bool(lbody.get("scrub", False)),
+                hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
             for lname, lbody in body.get("locations", {}).items():
@@ -333,13 +334,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}}},")
         lines.append("};")
         # règles
         lines.append(f"constexpr int kHelperCount = {len(self.helper_offsets)};")
@@ -366,10 +367,17 @@ def chest_tokens() -> dict[int, str]:
     w = Exporter().world()
     out = {}
     for i, l in enumerate(w["locations"]):
-        if l["hashes"] and l["shuffle"] and not l["pickup"]:
+        if l["hashes"] and l["shuffle"] and not l["pickup"] and not l["scrub"]:
             for h in l["hashes"]:
                 out[h] = token(i)
     return out
+
+
+def scrub_tokens() -> dict[str, tuple[str, list[int]]]:
+    """{nom du lieu: (jeton, hashes des Peste Mojo)} pour les Peste Mojo vendeuses : le jeton est vendu,
+    le module natif donne l'objet placé (ou l'objet d'origine si elles ne sont pas mélangées)."""
+    w = Exporter().world()
+    return {l["name"]: (token(i), list(l["hashes"])) for i, l in enumerate(w["locations"]) if l["scrub"]}
 
 
 def heart_tokens() -> dict[int, tuple[str, str]]:

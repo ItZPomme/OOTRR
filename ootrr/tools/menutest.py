@@ -108,14 +108,14 @@ def build_native(root_gamedata: dict) -> None:
 
 
 def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
-          give: list[str] | None = None) -> list[str]:
+          give: list[str] | None = None, flags: dict | None = None) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
     # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
     from ..settings import build as build_settings
     from ..world import World
     world = World(build_settings(dict(menu.STATIC_SETTINGS)))
-    common = dict(start_flags=world.start_flags(), event_skips=world.event_skips(),
+    common = dict(start_flags={**world.start_flags(), **(flags or {})}, event_skips=world.event_skips(),
                   start_warp=tuple(start.split("=", 1)) if start else None,
                   start_items=world.start_items() + list(give or []))
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}
@@ -140,6 +140,26 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             actor_changes[h] = {"Gyaml": t}
             tokens_actors[t] = f"SELF@{base}"
         report.append(f"jetons des cœurs au sol : {len(hearts)}")
+        # Peste Mojo vendeuses : elles vendent leur jeton (prix unique) ; au paiement, le module natif
+        # donne l'objet placé (ou l'objet d'origine si le réglage est désactivé). La Peste Mojo de la
+        # plaine a sa propre vente directe (entrée « Secret »).
+        from ..native_logic import scrub_tokens
+        from ..patch import SCRUB_FIELDS
+        from ..world import SCRUB_PRICE, SCRUB_SECRET_LOCATION
+        scrub_sales = {}
+        for lname, (t, hashes) in scrub_tokens().items():
+            for h in hashes:
+                actor_changes[h] = {SCRUB_FIELDS[0]: t, SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
+            tokens_actors[t] = "SELF@Obj_Heart_Piece"
+            scrub_sales[t] = SCRUB_PRICE
+            if lname == SCRUB_SECRET_LOCATION:
+                mb.scrub_secret = (t, SCRUB_PRICE)
+        # messages de vente des objets possibles (le module redirige le message du jeton)
+        from ..native_logic import Exporter
+        mb.scrub_message_items = sorted({i["name"].replace("TBox_Rupee_", "Obj_Rupee_") for i in Exporter().world()["items"]
+                                         if i["ground"]} | {"Item_StickBag_Medium", "Item_StickBag_Large", "Item_NutBag_Medium"})
+        common["scrub_sales"] = scrub_sales
+        report.append(f"Peste Mojo : {len(scrub_sales)} jetons vendus")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None
@@ -269,12 +289,18 @@ def main(argv=None):
     p.add_argument("--test-start", metavar="BANC=POINT", help="point de départ de test (ex. HyruleField_Child=HyruleField_FrontOfMarket)")
     p.add_argument("--test-give", action="append", default=[], metavar="OBJET",
                    help="test : objet donné au début de la partie (répétable, ex. Item_Gauntlet_Goron)")
+    p.add_argument("--test-flag", action="append", default=[], metavar="NOM=VALEUR",
+                   help="test : valeur de départ d'une donnée GameData (ex. PlayerStatus.CurrentRupee=99)")
     a = p.parse_args(argv)
     if not NATIVE.is_file():
         raise SystemExit(f"module natif absent : {NATIVE} (compiler native/exlaunch, voir native/README.md)")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give):
+        flags = {}
+        for entry in a.test_flag:
+            name, value = entry.split("=", 1)
+            flags[name] = {"true": True, "false": False}.get(value.lower(), int(value) if value.lstrip("-").isdigit() else value)
+        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give, flags):
             print(line)
         (root / "exefs").mkdir()
         shutil.copy2(NATIVE, root / "exefs" / "subsdk9")

@@ -48,6 +48,7 @@ struct World {
                 int mode = s[SET_shuffle_hearts];
                 shuffle = mode == kHeartsAll || (mode == kHeartsFreestanding && info.pickup == 1);
             }
+            if (info.scrub) shuffle = s[SET_shuffle_scrubs] != 0;
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -62,9 +63,17 @@ struct World {
 
     bool IsProgression(int item) const { return item >= 0 && item_logic[item] >= 0; }
 
+    static bool IsRupee(const char* name) {
+        const char* prefix = "TBox_Rupee_";
+        while (*prefix && *name == *prefix) { name++; prefix++; }
+        return !*prefix;
+    }
+
     bool CanPlace(int item, int loc) const {
         const LocationInfo& info = kLocations[loc];
         if (info.pickup && !kItems[item].ground) return false;
+        // Peste Mojo : objets « au sol », sauf les rubis (un rubis vendu n'irait pas dans la bourse)
+        if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name))) return false;
         if (info.no_progression && IsProgression(item)) return false;
         return true;
     }

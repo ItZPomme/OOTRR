@@ -172,6 +172,10 @@ def bridge_exps(mode: str, count: int) -> dict[str, list[tuple]]:
 # réglage free_time_travel : l'épée de légende renvoie enfant sans attendre le Temple de la Forêt
 # (condition remplacée par une expression toujours vraie une fois la porte ouverte, même longueur)
 FREE_TIME_TRAVEL = {"Market_Adult_Prefab_89da": {"SageOfForest_IsCompleted_Exp": "DoorOfTime_IsAfter_Ready_Exp"}}
+# Peste Mojo vendeuses mélangées : prix unique (les quarts de cœur coûtent 100 dans le jeu, plus que la
+# bourse d'enfant) ; le script commun vend l'objet une fois (SimpleShopSub_Scrub_Business_OneTime)
+SCRUB_PRICE = 40
+SCRUB_SECRET_LOCATION = "HF Deku Scrub Heart Piece"  # script à part : vente directe (entrée « Secret »)
 FOREST_FLAGS = {"exit": "KokiriForest_Npc_Kokiri_007_Child_Blocker_00", "deku": "KokiriForest_Npc_Kokiri_Mido_Child_Blocker"}
 # réglage open_forest : PNJ « bloqueurs » retirés de KokiriForest_Child_Static
 OPEN_FOREST_REMOVALS = {
@@ -213,10 +217,11 @@ class Location:
     conditional: bool = False  # coffre A_06 à contenu conditionnel
     pickup: str | None = None  # "freestanding" | "boss" : cœur posé au sol (pas un coffre)
     no_progression: bool = False  # emplacement incertain : jamais d'objet nécessaire pour finir
+    scrub: bool = False  # Peste Mojo vendeuse : hashes = l'acteur Enemy_Scrub_Business (enfant / adulte)
 
     @property
     def is_chest(self) -> bool:
-        return bool(self.hashes) and not self.pickup
+        return bool(self.hashes) and not self.pickup and not self.scrub
 
 
 @dataclass
@@ -349,12 +354,15 @@ class World:
             conditional=bool(lbody.get("conditional", False)),
             pickup=lbody.get("pickup"),
             no_progression=bool(lbody.get("no_progression", False)),
+            scrub=bool(lbody.get("scrub", False)),
         )
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
         if loc.pickup:
             mode = self.settings.get("shuffle_hearts", "none")
             loc.shuffle = mode == "all" or (mode == "freestanding" and loc.pickup == "freestanding")
+        if loc.scrub:
+            loc.shuffle = bool(self.settings.get("shuffle_scrubs"))
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -587,6 +595,9 @@ class World:
         """Contraintes d'emplacement : objets au sol limités, emplacements incertains sans progression."""
         if loc.pickup and item not in self.ground and item not in self.ground_native:
             return False
+        if loc.scrub and (item not in self.ground and item not in self.ground_native
+                          or item.startswith("TBox_Rupee_")):
+            return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)
         if loc.no_progression and self.is_progression(item):
             return False
         return True

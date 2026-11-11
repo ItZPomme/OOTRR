@@ -76,7 +76,15 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         changes.setdefault(int(h), {})["Drop__DropActor"] = name
         print(f"Test : butin de {h} -> {name} (donne {item.strip()}, hors logique)")
     # Peste Mojo de test : HASH=OBJET[:PRIX] -> vend OBJET (vente unique) via le script commun
-    scrub_sales: dict[str, int] = {}
+    from .patch import scrub_changes
+    from .world import SCRUB_SECRET_LOCATION
+    scrubs, scrub_sales = scrub_changes(patch)
+    for h, change in scrubs.items():
+        changes.setdefault(h, {}).update(change)
+    secret = next(((c["item"], scrub_sales[c["item"]]) for c in patch["chests"]
+                   if c.get("scrub") and c["location"] == SCRUB_SECRET_LOCATION), None)
+    if scrubs:
+        print(f"Peste Mojo mélangées : {len(scrub_sales)} objets vendus")
     for entry in test_scrubs or []:
         h, spec = entry.split("=", 1)
         item, _, price = spec.partition(":")
@@ -122,7 +130,9 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         event_changes = patch.get("event_changes") or {}
         if event_changes:
             print(f"Récompenses de boss modifiées dans {len(event_changes)} scènes")
-        ModBuilder(romfs).build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
+        builder = ModBuilder(romfs)
+        builder.scrub_secret = secret
+        builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,

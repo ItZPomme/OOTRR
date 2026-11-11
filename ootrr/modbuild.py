@@ -335,6 +335,11 @@ class ModBuilder:
             report.append(f"{rel}: {len(new)} messages de Peste Mojo")
         return report
     SCRUB_TALK = "Enemy_Scrub_Business_DekuStickPouch_01"  # script « sac de bâtons » commun aux Peste Mojo mélangées
+    # Peste Mojo du quart de cœur de la plaine : son script (entrée « Secret ») vend le quart de cœur
+    # directement, sans comparer l'article ; (objet, prix) vendu à la place, ou None
+    scrub_secret: tuple[str, int] | None = None
+    # messages de vente supplémentaires (objets que le module natif peut substituer à un jeton)
+    scrub_message_items: list[str] = []
 
     def _scrub_sales(self, flow: bytes, sales: dict[str, int]) -> tuple[bytes, list[str]]:
         """Peste Mojo : avant les comparaisons d'origine, une question par objet vendu
@@ -376,6 +381,23 @@ class ModBuilder:
         ask = (flow, _q(flow, fc["events"] + compare * EVENT_SIZE + 0x10)) if compare is not None else None
         if compare is None or sale is None:
             raise KeyError("repères introuvables dans le script des Peste Mojo")
+        report: list[str] = []
+        if self.scrub_secret:
+            # vente directe du quart de cœur dans l'entrée « Secret » : remplacée par celle de l'objet
+            from .tools.events import trace
+            item, price = self.scrub_secret
+            direct = [int(line.split(":", 1)[0]) for line in trace(flow, "Secret")
+                      if "SimpleShopSub_Scrub_Business_OneTime" in line and "'Obj_Heart_Piece'" in line]
+            if len(direct) != 1:
+                raise KeyError(f"vente du quart de cœur (entrée Secret) : {len(direct)} candidates")
+            flow, secret_report = insert_flow(flow, None, [{
+                "copy_event": direct[0], "next": None,
+                "set": {"ActorName": item, "Price": int(price),
+                        "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{item}"}}],
+                before=direct[0])
+            report += secret_report
+            fc = _flowchart_full(flow)
+            ask = (flow, _q(flow, fc["events"] + compare * EVENT_SIZE + 0x10))
         nodes = []
         items = sorted(sales)
         for k, item in enumerate(items):
@@ -384,7 +406,8 @@ class ModBuilder:
             nodes.append({"copy_event": sale, "next": None,
                           "set": {"ActorName": item, "Price": int(sales[item]),
                                   "SellerMessageId": f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{item}"}})
-        return insert_flow(flow, None, nodes, before=compare)
+        flow, sale_report = insert_flow(flow, None, nodes, before=compare)
+        return flow, report + sale_report
 
     def _guard_fairy_ocarina(self, flow: bytes) -> tuple[bytes, list[str]]:
         from .formats.evfl import ensure_actor_member, find_action_event, find_query, insert_flow
@@ -673,7 +696,8 @@ class ModBuilder:
         if logic_patches:
             report += self._write_logic(logic_patches, out_romfs)
         if scrub_sales or questions:
-            report += self._write_messages(sorted(scrub_sales or {}), out_romfs, questions or [])
+            items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items))
+            report += self._write_messages(items, out_romfs, questions or [])
         if pack_changes:
             report += self._write_packs(pack_changes, out_romfs)
         rsdb_all: dict[str, dict[str, dict]] = {t: dict(rows) for t, rows in (rsdb_changes or {}).items()}

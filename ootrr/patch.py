@@ -24,6 +24,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "event": loc.event,
             "conditional": loc.conditional,
             "pickup": loc.pickup,
+            "scrub": loc.scrub,
         })
     return {
         "format": PATCH_FORMAT,
@@ -59,7 +60,7 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
     d'origine (sinon l'animation de l'ancien objet se joue, ex. l'épée dans le dos)."""
     changes: dict[int, dict] = {}
     for chest in patch["chests"]:
-        if chest["item"] == chest["vanilla"] or chest.get("pickup"):
+        if chest["item"] == chest["vanilla"] or chest.get("pickup") or chest.get("scrub"):
             continue
         change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
         if chest["event"] == "drop":
@@ -71,6 +72,26 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
         for h in chest["hashes"]:
             changes[int(h)] = change
     return changes
+
+
+SCRUB_FIELDS = ("ScrubBusiness_ShopItemActorName0", "ScrubBusiness_ShopItemActorName1",
+                "ScrubBusiness_ShopItemActorName2")
+
+
+def scrub_changes(patch: dict[str, Any], price: int | None = None) -> tuple[dict[int, dict], dict[str, int]]:
+    """Peste Mojo mélangées : ({hash: champs de l'acteur}, {objet vendu: prix}). L'acteur garde son
+    script (TalkEventName) ; le premier article devient l'objet placé, les autres disparaissent."""
+    from .world import SCRUB_PRICE
+
+    changes: dict[int, dict] = {}
+    sales: dict[str, int] = {}
+    for loc in patch["chests"]:
+        if not loc.get("scrub"):
+            continue
+        sales[loc["item"]] = price or SCRUB_PRICE
+        for h in loc["hashes"]:
+            changes[int(h)] = {SCRUB_FIELDS[0]: loc["item"], SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
+    return changes, sales
 
 
 PICKUP_PREFIX = "Obj_OoTRR_Pickup_"

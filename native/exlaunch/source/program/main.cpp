@@ -365,6 +365,30 @@ const char* GroundItem(const char* item) {
 
 HOOK_DEFINE_TRAMPOLINE(FindMessage) {
     static u64 Callback(void* out, const char** file, const char** label, u64 extra) {
+        // message de vente d'une Peste Mojo (OoTRR_Scrub_<jeton>) -> celui de l'objet placé
+        if (label && *label) {
+            const char* scrub = "OoTRR_Scrub_";
+            int k = 0;
+            while (scrub[k] && (*label)[k] == scrub[k]) k++;
+            int location = scrub[k] ? -1 : TokenLocation(*label + k);
+            const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+            if (item) {
+                static char name[160];
+                size_t n = 0;
+                for (const char* p = scrub; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                for (const char* p = GroundItem(item); *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                name[n] = 0;
+                const char* mine = name;
+                u64 found = Orig(out, file, &mine, extra);
+                if (g_token_message_logs > 0) {
+                    g_token_message_logs--;
+                    Log(*label);
+                    Log(name);
+                    LogValue("OoTRR: vente de Peste Mojo redirigee, trouve", found);
+                }
+                if (found & 1) return found;
+            }
+        }
         if (label && *label) {
             int location = TokenLocation(*label);
             const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
