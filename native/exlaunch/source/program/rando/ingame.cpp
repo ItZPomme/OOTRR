@@ -20,6 +20,7 @@ using GetBoolFn = bool (*)(void* manager, bool* value, Handle* handle, uint32_t 
 using GetIntFn = bool (*)(void* manager, int32_t* value, uint32_t hash);
 using SetIntNodeFn = void (*)(void* node, uint32_t hash);
 using SetBoolNodeFn = void (*)(void* node, uint32_t hash);
+using PouchAddFn = void (*)(void* pouch, const char** name, uint64_t count, uint32_t type);
 using SetStructBoolFn = void (*)(void* manager, bool value, Handle* handle, uint32_t member_hash);
 
 void* Manager(std::uintptr_t main_base) { return **reinterpret_cast<void***>(main_base + kGameDataManagerPtr); }
@@ -113,6 +114,27 @@ int ApplyStartFlags(std::uintptr_t main_base) {
         *reinterpret_cast<uint8_t**>(node + 0x40) = &value;
         set_bool(node, f.flag);
         count++;
+    }
+    return count;
+}
+
+int GiveStartItems(std::uintptr_t main_base) {
+    void* pouch = *reinterpret_cast<void**>(main_base + kPouchPtr);
+    if (!pouch) return -1;
+    auto add = reinterpret_cast<PouchAddFn>(main_base + kPouchAdd);
+    // mêmes lieux que World._start_location_names (Porte du Temps ouverte ou Zelda enfant passée)
+    const int32_t* list = nullptr;
+    int count = 0;
+    if (g_settings.values[logic::SET_open_door_of_time]) {
+        list = logic::kOpenDoorStart;
+        count = sizeof(logic::kOpenDoorStart) / sizeof(logic::kOpenDoorStart[0]);
+    } else if (g_settings.values[logic::SET_skip_child_zelda]) {
+        list = logic::kSkipChildZelda;
+        count = sizeof(logic::kSkipChildZelda) / sizeof(logic::kSkipChildZelda[0]);
+    }
+    for (int i = 0; i < count; i++) {
+        const char* name = ItemFor(list[i]);
+        add(pouch, &name, 1, 7);
     }
     return count;
 }

@@ -13,6 +13,8 @@ constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool
 constexpr std::intptr_t kGetInt = 0x163d20;               // (gestionnaire, s32* valeur, hachage) -> bool
 constexpr std::intptr_t kSetIntNode = 0xc25ce0;           // nœud SeqOneShotSetNonStructGameDataInt (nœud, hachage)
 constexpr std::intptr_t kSetBoolNode = 0x682b00;          // nœud SeqOneShotSetNonStructGameDataBool (nœud, hachage)
+constexpr std::intptr_t kPouchAdd = 0x110d0b0;            // (inventaire, const char** objet, nombre, type) : ajoute un objet
+constexpr std::intptr_t kPouchPtr = 0x4e6b718;            // pointeur vers l'inventaire
 constexpr std::intptr_t kSetStructBool = 0x608a10;        // (gestionnaire, valeur, poignée*, hachage du membre)
 
 // résultat de la lecture des réglages du menu (pour le journal)
@@ -32,6 +34,10 @@ void WriteSavedSeed(std::uintptr_t main_base, int32_t seed);
 
 // drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre
 int ApplyStartFlags(std::uintptr_t main_base);
+
+// objets donnés au départ selon les réglages (Zelda enfant / Porte du Temps : lettre et berceuse) ;
+// renvoie leur nombre, -1 si l'inventaire n'est pas prêt
+int GiveStartItems(std::uintptr_t main_base);
 
 bool Ready();
 uint32_t CurrentSeed();

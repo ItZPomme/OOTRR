@@ -96,7 +96,8 @@ u64 ReadTick() {
     return value;
 }
 
-bool g_trust_memory = false;  // seed de nouvelle partie pas encore visible dans GameData (écriture différée)
+bool g_trust_memory = false;
+bool g_pending_start_items = false;  // objets de départ à donner une fois l'inventaire prêt  // seed de nouvelle partie pas encore visible dans GameData (écriture différée)
 
 void LogMenuRead(const ootrr::ingame::MenuRead& r) {
     char buf[96] = "OoTRR: reglages lus ";
@@ -124,6 +125,7 @@ void GenerateSeed() {
         ootrr::ingame::WriteSavedSeed(Main(), static_cast<s32>(seed));
         g_trust_memory = true;
         LogValue("OoTRR: drapeaux de depart poses", static_cast<u64>(ootrr::ingame::ApplyStartFlags(Main())));
+        g_pending_start_items = true;
     }
 }
 
@@ -370,6 +372,13 @@ HOOK_DEFINE_TRAMPOLINE(InitDrop) {
     static void Callback(u8* component, u8* info) {
         ReplaceTokenAtSource(info);
         Orig(component, info);
+        if (g_pending_start_items) {
+            int given = ootrr::ingame::GiveStartItems(Main());
+            if (given >= 0) {
+                g_pending_start_items = false;
+                LogValue("OoTRR: objets de depart donnes", static_cast<u64>(given));
+            }
+        }
         GiveDungeonItems();
     }
 };
