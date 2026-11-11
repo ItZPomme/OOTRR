@@ -447,6 +447,9 @@ class ModBuilder:
     SHOP_ONCE = "?Component/ActorGameDataSetting/NoRespawn.game__component__ActorGameDataSetting.bgyml"
     pickup_models = True  # l'objet ramassable prend le modèle 3D de l'objet donné
     pickup_pouch = True  # ... et ses paramètres d'inventaire (traitement spécial de l'ocarina, etc.)
+    # jetons « SELF » : fichiers ajoutés à chaque archive de jeton (modèles des objets possibles, sous
+    # leur chemin d'origine) ; le module natif redirige le modèle du jeton vers celui de l'objet placé
+    token_model_files: dict[str, bytes] | None = None
 
     def _use_item_model(self, sarc, param_path: str, name: str, item: str, pouch_params: bool = True) -> bool:
         """Remplace le modèle et l'animation du réceptacle par ceux de l'objet donné.
@@ -535,7 +538,12 @@ class ModBuilder:
             new_param = f"Actor/{name}.engine__actor__ActorParam.bgyml"
             sarc.files[new_param] = sarc.files.pop(old_param)
             sarc.align[new_param] = sarc.align.pop(old_param)
-            if self.pickup_models:
+            if pouch_from != item:  # jeton SELF : modèle propre (copie de celui du cœur), redirigé en jeu
+                self._use_item_model(sarc, new_param, name, base, pouch_params=False)
+                for path, data in (self.token_model_files or {}).items():
+                    sarc.files[path] = data
+                    sarc.align[path] = 8
+            elif self.pickup_models:
                 self._use_item_model(sarc, new_param, name, item, pouch_params=not base.startswith("Shop_"))
             if base.startswith("Shop_"):
                 # article de boutique : vendu une seule fois (le bouclier Mojo d'origine réapparaît toujours)

@@ -34,6 +34,59 @@ EXLAUNCH = Path(__file__).resolve().parents[2] / "native" / "exlaunch"
 DEVKITPRO_BASH = Path("C:/devkitPro/msys2/usr/bin/bash.exe")
 
 
+def ground_models(mb) -> tuple[dict[str, bytes], list[tuple[str, str, str]]]:
+    """Modèles des objets possibles sur un cœur au sol : (fichiers à mettre dans les archives des
+    jetons, [(objet, chemin ModelInfo, chemin AnimationParam)]). Sans modèle propre ou sans
+    animation (chants : rubis), l'objet garde le modèle du cœur."""
+    from ..formats.sarc import read_sarc
+    from ..native_logic import Exporter
+
+    files: dict[str, bytes] = {}
+    table = []
+    for info in Exporter().world()["items"]:
+        if not info["ground"]:
+            continue
+        item = info["name"]
+        actor = item.replace("TBox_Rupee_", "Obj_Rupee_")
+        pack = mb.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+        if not pack.exists():
+            continue
+        content = read_sarc(mb.codec.decompress(pack))
+
+        def component(key):
+            path = f"Actor/{actor}.engine__actor__ActorParam.bgyml"
+            while path in content:
+                param = read_byml(content[path])
+                ref = param.get("Components", {}).get(key)
+                if ref:
+                    return ref.lstrip("?")
+                parent = param.get("$parent", "")
+                path = "Actor/" + parent.split("/")[-1].replace(".gyml", ".bgyml") if parent else ""
+            return None
+
+        model, anim = component("ModelInfoRef"), component("AnimationRef")
+        if model not in content or anim not in content:
+            continue
+        if read_byml(content[model]).get("ModelProjectName") == "Obj_Rupee" and not actor.startswith("Obj_Rupee_"):
+            continue  # chants : modèle de rubis, sans intérêt
+        files[model] = content[model]
+        files[anim] = content[anim]
+        table.append((actor, model, anim))
+    return files, table
+
+
+def ground_models_header(table: list[tuple[str, str, str]]) -> str:
+    lines = ["// Généré par ootrr/tools/menutest.py (ground_models) : ne pas modifier à la main.", "#pragma once",
+             "", "namespace ootrr::ground {", "",
+             "// objet posé au sol -> fichiers de son modèle (copiés dans les archives des jetons)",
+             "struct GroundModel { const char* item; const char* model; const char* anim; };",
+             f"constexpr int kGroundModelCount = {len(table)};",
+             "inline constexpr GroundModel kGroundModels[kGroundModelCount] = {"]
+    lines += [f'    {{"{a}", "{m}", "{n}"}},' for a, m, n in table]
+    lines += ["};", "", "}  // namespace ootrr::ground", ""]
+    return "\n".join(lines)
+
+
 def build_native(root_gamedata: dict) -> None:
     """Écrit les en-têtes générés (logique, réglages du menu) et compile le module natif."""
     import os
@@ -78,6 +131,11 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         # nom du jeton) ; au ramassage, le module natif donne l'objet de la seed à la place
         from ..native_logic import heart_tokens
         hearts = heart_tokens()
+        model_files, model_table = ground_models(mb)
+        mb.token_model_files = model_files
+        (EXLAUNCH / "source" / "program" / "rando" / "ground_models.hpp").write_text(
+            ground_models_header(model_table), encoding="utf-8", newline="\n")
+        report.append(f"modèles des objets au sol : {len(model_table)} ({len(model_files)} fichiers par jeton)")
         for h, (t, base) in hearts.items():
             actor_changes[h] = {"Gyaml": t}
             tokens_actors[t] = f"SELF@{base}"

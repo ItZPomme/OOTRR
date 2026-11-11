@@ -2,6 +2,7 @@
 #include "rando/ingame.hpp"
 #include "rando/menu_data.hpp"
 #include "rando/logic_data.hpp"
+#include "rando/ground_models.hpp"
 
 /* OoTRR : menu du randomizer dans l'écran d'options du jeu (voir native/README.md).
  *
@@ -219,11 +220,55 @@ struct ResourceHandle {
     ~ResourceHandle() {}
 };
 
+int TokenLocation(const char* text);
+const char* GroundItem(const char* item);
+int g_model_logs = 24;
+
+/* Modèle d'un jeton de cœur au sol : Component/ModelInfo/OoTRR_Lnnnn… (et AnimationParam) redirigé
+ * vers le fichier de l'objet placé par la seed (copié dans l'archive du jeton sous son chemin). */
+const char* TokenModelPath(const char* path) {
+    const char* kinds[2] = {"Component/ModelInfo/", "Component/AnimationParam/"};
+    for (int kind = 0; kind < 2; kind++) {
+        const char* p = path;
+        const char* q = kinds[kind];
+        while (*q && *p == *q) { p++; q++; }
+        if (*q) continue;
+        int location = TokenLocation(p);
+        const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+        if (!item) return nullptr;
+        item = GroundItem(item);
+        for (const auto& m : ootrr::ground::kGroundModels)
+            if (SameString(m.item, item)) return kind == 0 ? m.model : m.anim;
+        return nullptr;  // pas de modèle connu : celui du cœur
+    }
+    return nullptr;
+}
+
 HOOK_DEFINE_TRAMPOLINE(LoadResource) {
     static ResourceHandle Callback(void* manager, const char** path) {
         if (g_loading_menu_table && path == reinterpret_cast<const char**>(Main() + kOptionTablePath)) {
             path = &g_menu_table_path;
             Log("OoTRR: chargement de la table du menu");
+        }
+        if (path && *path) {
+            const char* p = *path;
+            bool token = false;
+            for (const char* s = p; *s; s++)
+                if (s[0] == 'O' && s[1] == 'o' && s[2] == 'T' && s[3] == 'R' && s[4] == 'R' && s[5] == '_' && s[6] == 'L') token = true;
+            if (token) {
+                static const char* redirected;
+                const char* other = TokenModelPath(p);
+                if (g_model_logs > 0) {
+                    g_model_logs--;
+                    Log(p);
+                    if (other) Log(other);
+                    Log(other ? "OoTRR: ressource de jeton redirigee (avant / apres)" : "OoTRR: ressource de jeton chargee");
+                }
+                if (other) {
+                    redirected = other;
+                    path = &redirected;
+                }
+            }
         }
         return Orig(manager, path);
     }
