@@ -67,6 +67,23 @@ Module injecté dans le jeu avec [exlaunch](https://github.com/shadowninja108/ex
   0x34011c0 relatif) clone les modèles `Pa_ToggleBtn_00`, `Pa_SelectBtn_00`, `Pa_AmiiboBtn_00`,
   `Pa_Separator_00`.
 
+### Ouvrir le menu après « Nouvelle partie » (validé en jeu, 2026-11-10)
+
+`Sequence/NormalTitle.module.ainb` (graphe de l'écran titre, lu et réécrit avec la bibliothèque
+`ainb` 0.2.17, GPL-2, `pip install ainb` ; modifier l'objet, pas le dict/JSON qui casse la table des
+chaînes en 0x408) :
+- nœud 1 (`Element_StringSelector`) : `Pa_Button_00` -> 50 -> 49 -> 48 -> 2 `ConfirmationNewGame.module`
+  (« Yes » -> 13 début de partie, « No » -> 53 retour au titre) ; `Pa_Button_02` -> 52 -> 43 -> 9
+  `Option.module` (`IsTitleMenu` = vrai, « End » -> 53). 48 et 43 font la même préparation (cachent l'écran titre).
+- Modification (`ootrr.tools.optiontest.add_menu_after_new_game`) : copie du nœud 9 en nœud 74,
+  48 -> 74, « End » de 74 -> 2 ; `Option.module.ainb` passe à 2 instances. Résultat en jeu :
+  Nouvelle partie -> écran d'options -> B -> confirmation -> Oui = partie, Non = titre.
+- Échecs utiles : remplacer `ConfirmationNewGame.module.ainb` par le module d'options fait juste
+  disparaître le menu (paramètres d'entrée absents) ; insérer l'écran après « Oui » laisse la
+  fenêtre de confirmation affichée par-dessus.
+- Reste : nos propres lignes seulement dans ce menu (l'écran Options normal doit garder les siennes)
+  et nos propres valeurs (aujourd'hui une ligne renommée change toujours l'option du jeu).
+
 ## Ghidra
 
 Installé hors du dépôt (`C:\Users\<toi>\Tools` : Ghidra 12.2 + JDK 25, le projet d'analyse contient

@@ -1,1 +1,3 @@
 zstandard>=0.22
+# Menu en jeu : lecture / écriture des graphes AINB (GPL-2). Seulement pour ootrr.tools.optiontest pour l'instant.
+ainb==0.2.17

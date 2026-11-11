@@ -1,7 +1,7 @@
 # AGENTS.md — guide pour les agents IA (et les humains pressés)
 
 Randomizer pour *The Legend of Zelda: Ocarina of Time* — remake Switch 2 (moteur de
-*Tears of the Kingdom*). Python 3.10+, une seule dépendance (`zstandard`). Le générateur
+*Tears of the Kingdom*). Python 3.10+, dépendances : `zstandard` (et `ainb` pour le menu en jeu). Le générateur
 produit un **mod LayeredFS** (fichiers modifiés seulement) que l'on installe dans
 l'émulateur Eden (ou un dérivé de Yuzu). Code, commentaires et docs sont en **français**.
 
