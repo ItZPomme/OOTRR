@@ -106,7 +106,23 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   visible, vérifié en jeu ; les fiches numérotent les noms depuis le début de la réserve de chaînes,
   qui commence par le nom de la page, avant `RootPane`). Un modèle sans ligne correspondante reste
   affiché à sa place : on cache l'amiibo, et la table contient deux séparateurs (le modèle sert).
-- Reste : utiliser les choix (au début de la partie) et générer la seed dans le jeu.
+- Choix enregistrés dans la partie (validé : relu dans progress.sav) : les membres « réglage » de
+  `OoTRRMenu` ont SaveFileIndex 0 et ResetTypeValue 0 ; MetaData décalé de 8 octets par entrée
+  (`ingame_menu.add_saved_entries`). Le menu repart des valeurs par défaut après un retour au titre.
+
+### Placement pendant le jeu (validé en jeu, 2026-11-10 : coffres de Mido)
+
+- Le mod de fichiers met dans chaque emplacement mélangé un **jeton** `OoTRR_Lnnnn` (Drop__DropActor).
+  Un jeton doit être un **vrai acteur** (copie de `TBox_Rupee_Green`, fiches RSDB copiées) : sinon le
+  coffre ne propose pas de l'ouvrir.
+- Le coffre crée son contenu à l'avance (porte-acteur, nom lu dans son tableau noir, lui-même rempli
+  depuis les paramètres de la carte). Remplacer la copie du composant « drop » ne suffit pas (le coffre
+  fait apparaître le jeton -> blocage). Le crochet de `0xbd1c00` remplace **la valeur à la source**,
+  dans les paramètres dynamiques en mémoire, avant l'appel d'origine :
+  `*(*(*(infos+0x40)+0x270))+0x10` -> { u32 nb clés, const char** clés (+8), u32 nb valeurs (+0x10),
+  const char** valeurs (+0x18) }.
+- Table de placement : fixe pour le test (`g_placement` dans main.cpp) ; viendra du générateur.
+
 
 ## Ghidra
 

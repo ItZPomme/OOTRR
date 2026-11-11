@@ -208,27 +208,58 @@ namespace {
     }
 }
 
-HOOK_DEFINE_TRAMPOLINE(InitDrop) {
-    static void Callback(u8* component, u8* info) {
-        Orig(component, info);
-        char* item = *reinterpret_cast<char**>(component + 0x48);
-        int capacity = *reinterpret_cast<int*>(component + 0x50);
-        if (!item || capacity <= 1) return;
-        int index = TokenIndex(item);
+/* Paramètres dynamiques d'un acteur placé (lus par l'initialisation du composant « drop ») :
+ * *(*(infos + 0x40) + 0x270) -> objet, +0x10 -> table { u32 nombre de clés ; +0x08 const char** clés ;
+ * +0x10 u32 nombre de valeurs ; +0x18 const char** valeurs }. Le tableau noir du coffre et son
+ * porte-acteur (contenu créé à l'avance) lisent les mêmes valeurs : on remplace la valeur à la source. */
+struct DynamicParams {
+    u32 key_count;
+    u32 pad0;
+    const char** keys;
+    u32 value_count;
+    u32 pad1;
+    const char** values;
+};
+
+DynamicParams* FindDynamicParams(u8* info) {
+    if (!info) return nullptr;
+    u8* placement = *reinterpret_cast<u8**>(info + 0x40);
+    if (!placement) return nullptr;
+    u8** holder = *reinterpret_cast<u8***>(placement + 0x270);
+    if (!holder || !*holder) return nullptr;
+    auto* params = *reinterpret_cast<DynamicParams**>(*holder + 0x10);
+    if (reinterpret_cast<uintptr_t>(params) + 1 < 2) return nullptr; // nul ou -1 : pas de paramètres
+    return params;
+}
+
+void ReplaceTokenAtSource(u8* info) {
+    DynamicParams* params = FindDynamicParams(info);
+    if (!params || !params->keys || !params->values) return;
+    for (u32 i = 0; i < params->key_count && i < params->value_count; i++) {
+        const char* key = params->keys[i];
+        const char* value = params->values[i];
+        if (!key || !value || !SameString(key, "Drop__DropActor")) continue;
+        int index = TokenIndex(value);
         if (index < 0) return;
         const char* real = index < kPlacementCount ? g_placement[index] : kFallbackItem;
+        params->values[i] = real;
         char buf[96] = "OoTRR: emplacement ";
         size_t n = 19;
-        for (const char* p = item; *p && n < 60; p++) buf[n++] = *p;
+        for (const char* p = value; *p && n < 60; p++) buf[n++] = *p;
         buf[n++] = ' ';
         buf[n++] = '-';
         buf[n++] = ' ';
-        int i = 0;
-        for (; real[i] && i < capacity - 1; i++) item[i] = real[i];
-        item[i] = 0;
         for (const char* p = real; *p && n < sizeof(buf) - 1; p++) buf[n++] = *p;
         buf[n] = 0;
         Log(buf);
+        return;
+    }
+}
+
+HOOK_DEFINE_TRAMPOLINE(InitDrop) {
+    static void Callback(u8* component, u8* info) {
+        ReplaceTokenAtSource(info);
+        Orig(component, info);
     }
 };
 
