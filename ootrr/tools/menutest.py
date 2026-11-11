@@ -4,7 +4,8 @@
 
 Contenu : GameData (structure OoTRRMenu + drapeau), table de lignes dans le pack Bootup, textes
 (LayoutMsg/SystemOption_00, toutes les langues), Sequence/NormalTitle, table RESTBL, et le module
-natif (native/exlaunch/deploy/subsdk9, à compiler avant) dans exefs/.
+natif (compilé par l'outil : en-têtes générés + make de devkitPro) dans exefs/. Les coffres
+mélangeables contiennent des jetons ; le module natif génère la seed au début de la partie.
 Installe sous `OoTRR-menu` : désactiver les autres mods OoTRR (OoTRR, OoTRR-essai, OoTRR-options,
 OoTRR-native) pendant le test.
 """
@@ -27,18 +28,33 @@ from ..settings import defaults
 
 NATIVE = Path(__file__).resolve().parents[2] / "native" / "exlaunch" / "deploy" / "subsdk9"
 
-# test du placement pendant le jeu : jetons d'emplacement dans les coffres de la maison de Mido
-# (le module natif les remplace ; table fixe de test dans main.cpp : grappin, bottes, arc, boomerang)
+# jetons d'emplacement : copies de cet objet de coffre (le coffre refuse un acteur inconnu)
 TOKEN_BASE = "TBox_Rupee_Green"
-TOKEN_CHESTS = {
-    10831981390482426294: "OoTRR_L0000",
-    4555665598794293658: "OoTRR_L0001",
-    9725242744547055868: "OoTRR_L0002",
-    12786193094758345086: "OoTRR_L0003",
-}
+EXLAUNCH = Path(__file__).resolve().parents[2] / "native" / "exlaunch"
+DEVKITPRO_BASH = Path("C:/devkitPro/msys2/usr/bin/bash.exe")
 
 
-def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
+def build_native(root_gamedata: dict) -> None:
+    """Écrit les en-têtes générés (logique, réglages du menu) et compile le module natif."""
+    import os
+    import subprocess
+
+    from .. import native_logic
+    native_logic.main()
+    (EXLAUNCH / "source" / "program" / "rando" / "menu_data.hpp").write_text(
+        menu.menu_header(root_gamedata), encoding="utf-8", newline="\n")
+    unix = "/" + EXLAUNCH.as_posix().replace(":", "", 1)
+    script = ("export DEVKITPRO=/opt/devkitpro DEVKITA64=/opt/devkitpro/devkitA64; "
+              "export PATH=$DEVKITPRO/devkitA64/bin:$DEVKITPRO/tools/bin:$PATH; "
+              f"cd '{unix}' && make -j8")
+    env = dict(os.environ, MSYSTEM="MSYS", CHERE_INVOKING="1")
+    done = subprocess.run([str(DEVKITPRO_BASH), "-lc", script], env=env, capture_output=True, text=True)
+    if done.returncode != 0:
+        raise SystemExit("compilation du module natif impossible :\n" + done.stdout[-3000:] + done.stderr[-3000:])
+    print("module natif compilé")
+
+
+def build(romfs: Path, out: Path, tokens: bool = True) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
     # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
@@ -52,8 +68,11 @@ def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
         # un jeton doit être un vrai acteur (le coffre lit aussi le nom ailleurs et refuse de s'ouvrir
         # sur un acteur inconnu) : copie du rubis vert de coffre, sans changer son modèle
         mb.pickup_models = False
-        tokens_actors = {t: f"{TOKEN_BASE}@{TOKEN_BASE}" for t in TOKEN_CHESTS.values()}
-        actor_changes.update({h: {"Drop__DropActor": t} for h, t in TOKEN_CHESTS.items()})
+        from ..native_logic import chest_tokens
+        chests = chest_tokens()
+        tokens_actors = {t: f"{TOKEN_BASE}@{TOKEN_BASE}" for t in sorted(set(chests.values()))}
+        actor_changes.update({h: {"Drop__DropActor": t} for h, t in chests.items()})
+        report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None
     report += mb.build(actor_changes, out, pickups=tokens_actors, **common)
@@ -65,6 +84,7 @@ def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
     raw = mb.codec.decompress(out / rel if (out / rel).exists() else path)
     root = read_byml(raw)
     report += menu.gamedata_struct(root, defaults())
+    build_native(root)
     enum_values = {}
     from ..formats.gamedata import flag_hash, index
     idx = index(root)
@@ -146,13 +166,13 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--romfs", required=True, type=Path)
     p.add_argument("--install", action="store_true")
-    p.add_argument("--tokens", action="store_true", help="jetons d'emplacement dans les coffres de Mido")
+    p.add_argument("--no-tokens", action="store_true", help="coffres d'origine (pas de jetons)")
     a = p.parse_args(argv)
     if not NATIVE.is_file():
         raise SystemExit(f"module natif absent : {NATIVE} (compiler native/exlaunch, voir native/README.md)")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for line in build(a.romfs, root / "romfs", a.tokens):
+        for line in build(a.romfs, root / "romfs", not a.no_tokens):
             print(line)
         (root / "exefs").mkdir()
         shutil.copy2(NATIVE, root / "exefs" / "subsdk9")

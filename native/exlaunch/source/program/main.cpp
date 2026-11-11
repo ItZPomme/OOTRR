@@ -1,4 +1,6 @@
 #include "lib.hpp"
+#include "rando/ingame.hpp"
+#include "rando/menu_data.hpp"
 
 /* OoTRR : menu du randomizer dans l'écran d'options du jeu (voir native/README.md).
  *
@@ -87,17 +89,35 @@ namespace {
 
 }
 
+u64 ReadTick() {
+    u64 value;
+    asm volatile("mrs %0, cntpct_el0" : "=r"(value));
+    return value;
+}
+
+void GenerateSeed() {
+    u32 seed = static_cast<u32>(ReadTick() ^ (ReadTick() >> 32)) & 0x7fffffffu;
+    bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed);
+    LogValue(ok ? "OoTRR: seed generee" : "OoTRR: echec de la generation, seed", seed);
+}
+
+void OnSetBool(void* node, u32 hash) {
+    bool value = (**reinterpret_cast<u8**>(static_cast<u8*>(node) + 0x40) & 1) != 0;
+    if (hash == kMenuFlagHash) SetMenu(value);
+    if (hash == ootrr::menu::kGenerateFlagHash && value) GenerateSeed();
+}
+
 HOOK_DEFINE_TRAMPOLINE(SetBoolNode) {
     static void Callback(void* node, u32 hash) {
         Orig(node, hash);
-        if (hash == kMenuFlagHash) SetMenu((**reinterpret_cast<u8**>(static_cast<u8*>(node) + 0x40) & 1) != 0);
+        OnSetBool(node, hash);
     }
 };
 
 HOOK_DEFINE_TRAMPOLINE(SetBoolNodeIndexed) {
     static void Callback(void* node, u32 hash, s32 index) {
         Orig(node, hash, index);
-        if (hash == kMenuFlagHash) SetMenu((**reinterpret_cast<u8**>(static_cast<u8*>(node) + 0x40) & 1) != 0);
+        OnSetBool(node, hash);
     }
 };
 
@@ -188,14 +208,11 @@ HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
     }
 };
 
-/* Placement pendant le jeu : le mod de fichiers remplace l'objet de chaque emplacement mélangé par un
- * jeton « OoTRR_Lnnnn » ; à l'initialisation du composant « drop », on écrit l'objet prévu.
- * Table de test fixe (coffres de Mido) en attendant le générateur. */
+/* Placement pendant le jeu : le mod de fichiers remplace l'objet de chaque coffre mélangeable par un
+ * jeton « OoTRR_Lnnnn » (nnnn = index de l'emplacement dans rando/logic_data.hpp) ; à l'initialisation
+ * du composant « drop », on écrit l'objet placé par la seed (ou l'objet d'origine sans seed). */
 namespace {
     constexpr const char* kTokenPrefix = "OoTRR_L";
-    const char* g_placement[] = {"Item_Hookshot", "Item_HoverBoot", "Item_Range_Bow", "Item_Boomerang"};
-    constexpr int kPlacementCount = sizeof(g_placement) / sizeof(g_placement[0]);
-    constexpr const char* kFallbackItem = "TBox_Rupee_Green";
 
     int TokenIndex(const char* name) {
         for (int i = 0; kTokenPrefix[i]; i++) if (name[i] != kTokenPrefix[i]) return -1;
@@ -204,7 +221,7 @@ namespace {
             if (*p < '0' || *p > '9') return -1;
             n = n * 10 + (*p - '0');
         }
-        return n;
+        return n < ootrr::ingame::LocationCount() ? n : -1;
     }
 }
 
@@ -241,8 +258,20 @@ void ReplaceTokenAtSource(u8* info) {
         if (!key || !value || !SameString(key, "Drop__DropActor")) continue;
         int index = TokenIndex(value);
         if (index < 0) return;
-        const char* real = index < kPlacementCount ? g_placement[index] : kFallbackItem;
+        const char* real = ootrr::ingame::ItemFor(index);
         params->values[i] = real;
+        // objet différent de l'original : retirer la scène de l'objet d'origine (event « drop ») et,
+        // pour un coffre à contenu conditionnel, l'objet testé et son remplaçant (comme patch.chest_changes)
+        if (!SameString(real, ootrr::ingame::VanillaItem(index))) {
+            for (u32 k = 0; k < params->key_count && k < params->value_count; k++) {
+                const char* other = params->keys[k];
+                if (!other) continue;
+                bool clear = (ootrr::ingame::IsDropEvent(index) && SameString(other, "GetEventName")) ||
+                             (ootrr::ingame::IsConditional(index) &&
+                              (SameString(other, "Drop__CheckActor") || SameString(other, "Drop__DropActor_Substitute")));
+                if (clear) params->values[k] = "";
+            }
+        }
         char buf[96] = "OoTRR: emplacement ";
         size_t n = 19;
         for (const char* p = value; *p && n < 60; p++) buf[n++] = *p;

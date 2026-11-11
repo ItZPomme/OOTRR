@@ -26,6 +26,7 @@ from .formats.gamedata import flag_hash, index
 from .formats.msbt import add_messages, read_labels
 
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
+GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
 STRUCT = "OoTRRMenu"
 OPTION_STRUCT = "OptionData"
 BOOTUP = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs"
@@ -139,10 +140,11 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
             report.append(f"GameData {STRUCT}.{name} ({setting}) défaut={new['DefaultValue']}")
     data["Struct"].append({"DefaultValue": members, "Hash": U32(flag_hash(STRUCT)),
                            "ResetTypeValue": 0, "SaveFileIndex": -1})
-    flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == -1))
-    flag.update({"Hash": U32(flag_hash(MENU_FLAG)), "DefaultValue": False, "ResetTypeValue": 0})
-    data["Bool"].append(flag)
-    report.append(f"GameData : drapeau {MENU_FLAG}")
+    for name in (MENU_FLAG, GENERATE_FLAG):
+        flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == -1))
+        flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
+        data["Bool"].append(flag)
+        report.append(f"GameData : drapeau {name}")
     report.append(f"GameData : structure {STRUCT} ({len(members)} membres)")
     saved = sum(1 for _ in SETTING_ROWS)
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
@@ -288,13 +290,13 @@ def title_sequence(raw: bytes) -> bytes:
 
     template = next(n for n in nodes if n.name == "SeqOneShotSetNonStructGameDataBool")
 
-    def set_flag(value: bool):
+    def set_flag(value: bool, flag: str = MENU_FLAG):
         n = copy.deepcopy(template)
         n.index = len(nodes)
         n.guid = new_guid()
         for p in n.params.string_inputs:
             if p.name == "GameDataFullName":
-                p.default_value = MENU_FLAG
+                p.default_value = flag
         for p in n.params.bool_inputs:
             if p.name == "Value":
                 p.default_value = value
@@ -310,4 +312,40 @@ def title_sequence(raw: bytes) -> bytes:
     prepare_new_game.child_plugs.append(child(set_flag(True)))
     to_option[0].child_plugs.append(child(set_flag(False)))
     start.child_plugs.insert(0, child(set_flag(False)))
+    start.child_plugs.insert(1, child(set_flag(True, GENERATE_FLAG)))
     return script.to_binary()
+
+
+def menu_header(root: dict) -> str:
+    """En-tête C++ pour le module natif : comment lire chaque réglage du menu dans GameData
+    (structure OoTRRMenu : numéro de membre, booléen ou énumération, valeurs du jeu -> valeurs du réglage)."""
+    from .settings import SETTINGS
+
+    idx = index(root)
+    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
+    member = {m["Hash"]: i for i, m in enumerate(src["DefaultValue"])}
+    names = list(SETTINGS)
+    lines = ["// Généré par ootrr/ingame_menu.py (menu_header) : ne pas modifier à la main.", "#pragma once",
+             "#include <cstdint>", "", "namespace ootrr::menu {", "",
+             f"constexpr uint32_t kStructHash = 0x{flag_hash(STRUCT):08x};  // {STRUCT}",
+             f"constexpr uint32_t kMenuFlagHash = 0x{flag_hash(MENU_FLAG):08x};  // {MENU_FLAG}",
+             f"constexpr uint32_t kGenerateFlagHash = 0x{flag_hash(GENERATE_FLAG):08x};  // {GENERATE_FLAG}",
+             "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
+             "struct MenuSetting { int32_t setting; int32_t member; bool is_bool; int32_t count;",
+             "                     uint32_t game_values[8]; int32_t setting_values[8]; };"]
+    rows = []
+    for setting, option_type, values in SETTING_ROWS:
+        m = member[flag_hash(option_type)]
+        section, entry = idx[src["DefaultValue"][m]["Value"]]
+        sid = names.index(setting)
+        if values is None:
+            rows.append(f"    {{{sid}, {m}, true, 0, {{}}, {{}}}},  // {setting} <- {option_type}")
+            continue
+        allowed = SETTINGS[setting][1]
+        game = ", ".join(f"0x{flag_hash(v):08x}" for v in entry["RawValues"][:len(values)])
+        ours = ", ".join(str(allowed.index(v)) for v in values)
+        rows.append(f"    {{{sid}, {m}, false, {len(values)}, {{{game}}}, {{{ours}}}}},  // {setting} <- {option_type}")
+    lines += [f"constexpr int kMenuSettingCount = {len(rows)};",
+              "inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {"] + rows + ["};", "",
+              "}  // namespace ootrr::menu", ""]
+    return "\n".join(lines)
