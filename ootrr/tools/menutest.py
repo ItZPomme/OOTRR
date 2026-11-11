@@ -27,10 +27,21 @@ from ..settings import defaults
 
 NATIVE = Path(__file__).resolve().parents[2] / "native" / "exlaunch" / "deploy" / "subsdk9"
 
+# test du placement pendant le jeu : jetons d'emplacement dans les coffres de la maison de Mido
+# (le module natif les remplace ; table fixe de test dans main.cpp : grappin, bottes, arc, boomerang)
+TOKEN_CHESTS = {
+    10831981390482426294: "OoTRR_L0000",
+    4555665598794293658: "OoTRR_L0001",
+    9725242744547055868: "OoTRR_L0002",
+    12786193094758345086: "OoTRR_L0003",
+}
 
-def build(romfs: Path, out: Path) -> list[str]:
+
+def build(romfs: Path, out: Path, tokens: bool = False) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
+    if tokens:
+        report += mb.build({h: {"Drop__DropActor": t} for h, t in TOKEN_CHESTS.items()}, out)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))
@@ -119,12 +130,13 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--romfs", required=True, type=Path)
     p.add_argument("--install", action="store_true")
+    p.add_argument("--tokens", action="store_true", help="jetons d'emplacement dans les coffres de Mido")
     a = p.parse_args(argv)
     if not NATIVE.is_file():
         raise SystemExit(f"module natif absent : {NATIVE} (compiler native/exlaunch, voir native/README.md)")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for line in build(a.romfs, root / "romfs"):
+        for line in build(a.romfs, root / "romfs", a.tokens):
             print(line)
         (root / "exefs").mkdir()
         shutil.copy2(NATIVE, root / "exefs" / "subsdk9")

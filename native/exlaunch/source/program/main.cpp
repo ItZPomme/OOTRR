@@ -28,6 +28,7 @@ namespace {
     constexpr ptrdiff_t kTableRowByType = 0x339c790;     // ligne d'un type d'option (table, type)
     constexpr ptrdiff_t kFindMessage = 0xa6afe0;         // texte (sortie, const char** fichier, const char** étiquette)
     constexpr ptrdiff_t kGetStructHandle = 0x9b3eb0;     // poignée de structure GameData (gestionnaire, poignée, hachage)
+    constexpr ptrdiff_t kInitDrop = 0xbd1c00;           // composant « drop » : lit Drop__DropActor (composant, infos de création)
     constexpr ptrdiff_t kLoadLayout = 0x43a0e0;          // construit une mise en page ; 5e argument = nom ("SystemOption_00")
 
     const char* const kMenuTablePath = "UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml";
@@ -187,6 +188,50 @@ HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
     }
 };
 
+/* Placement pendant le jeu : le mod de fichiers remplace l'objet de chaque emplacement mélangé par un
+ * jeton « OoTRR_Lnnnn » ; à l'initialisation du composant « drop », on écrit l'objet prévu.
+ * Table de test fixe (coffres de Mido) en attendant le générateur. */
+namespace {
+    constexpr const char* kTokenPrefix = "OoTRR_L";
+    const char* g_placement[] = {"Item_Hookshot", "Item_HoverBoot", "Item_Range_Bow", "Item_Boomerang"};
+    constexpr int kPlacementCount = sizeof(g_placement) / sizeof(g_placement[0]);
+    constexpr const char* kFallbackItem = "TBox_Rupee_Green";
+
+    int TokenIndex(const char* name) {
+        for (int i = 0; kTokenPrefix[i]; i++) if (name[i] != kTokenPrefix[i]) return -1;
+        int n = 0;
+        for (const char* p = name + 7; *p; p++) {
+            if (*p < '0' || *p > '9') return -1;
+            n = n * 10 + (*p - '0');
+        }
+        return n;
+    }
+}
+
+HOOK_DEFINE_TRAMPOLINE(InitDrop) {
+    static void Callback(u8* component, u8* info) {
+        Orig(component, info);
+        char* item = *reinterpret_cast<char**>(component + 0x48);
+        int capacity = *reinterpret_cast<int*>(component + 0x50);
+        if (!item || capacity <= 1) return;
+        int index = TokenIndex(item);
+        if (index < 0) return;
+        const char* real = index < kPlacementCount ? g_placement[index] : kFallbackItem;
+        char buf[96] = "OoTRR: emplacement ";
+        size_t n = 19;
+        for (const char* p = item; *p && n < 60; p++) buf[n++] = *p;
+        buf[n++] = ' ';
+        buf[n++] = '-';
+        buf[n++] = ' ';
+        int i = 0;
+        for (; real[i] && i < capacity - 1; i++) item[i] = real[i];
+        item[i] = 0;
+        for (const char* p = real; *p && n < sizeof(buf) - 1; p++) buf[n++] = *p;
+        buf[n] = 0;
+        Log(buf);
+    }
+};
+
 extern "C" void exl_main(void* x0, void* x1) {
     exl::hook::Initialize();
     SetBoolNode::InstallAtOffset(kSetBoolNode);
@@ -199,6 +244,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     FindMessage::InstallAtOffset(kFindMessage);
     GetStructHandle::InstallAtOffset(kGetStructHandle);
     LoadLayout::InstallAtOffset(kLoadLayout);
+    InitDrop::InstallAtOffset(kInitDrop);
     Log("OoTRR: module natif charge, crochets du menu installes");
 }
 

@@ -104,7 +104,12 @@ FRENCH = ("EUfr", "USfr")
 
 
 def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
-    """Ajoute la structure OoTRRMenu (copie d'OptionData, non sauvegardée) à GameDataList."""
+    """Ajoute la structure OoTRRMenu (copie d'OptionData) à GameDataList.
+
+    Les membres qui portent un réglage sont enregistrés dans la sauvegarde de la partie
+    (progress.sav, SaveFileIndex 0) et échappent à la remise à zéro de « Nouvelle partie »
+    (ResetTypeValue 0) ; les autres ne sont pas sauvegardés. Voir add_saved_entries pour les
+    métadonnées de sauvegarde."""
     data = root["Data"]
     idx = index(root)
     src = next(e for e in data["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
@@ -119,9 +124,9 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         name = types.get(m["Hash"], f"{m['Hash']:08x}")
         new = copy.deepcopy(entry)
         new["Hash"] = U32(flag_hash(f"{STRUCT}.{name}"))
-        new["SaveFileIndex"] = -1
-        new["ResetTypeValue"] = 0
         setting, values = by_type.get(name, (None, None))
+        new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
+        new["ResetTypeValue"] = 0
         if defaults is not None and setting in defaults:
             value = defaults[setting]
             if values is None and section == "Bool":
@@ -139,7 +144,33 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     data["Bool"].append(flag)
     report.append(f"GameData : drapeau {MENU_FLAG}")
     report.append(f"GameData : structure {STRUCT} ({len(members)} membres)")
+    saved = sum(1 for _ in SETTING_ROWS)
+    report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
+
+
+PROGRESS_SAVE = 0  # SaveFileIndex de slot_%02d/progress.sav
+
+
+def add_saved_entries(root: dict, save_index: int, count: int) -> list[str]:
+    """Met à jour les métadonnées de sauvegarde après l'ajout de `count` entrées scalaires
+    (Bool, Int, Enum…) enregistrées dans le fichier `save_index`.
+
+    progress.sav (relevé sur une sauvegarde) : en-tête 0x20 octets, puis pour chaque type un
+    marqueur et une paire (hachage u32, valeur u32) par entrée, puis la zone des tableaux et chaînes,
+    dont la position est SaveDataOffsetPos (aussi écrite dans l'en-tête). Une entrée scalaire ajoute
+    8 octets à la table : la zone de données et la taille totale se décalent d'autant. Les
+    sauvegardes sont indexées par hachage : une ancienne sauvegarde prend la valeur par défaut."""
+    meta = root["MetaData"]
+    grow = 8 * count
+    old = (meta["SaveDataOffsetPos"][save_index], meta["SaveDataSize"][save_index])
+    meta["SaveDataOffsetPos"][save_index] = type(old[0])(old[0] + grow)
+    meta["SaveDataSize"][save_index] = type(old[1])(old[1] + grow)
+    meta["AllDataSaveOffset"] = type(meta["AllDataSaveOffset"])(meta["AllDataSaveOffset"] + grow)
+    meta["AllDataSaveSize"] = type(meta["AllDataSaveSize"])(meta["AllDataSaveSize"] + grow)
+    return [f"GameData : {count} entrées sauvegardées dans {meta['SaveDirectory'][save_index]} "
+            f"(données {old[0]} -> {meta['SaveDataOffsetPos'][save_index]}, "
+            f"taille {old[1]} -> {meta['SaveDataSize'][save_index]})"]
 
 
 def option_table(game_table: bytes, enum_values: dict[str, list[str]]) -> bytes:
