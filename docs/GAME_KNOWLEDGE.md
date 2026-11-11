@@ -127,11 +127,10 @@ ajouter (non sauvegardées, la taille de sauvegarde ne change pas) **[jeu]**.
 ## Pistes non abouties
 
 - Menu de réglages **dans le jeu** : fait avec du code natif (exlaunch), voir `native/README.md`.
-- **Cartes et boussoles « au départ » (`maps_compasses=start_with`) : ne fonctionne pas** (validé
-  en jeu, 2026-11-10, avec le mod Python seed 1234 et avec le menu natif). Ni le drapeau
-  `DungeonInfo.<donjon>.IsGetMap` / `IsGetCompass` à 1 dès la nouvelle partie (valeur par défaut ou
-  écrit au départ, relu à 1 dans la sauvegarde et à l'entrée du donjon), ni en plus l'appel des
-  fonctions du nœud `OneShotDungeonGetMap` (`0x3282fe0` / `0x3283060` : drapeau + objet
-  `Item_Dungeon_Map` / `Item_Dungeon_Compass`) n'affichent la carte. La scène du coffre
-  (`InsideTheDekuTree_GetMap`, événement de `GameSystemActor` avec `EventGetDungeonMap`) fait
-  donc autre chose : piste à suivre (comparer une sauvegarde avant / après un vrai coffre de carte).
+- **Cartes et boussoles « au départ » : validé en jeu (2026-11-10, menu natif).** La carte restait
+  « ??? » (même celle d'un vrai coffre) parce que les scènes d'arrivée, marquées vues, sont celles qui
+  **découvrent** un lieu (`EventTriggerOpenLocationUI`) quand RSDB `Location`
+  `IsShowLocationUIFirstTimeInDemo` est vrai (33 lieux sur 36) : champ mis à faux avec
+  `skip_cutscenes=safe` (`World.rsdb_changes`), le lieu est découvert à la première entrée.
+  Le menu natif donne aussi la carte et la boussole à l'entrée du donjon (fonctions du nœud
+  `OneShotDungeonGetMap`, `0x3282fe0` / `0x3283060`).
