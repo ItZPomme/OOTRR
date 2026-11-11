@@ -42,6 +42,22 @@ uint32_t g_seed = 0;
 
 }  // namespace
 
+/* Seed du générateur = seed affichée mélangée aux réglages (FNV-1a 64 bits) : une même seed donne
+ * des placements différents selon les réglages, et reste reproductible (mêmes seed + réglages ->
+ * même partie, y compris au chargement). Le générateur lui-même (identique à Python) ne change pas. */
+uint64_t MixSettings(uint32_t seed, const Settings& settings) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    auto mix = [&](uint32_t v) {
+        for (int i = 0; i < 4; i++) {
+            h ^= (v >> (8 * i)) & 0xff;
+            h *= 0x100000001b3ull;
+        }
+    };
+    mix(seed);
+    for (int i = 0; i < logic::kSettingCount; i++) mix(static_cast<uint32_t>(settings.values[i]));
+    return h & 0x7fffffffffffffffull;
+}
+
 bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     void* manager = Manager(main_base);
     auto get_handle = reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle);
@@ -80,7 +96,7 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     for (int i = 0; i < r.count; i++) r.values[i] = settings.values[i];
     g_seed = seed;
     g_settings = settings;
-    g_ready = Generate(settings, seed, g_result);
+    g_ready = Generate(settings, MixSettings(seed, settings), g_result);
     return g_ready;
 }
 

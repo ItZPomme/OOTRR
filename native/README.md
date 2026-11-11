@@ -160,6 +160,11 @@ Seed aléatoire tirée à l'ouverture du menu (1-999999) et affichée dans la de
 (validé en jeu) : le texte lu par `0xa6afe0` (sortie { const char* UTF-8 ; s32 longueur }) est copié
 avec le repère `######` remplacé par la seed. C'est cette seed qui sert si la seed manuelle est désactivée.
 
+Le générateur reçoit la seed affichée **mélangée aux réglages** (`MixSettings`, FNV-1a) : une même
+seed donne une autre partie si les réglages changent, et la même partie avec les mêmes réglages (y
+compris au chargement). Le générateur (identique à Python) n'est pas modifié ; une seed du menu ne
+correspond donc pas à la même seed passée à `python -m ootrr --seed`.
+
 ## Ghidra
 
 Installé hors du dépôt (`C:\Users\<toi>\Tools` : Ghidra 12.2 + JDK 25, le projet d'analyse contient
