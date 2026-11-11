@@ -71,6 +71,9 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 - Skulltula d'or : `Dynamic.Drop__DropActor` remplace le jeton **[jeu]** ; il faut un objet
   ramassable (copie de `Obj_Token_Gold` ou du réceptacle). Tant que l'objet n'est pas ramassé, la
   Skulltula réapparaît.
+- Skulltulas d'or mélangées : la Skulltula lâche son jeton `OoTRR_Lnnnn` (copie de `Obj_Token_Gold`),
+  modèle, textes et ajout redirigés vers l'objet de la seed — **validé en jeu** (Arbre Mojo). Le jeton
+  n'est pas remplacé à la source (`KeepsToken`). Jeton d'or placé dans un coffre : non vérifié.
 
 ## Messages (Mals)
 
