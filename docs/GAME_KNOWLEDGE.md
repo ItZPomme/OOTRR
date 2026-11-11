@@ -35,6 +35,13 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   `IsGetEvent = 0`) insérée dans `OpeningEvent:Opening_Introduction` **[jeu]**.
 - Les drapeaux `IsGet.<objet>` sont posés quand on obtient l'objet ; les mettre à vrai **ne**
   supprime **pas** l'animation de première obtention des consommables **[jeu]** (décidée par le moteur).
+- **Cœurs au sol, menu natif [jeu]** (2026-11-11) : l'acteur devient un jeton `OoTRR_Lnnnn` (copie du
+  cœur d'origine, `ActorInfo.ActorName` = le jeton lui-même, `PouchActorInfo` copiée du cœur). Au
+  ramassage, la séquence « objet obtenu » cherche `<objet>_GetMessage` / `_GetCaption` dans
+  `ActorMsg/PouchContent` : **un texte introuvable bloque la partie** (le cœur tourne sans fin) ; les
+  textes du jeton sont redirigés vers ceux de l'objet de la seed, puis l'ajout (`0x110d570`) aussi.
+- Les rubis de coffre `TBox_Rupee_*` n'ont pas ces textes (les `Obj_Rupee_*` si). Les rubis ne passent
+  pas par l'inventaire : l'ajout est sans effet, l'argent est l'entier `PlayerStatus.CurrentRupee` **[jeu]**.
 - Inventaire : bloc binaire de la sauvegarde, pas de drapeaux par objet (sauf `PouchData.<objet>.StockNum`).
 - Valeurs utiles : `PlayerStatus.MaxLife` (quarts de cœur, 12 = 3 cœurs), `PlayerStatus.Life`,
   `PouchData.Item_Token_Gold.StockNum` (jetons de Skulltula d'or).
