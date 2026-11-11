@@ -121,7 +121,27 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   dans les paramètres dynamiques en mémoire, avant l'appel d'origine :
   `*(*(*(infos+0x40)+0x270))+0x10` -> { u32 nb clés, const char** clés (+8), u32 nb valeurs (+0x10),
   const char** valeurs (+0x18) }.
-- Table de placement : fixe pour le test (`g_placement` dans main.cpp) ; viendra du générateur.
+- Les jetons sont posés dans les 134 coffres mélangeables (`native_logic.chest_tokens`, index = rang dans
+  `logic_data.hpp`). Coffre « drop » dont l'objet change : `GetEventName` vidé à la source ; coffre
+  conditionnel : `Drop__CheckActor` et `Drop__DropActor_Substitute` vidés.
+
+### Générateur de seed dans le jeu (validé en jeu, 2026-11-10)
+
+- `python -m ootrr.native_logic` exporte la logique en tables C++ (`rando/logic_data.hpp`) : règles en
+  code préfixé, réglages symboliques (lus dans le menu). `rando/generator.cpp` est un portage exact de
+  `search.py` / `fill.py`, et `rando/py_random.hpp` de `random.Random` (MT19937, init_by_array,
+  _randbelow, shuffle, choice).
+- `python -m ootrr.tools.native_check` compile le générateur pour le PC (w64devkit) et le compare à
+  Python : 1000 seeds identiques sur 5 préréglages. En jeu : seeds 0x5d0e118b (défaut) et 0x20eed1eb
+  (réglages du menu) identiques à Python sur les coffres de la forêt Kokiri.
+- Au début de la partie, le nœud ajouté `OoTRR.GenerateSeed` déclenche la génération : réglages lus dans
+  la structure `OoTRRMenu` (accesseurs `0x404760` énumération / `0x179f70` booléen, **par hachage du nom
+  du membre**), seed tirée du compteur système, écrite dans `OoTRR.Seed` (entier sauvegardé, via la
+  fonction du nœud `SeqOneShotSetNonStructGameDataInt` `0xc25ce0` avec un faux nœud ; lecture `0x163d20`).
+- Partie chargée : au premier jeton, si la seed enregistrée diffère de celle en mémoire, régénération
+  avec la seed et les réglages de la partie (validé : même placement après rechargement).
+- Reste : appliquer en jeu les autres effets des réglages (forêt, porte, récompenses, cœurs au sol,
+  cartes, objets de départ…) et les emplacements qui ne sont pas des coffres.
 
 
 ## Ghidra
