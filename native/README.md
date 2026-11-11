@@ -144,6 +144,18 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   cartes, objets de départ…) et les emplacements qui ne sont pas des coffres.
 
 
+### Seed manuelle au clavier virtuel (validé en jeu, 2026-11-10)
+
+Ligne « Seed manuelle » du menu (membre `VoiceSubtitle` de `OoTRRMenu`, non sauvegardé). Activée, le
+module ouvre au lancement de la partie le clavier de la console (`rando/keyboard.cpp`) : bibliothèque
+`nn::swkbd` du module **sdk** (le jeu ne s'en sert pas, mais sdk l'exporte ; rtld résout nos imports
+par leur nom). Pavé numérique, 9 chiffres ; annulé ou vide -> seed aléatoire (1-999999).
+Disposition relevée dans sdk : `KeyboardConfig` 0x518 octets (mode +0x0, longueur max +0x3ac, min
++0x3b0), `ShowKeyboardArg` = config + tampon de travail (+0x518, 0x1000 octets alignés) + taille
+(+0x520), `String` = { char16_t*, taille }. **La taille de `String` doit être exactement
+`GetRequiredStringBufferSize()`** : plus grande, la lecture de la réponse échoue et le SDK arrête le
+jeu (2128-0503).
+
 ## Ghidra
 
 Installé hors du dépôt (`C:\Users\<toi>\Tools` : Ghidra 12.2 + JDK 25, le projet d'analyse contient
