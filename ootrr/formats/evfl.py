@@ -343,8 +343,8 @@ def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | No
     « possède le sac de bâtons moyen ? » -> 0 = vend le grand sac).
     nodes[i] : {"actor", "action" ou "query", "template": (fichier, adresse des paramètres),
                 "set": {paramètre: chaîne}, "next": cible (action) ou "cases": {valeur: cible}}
-    Une cible est l'indice d'un autre nœud, « old » (l'ancien début du point d'entrée)
-    ou None (fin). Les acteurs, actions et questions doivent déjà exister dans le fichier.
+    Une cible est l'indice d'un autre nœud, « old » (l'ancien début du point d'entrée),
+    {"event": N} (étape N existante du fichier) ou None (fin). Les acteurs, actions et questions doivent déjà exister dans le fichier.
 
     Avec before=indice d'un événement, le graphe est inséré juste avant cet événement
     (tout ce qui y menait mène au graphe) : « old » = cet événement, « after » = l'étape
@@ -369,6 +369,10 @@ def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | No
             return old_main
         if t == "after":
             return after
+        if isinstance(t, dict):  # {"event": N} : étape existante du fichier
+            if not 0 <= t["event"] < first:
+                raise IndexError(f"étape {t['event']} hors du fichier ({first} étapes)")
+            return t["event"]
         return NO_EVENT if t is None else first + t
 
     old_slots = pointer_slots(d)

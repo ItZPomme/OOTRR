@@ -85,6 +85,15 @@ MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
 # écartée par le tri car elle replace Link devant sa porte)
 EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
                  "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0045")
+# Cycle jour / nuit de la plaine : en quittant la forêt (Goto_HyruleCastle:KokiriForest_ArriveLostWood, étape
+# 182), le jeu pose HyruleField_ChangeENV = vrai ; la plaine enfant prend alors la palette
+# MainField_Bluesky_First (WorldParam HyruleField_Child, ConditionEnvTimePalette), qui force la lumière du
+# soleil (IsForceMainLight, soleil fixe). Seule la scène du hibou à l'entrée de la plaine
+# (Goto_HyruleCastle_Kaepora_00, étape 181) le remet à faux. Elle n'est demandée (module
+# HyruleField_Child_Prefab_de5f) que si Dm_HrlField_0010 n'est pas vue et la quête Goto_HyruleCastle est à
+# Step01 : avec ses scènes marquées vues (EXTRA_SKIPPED) ou Zelda passée (quête Complete), la lumière restait
+# figée. L'étape qui pose le drapeau est sautée (la palette « First » n'est qu'un éclairage de première arrivée).
+FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
 # La scène de Saria au pont (Dm_Kokiri_0155) n'est plus passée : Saria donne son objet au pont (l'Ocarina
 # des fées, ou l'objet de la seed avec shuffle_ocarinas), comme dans le jeu d'origine.
 SARIA_GIFT = "LW Gift from Saria"
@@ -737,6 +746,8 @@ class World:
         if self.settings.get("skip_cutscenes") == "safe":
             # après l'achat du bouclier Mojo, la vendeuse lance le tutoriel du bouclier d'une autre Kokiri
             skips.setdefault("Npc_Kokiri_001_Shop_Child", []).append("DekuShield_TutorialTalk")
+        # cycle jour / nuit (tous réglages) : voir FIELD_FIRST_PALETTE_STEP
+        skips.setdefault(FIELD_FIRST_PALETTE_STEP[0], []).append(FIELD_FIRST_PALETTE_STEP[1])
         return skips
 
     def can_place(self, item: str, loc: Location) -> bool:

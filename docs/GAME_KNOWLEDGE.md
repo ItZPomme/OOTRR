@@ -205,6 +205,16 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   et `DoorOfTime` à `Step01`. `skip_child_zelda` (et la porte ouverte) posent ces états au départ, pour que
   le temps passe comme après Zelda **[fichiers]** (à tester en jeu : le mécanisme exact qui fige le temps
   avant Zelda n'a pas été trouvé dans les fichiers).
+- **Lumière figée de la plaine enfant [fichiers]** : `WorldParam/HyruleField_Child` a une
+  `ConditionEnvTimePalette` (`GameDataCondition: HyruleField_ChangeENV`) vers `MainField_Bluesky_First`
+  (`Pack/EnvPalette.pack`), copie de `MainField_Bluesky` avec `IsForceMainLight: true` (soleil fixe,
+  élévation 18°) : tant que le drapeau est vrai, l'éclairage ne suit plus l'heure. Posé vrai en quittant la
+  forêt (`Goto_HyruleCastle:KokiriForest_ArriveLostWood`, étape 182), remis à faux par le hibou à l'entrée de
+  la plaine (`Goto_HyruleCastle_Kaepora_00`, étape 181, puis `Event_RebuildConditionEnvTimePalette`). Le
+  hibou n'est demandé (module `HyruleField_Child_Prefab_de5f` : joueur dans la zone, `Dm_HrlField_0010` non
+  vue, quête `Goto_HyruleCastle` à Step01) que dans une partie normale : l'étape 182 est sautée
+  (`world.FIELD_FIRST_PALETTE_STEP`, à tester en jeu sur une nouvelle partie).
+- `IsWorldTimeStop` / `IsDisableTimeProgress` sont des réglages d'événement (EventSetting), pas un état global.
 
 ## Âge et point de départ
 
@@ -270,6 +280,11 @@ ajouter (non sauvegardées, la taille de sauvegarde ne change pas) **[jeu]**.
 - Changer un acteur de type par `Gyaml` (cœur -> coffre) : rien n'apparaît. Un coffre copié dans
   une carte statique (`Obj_TBox_A_01_NoBake`) n'a pas pu s'ouvrir.
 - Une copie du réceptacle qui donne des PV (quart de cœur sur mesure) bloque la partie.
+- `insert_flow` : `set` n'écrit que des **textes**. Un paramètre entier (ex. `Num` de
+  `EventQueryIsExistInPouch`) reçoit l'adresse de la chaîne (`Num = 12304`) : garder la valeur du modèle.
+  Réponses des questions : 0 = oui. Toujours relire le script produit avec `tools.events` **[fichiers]**.
+- Textes des volets d'une mise en page (ex. `Pa_AmiiboBtn_00-T_BtnTitle_00`) : lus par 0xa6b250 (fichier de
+  messages déjà chargé), pas par 0xa6afe0 / 0xa6b060 **[fichiers, Ghidra]**.
 - Un acteur dans un groupe de logique (AiGroups) peut ignorer sa condition de présence selon le
   module ; tester.
 - PowerShell 5 ajoute un BOM UTF-8 avec `Set-Content -Encoding utf8` : casse les JSON.

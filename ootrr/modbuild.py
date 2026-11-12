@@ -97,7 +97,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -139,6 +139,9 @@ class ModBuilder:
             if flow == self.ERA_FLOW:
                 new, era_report = self._guard_era_sword(new)
                 report += era_report
+            if flow == self.DAMPE_FLOW:
+                new, dampe_report = self._dampe_exit(new)
+                report += dampe_report
             for guard in self.EVENT_GUARDS:
                 if guard[0] == flow:
                     new, guard_report = self._guard_event(new, guard)
@@ -609,9 +612,32 @@ class ModBuilder:
         if idx is None or ask[1] is None:
             raise KeyError(f"{self.ERA_FLOW} : étape de l'épée Kokiri introuvable")
         new, report = insert_flow(flow, None, [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch",
-                                                "template": ask, "set": {"Actor": "Weapon_Sword_Kokiri", "Num": "1"},
-                                                "cases": {1: "old", 0: "after"}}], before=idx)
+                                                # « set » n'écrit que des textes : Num (entier, 1) reste celui du
+                                                # modèle ; 0 = oui (épée en poche) -> l'étape qui l'équipe
+                                                "template": ask, "set": {"Actor": "Weapon_Sword_Kokiri"},
+                                                "cases": {0: "old", 1: "after"}}], before=idx)
         return new, report + [f"{self.ERA_FLOW}: épée Kokiri équipée seulement si possédée"]
+
+    # course de Dampé : la sortie de la salle d'arrivée demande le Grappin, qui est dans le coffre de la course
+    # (mélangé : on peut l'ouvrir sans recevoir le Grappin). Après ce coffre (état OpenedHookShot), parler à
+    # Dampé ne fait que conseiller le Grappin (SuggestExit, étape 260) ; sans Grappin ni Super Grappin, il
+    # ramène Link dehors comme après une chute (étapes 71 -> 70 -> 68 : soin, Graveyard_Adult point 4, fin)
+    DAMPE_FLOW = "MiniGame_DampeRace"
+    DAMPE_SUGGEST_EXIT, DAMPE_FALL_EXIT = 260, 71
+
+    def _dampe_exit(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_query, insert_flow
+        from .tools.events import event_line
+
+        if "MiniGame_DampeRace_End" not in event_line(flow, 68)[0] or                 "Graveyard_Adult" not in event_line(flow, 70)[0] or "SuggestExit" not in event_line(flow, 260)[0]:
+            raise KeyError(f"{self.DAMPE_FLOW} : étapes de la sortie inattendues")
+        ask = (flow, find_query(flow, "PouchSystemActor", "EventQueryIsExistInPouch"))
+        nodes = [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
+                  "set": {"Actor": "Item_Longshot"}, "cases": {0: "old", 1: 1}},
+                 {"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
+                  "set": {"Actor": "Item_Hookshot"}, "cases": {0: "old", 1: {"event": self.DAMPE_FALL_EXIT}}}]
+        new, report = insert_flow(flow, None, nodes, before=self.DAMPE_SUGGEST_EXIT)
+        return new, report + [f"{self.DAMPE_FLOW}: sortie sans Grappin après le coffre de la course"]
 
     def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
         """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""

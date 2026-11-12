@@ -102,5 +102,10 @@ int LocationCount();
 bool IsShop(int location);
 // prix d'un article de boutique mélangé (réglage shop_prices ; même calcul que world.shop_price)
 int32_t ShopPrice(int location);
+// articles jetons déjà achetés (entier sauvegardé OoTRR.ShopSold, un bit par emplacement de boutique)
+int ShopSlot(int location);
+bool IsShopSold(std::uintptr_t main_base, int location);
+int32_t MarkShopSold(std::uintptr_t main_base, int location);  // nouveau masque, -1 si illisible
+int32_t SoldShopPrice(int location);
 
 }  // namespace ootrr::ingame
