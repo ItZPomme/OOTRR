@@ -46,6 +46,7 @@ struct World {
             if (info.pickup) {
                 int mode = s[SET_shuffle_hearts];
                 shuffle = mode == kHeartsAll || (mode == kHeartsFreestanding && info.pickup == 1);
+                if (info.pickup == 3) shuffle = s[SET_shuffle_gifts] != 0;  // objet au sol unique (Flèche de feu)
             }
             if (info.scrub) shuffle = s[SET_shuffle_scrubs] != 0;
             if (info.skulltula) {

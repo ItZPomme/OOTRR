@@ -314,7 +314,7 @@
         "LH Child Fishing":    {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
         "LH Adult Fishing":    {"rule": "is_adult", "vanilla": "Item_Scale_Gold", "gift": true},
         "LH Lab Dive":         {"rule": "has_gold_scale or (can_use(Iron_Boots) and can_use(Progressive_Hookshot))", "vanilla": "Obj_Heart_Piece"},
-        "LH Sun":              {"rule": "is_adult and Water_Medallion and can_use(Bow)", "vanilla": "Item_Arrow_Fire"},
+        "LH Sun":              {"rule": "is_adult and Water_Medallion and can_use(Bow)", "vanilla": "Item_Arrow_Fire", "hashes": [4598657944866228526], "pickup": "item", "actor": "Obj_Arrow_Fire", "_note": "flèche posée sur l'eau (Obj_Arrow_Fire, carte de la plaine adulte) après le tir dans le soleil ; mélangée avec shuffle_gifts"},
         "LH Freestanding PoH": {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [13469300937852836203], "pickup": "freestanding", "_note": "dans la carte de la plaine (version adulte), près de la maison du lac"}
       },
       "exits": {

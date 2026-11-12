@@ -283,7 +283,8 @@ class Location:
     event: str | None = None  # "keep" | "drop" | None
     dungeon_item: str | None = None  # "map" | "compass" | None
     conditional: bool = False  # coffre A_06 à contenu conditionnel
-    pickup: str | None = None  # "freestanding" | "boss" : cœur posé au sol (pas un coffre)
+    pickup: str | None = None  # "freestanding" | "boss" : cœur posé au sol ; "item" : autre objet au sol (shuffle_gifts)
+    actor: str | None = None  # pickup "item" : type de l'acteur posé au sol (ex. Obj_Arrow_Fire)
     no_progression: bool = False  # emplacement incertain : jamais d'objet nécessaire pour finir
     scrub: bool = False  # Peste Mojo vendeuse : hashes = l'acteur Enemy_Scrub_Business (enfant / adulte)
     skulltula: bool = False  # Skulltula d'or : hashes = l'acteur Enemy_Skulltula_Gold, l'objet remplace le jeton
@@ -433,6 +434,7 @@ class World:
             dungeon_item=lbody.get("dungeon_item"),
             conditional=bool(lbody.get("conditional", False)),
             pickup=lbody.get("pickup"),
+            actor=lbody.get("actor"),
             no_progression=bool(lbody.get("no_progression", False)),
             scrub=bool(lbody.get("scrub", False)),
             skulltula=bool(lbody.get("skulltula", False)),
@@ -447,6 +449,8 @@ class World:
         if loc.pickup:
             mode = self.settings.get("shuffle_hearts", "none")
             loc.shuffle = mode == "all" or (mode == "freestanding" and loc.pickup == "freestanding")
+            if loc.pickup == "item":  # objet unique posé au sol (Flèche de feu) : comme les cadeaux
+                loc.shuffle = bool(self.settings.get("shuffle_gifts"))
         if loc.scrub:
             loc.shuffle = bool(self.settings.get("shuffle_scrubs"))
         if loc.skulltula:
@@ -504,9 +508,12 @@ class World:
                     raise DataError(f"hash {h} utilisé par {seen_hashes[h]} et {loc.name}")
                 seen_hashes[h] = loc.name
             if loc.pickup:
-                if loc.pickup not in ("freestanding", "boss"):
-                    raise DataError(f"lieu {loc.name} : pickup doit valoir freestanding ou boss")
-                if loc.vanilla not in self.ground_native or not loc.hashes:
+                if loc.pickup not in ("freestanding", "boss", "item"):
+                    raise DataError(f"lieu {loc.name} : pickup doit valoir freestanding, boss ou item")
+                if loc.pickup == "item":
+                    if not loc.actor or not loc.hashes:
+                        raise DataError(f"lieu {loc.name} : un objet au sol doit avoir un hash et son acteur (actor)")
+                elif loc.vanilla not in self.ground_native or not loc.hashes:
                     raise DataError(f"lieu {loc.name} : un cœur au sol doit avoir un hash et un objet d'origine au sol")
             if loc.gift and loc.name not in self.gift_edits:
                 raise DataError(f"lieu {loc.name} : cadeau absent de gifts.json")

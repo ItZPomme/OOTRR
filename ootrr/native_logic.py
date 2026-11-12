@@ -229,7 +229,7 @@ class Exporter:
                 vanilla=aid[lbody["vanilla"]], dungeon=dungeons.index(d) if d else -1,
                 shuffle=bool(lbody.get("shuffle", bool(hashes))),
                 dungeon_item={"map": 1, "compass": 2}.get(lbody.get("dungeon_item"), 0),
-                pickup={"freestanding": 1, "boss": 2}.get(lbody.get("pickup"), 0),
+                pickup={"freestanding": 1, "boss": 2, "item": 3}.get(lbody.get("pickup"), 0), actor=lbody.get("actor") or "",
                 no_progression=bool(lbody.get("no_progression", False)),
                 event={"keep": 1, "drop": 2}.get(lbody.get("event"), 0),
                 conditional=bool(lbody.get("conditional", False)), scrub=bool(lbody.get("scrub", False)),
@@ -481,7 +481,7 @@ def heart_tokens() -> dict[int, tuple[str, str]]:
     for i, l in enumerate(w["locations"]):
         if l["hashes"] and l["pickup"]:
             for h in l["hashes"]:
-                out[h] = (token(i), w["items"][l["vanilla"]]["name"])
+                out[h] = (token(i), l["actor"] or w["items"][l["vanilla"]]["name"])
     return out
 
 
