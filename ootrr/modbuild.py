@@ -96,7 +96,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -129,6 +129,9 @@ class ModBuilder:
             if self.ocarina_guard and flow == self.OCARINA_GUARD[0]:
                 new, guard_report = self._guard_fairy_ocarina(new)
                 report += guard_report
+            if flow == self.ERA_FLOW:
+                new, era_report = self._guard_era_sword(new)
+                report += era_report
             for guard in self.EVENT_GUARDS:
                 if guard[0] == flow:
                     new, guard_report = self._guard_event(new, guard)
@@ -585,6 +588,22 @@ class ModBuilder:
                           "set": {"NextBanc": banc, "NextStartPos": pos, "BootEventName": ""}, "next": "old"})
         return flow, nodes
 
+    # changement d'époque : la sous-séquence équipe l'épée Kokiri même si Link ne l'a pas (épée mélangée,
+    # pas encore trouvée) ; sans l'épée en poche, l'arme de l'autre époque reste vide
+    ERA_FLOW = "ReplaceEquipmentForEraChange"
+
+    def _guard_era_sword(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_action_event, find_query, insert_flow
+
+        idx = find_action_event(flow, "GameDataActor", "EventTriggerSetGameDataString64", "Value", "Weapon_Sword_Kokiri")
+        ask = (flow, find_query(flow, "PouchSystemActor", "EventQueryIsExistInPouch"))
+        if idx is None or ask[1] is None:
+            raise KeyError(f"{self.ERA_FLOW} : étape de l'épée Kokiri introuvable")
+        new, report = insert_flow(flow, None, [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch",
+                                                "template": ask, "set": {"Actor": "Weapon_Sword_Kokiri", "Num": "1"},
+                                                "cases": {1: "old", 0: "after"}}], before=idx)
+        return new, report + [f"{self.ERA_FLOW}: épée Kokiri équipée seulement si possédée"]
+
     def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
         """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""
         from .formats.evfl import ensure_actor_member, find_action_event, find_query, insert_flow
@@ -874,7 +893,7 @@ class ModBuilder:
             raise KeyError(f"acteurs introuvables : {sorted(missing)}")
         if start_flags or bool_exps:
             report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps)
-        if event_changes or event_skips or start_items or moat_gate or start_warp or scrub_sales or questions:
+        if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
             report += self._write_events(event_changes or {}, out_romfs, event_skips, start_items, moat_gate,
                                          start_warp, scrub_sales, questions)
         if logic_patches:

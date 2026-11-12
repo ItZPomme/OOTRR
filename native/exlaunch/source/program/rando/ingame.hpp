@@ -38,6 +38,7 @@ namespace ootrr::ingame {
 void ResolveStart(ootrr::Settings& s, uint64_t seed);
 // point d'apparition de la dernière génération (0 = maison de Link)
 int32_t SpawnPoint();
+int32_t AddMaxLife(std::uintptr_t main_base, int32_t quarters);
 
 // lit les réglages du menu et génère une seed ; renvoie false si la génération échoue
 bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read = nullptr);

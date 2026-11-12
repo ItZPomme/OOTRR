@@ -150,6 +150,8 @@ u64 ReadTick() {
 }
 
 bool g_trust_memory = false;
+bool g_giving_start = false;  // objets de départ en cours (leurs chants passent)
+int g_song_blocks = 0;
 bool g_pending_start_items = false;  // objets de départ à donner une fois l'inventaire prêt  // seed de nouvelle partie pas encore visible dans GameData (écriture différée)
 
 void LogMenuRead(const ootrr::ingame::MenuRead& r) {
@@ -708,7 +710,9 @@ HOOK_DEFINE_TRAMPOLINE(InitDrop) {
         ReplaceTokenAtSource(info);
         Orig(component, info);
         if (g_pending_start_items) {
+            g_giving_start = true;
             int given = ootrr::ingame::GiveStartItems(Main());
+            g_giving_start = false;
             if (given >= 0) {
                 g_pending_start_items = false;
                 LogValue("OoTRR: objets de depart donnes", static_cast<u64>(given));
@@ -741,6 +745,21 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
             g_pouch_logs--;
             Log(name->text);
             LogValue("OoTRR: ajout a l'inventaire, raison", reason);
+        }
+        // chants mélangés : la leçon d'une scène (Dm_MelodyGet_*) ajoute aussi le chant d'origine (constaté : les
+        // deux apparaissent dans la liste de l'ocarina). Les dons de la seed passent par des jetons (OoTRR_L) ou
+        // les objets de départ ; tout autre ajout direct d'un chant est ignoré quand les chants sont mélangés.
+        if (name && name->text && !g_giving_start && ootrr::ingame::Ready()
+            && ootrr::ingame::SettingValue(ootrr::logic::SET_shuffle_songs) != 0) {
+            const char* t = name->text;
+            const char* prefix = "Item_Melody_";
+            int k = 0;
+            while (prefix[k] && t[k] == prefix[k]) k++;
+            if (!prefix[k]) {
+                Log(t);
+                LogValue("OoTRR: chant d'origine ignore (chants melanges), total", static_cast<u64>(++g_song_blocks));
+                return 1;
+            }
         }
         // jeton d'un cœur au sol (OoTRR_Lnnnn) ramassé : objet de la seed pour cet emplacement
         if (name && name->text) {
@@ -791,6 +810,8 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                     s32 before = heart ? ootrr::ingame::HeartPieces(Main()) : 0;
                     u64 result = Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
                     LogValue("OoTRR: ajout du jeton, resultat", result);
+                    if (SameString(text, "Obj_Heart_Container") && (result & 1))
+                        LogValue("OoTRR: vie maximale (quarts)", static_cast<u64>(ootrr::ingame::AddMaxLife(Main(), 4)));
                     if (heart) {
                         s32 after = ootrr::ingame::HeartPieces(Main());
                         LogValue("OoTRR: quarts de coeur avant", static_cast<u64>(before));

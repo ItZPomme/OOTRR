@@ -13,6 +13,9 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parent / "data" / "spawns.json"
 MASK = 0xFFFFFFFFFFFFFFFF
+# Départ aléatoire désactivé (retour de test : la logique et le jeu ne démarraient pas au même endroit) ;
+# même interrupteur dans ingame.cpp (kRandomSpawnEnabled). Le départ adulte reste au Temple du Temps.
+RANDOM_SPAWN_ENABLED = False
 
 
 @lru_cache(maxsize=1)
@@ -52,7 +55,7 @@ def resolve(settings: dict, seed: int) -> dict:
         # appris enfant)
         s["open_door_of_time"] = True
         s["free_time_travel"] = True
-    if s.get("random_spawn"):
+    if RANDOM_SPAWN_ENABLED and s.get("random_spawn"):
         age = "adult" if adult else "child"
         options = [i + 1 for i, sp in enumerate(spawns()) if sp["age"] == age]
         s["spawn_point"] = options[mix(seed, 2) % len(options)]

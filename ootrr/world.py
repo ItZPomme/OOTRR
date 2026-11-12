@@ -123,6 +123,10 @@ SKIP_FLAGS = (
 )
 # Les demandes d'événement qui font arrêter Link par ces Kokiri sont rendues absentes (condition de
 # présence : scène d'introduction pas encore vue, donc toujours faux une fois la partie commencée)
+# Talon devant le château (HyruleCastle_Static) : comme Impa, il disparaît une fois Zelda rencontrée
+# (DoorOfTime >= Step01), donc avec « Zelda enfant passée » ou la porte ouverte il n'est plus là
+TALON_CASTLE = 5439531180495276262
+TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False, "IsNegation": True}
 KOKIRI_INTERRUPTIONS = (
     15690126774393333419,  # KokiriForest_Kokiri_011_StopInFrontOfShop_00 (toit de la boutique)
     18383848770792576395,  # SubEvent_Kokiri_011_FocusOnNPC
@@ -656,6 +660,7 @@ class World:
                 out[h] = {"Presence": {"FlagName": FOREST_FLAGS["exit"], "IsCheckLazy": False, "IsNegation": False}}
             for h in OPEN_FOREST_REMOVALS["deku"]:
                 out[h] = {"Presence": {"FlagName": FOREST_FLAGS["deku"], "IsCheckLazy": False, "IsNegation": False}}
+        out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}

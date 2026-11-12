@@ -81,7 +81,8 @@ void ResolveStart(Settings& s, uint64_t seed) {
         s.values[logic::SET_open_door_of_time] = 1;
         s.values[logic::SET_free_time_travel] = 1;
     }
-    if (s.values[logic::SET_random_spawn]) {
+    constexpr bool kRandomSpawnEnabled = false;  // starting.py : RANDOM_SPAWN_ENABLED
+    if (kRandomSpawnEnabled && s.values[logic::SET_random_spawn]) {
         int count = 0;
         for (int i = 0; i < logic::kSpawnCount; i++) count += logic::kSpawnAdult[i] == (adult ? 1 : 0);
         int pick = static_cast<int>(StartHash(seed, 2) % static_cast<uint64_t>(count));
@@ -237,6 +238,18 @@ int32_t HeartPieces(std::uintptr_t main_base) {
     return value;
 }
 
+// réceptacle de cœur donné par l'inventaire : le jeu ne recalcule la vie maximale qu'au changement d'époque,
+// on l'augmente nous-mêmes (PlayerStatus.MaxLife en quarts de cœur) et on rend toute la vie
+int32_t AddMaxLife(std::uintptr_t main_base, int32_t quarters) {
+    void* manager = Manager(main_base);
+    int32_t value = 0;
+    if (!manager || !reinterpret_cast<GetIntFn>(main_base + kGetInt)(manager, &value, 0xfbe01da1)) return -1;  // PlayerStatus.MaxLife
+    value += quarters;
+    WriteGameDataInt(main_base, 0xfbe01da1, value);
+    WriteGameDataInt(main_base, 0x31ab5580, value);  // PlayerStatus.Life
+    return value;
+}
+
 int ReadFlag(std::uintptr_t main_base, uint32_t hash) {
     void* manager = Manager(main_base);
     bool value = false;
@@ -366,7 +379,14 @@ int GiveStartItems(std::uintptr_t main_base) {
         uint64_t added = add(manager, &s, 0, number, kReasonEvent, 0, 0, false, 0);
         if (ui) notify(ui, &s, (added & 1) != 0, kReasonEvent);
     };
+    // poche de Link (World._start_location_names) : l'objet qui s'y trouve (ex. médaillon) est donné au départ
+    bool pocket = g_settings.values[logic::SET_skip_cutscenes] == logic::kSkipSafe
+               || g_settings.values[logic::SET_shuffle_rewards] != logic::kRewardsVanilla;
     int given = count;
+    if (pocket) {
+        give(ItemFor(logic::kLinksPocket), 1);
+        given++;
+    }
     if (g_settings.values[logic::SET_starting_age] == logic::kAgeAdult) {
         give("Weapon_Sword_Master", 1);  // world.ADULT_START_ITEMS
         given++;
