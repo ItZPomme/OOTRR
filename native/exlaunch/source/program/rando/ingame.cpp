@@ -283,11 +283,13 @@ const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupe
 }
 
 namespace {
-uint64_t g_ocarina_tick[2] = {};
+uint64_t g_ocarina_tick[3] = {};
 }
 
 bool RecentOcarinaToken(int location) {
-    int slot = location == logic::kSariaGift ? 0 : location == logic::kOcarinaOfTimeLocation ? 1 : -1;
+    // Chant du Temps : aussi donné deux fois aux douves (don direct, puis la leçon de Dm_SY_Ocarina)
+    int slot = location == logic::kSariaGift ? 0 : location == logic::kOcarinaOfTimeLocation ? 1
+             : location == logic::kSongOfTimeLocation ? 2 : -1;
     if (slot < 0) return false;
     uint64_t now, freq;
     asm volatile("mrs %0, cntpct_el0" : "=r"(now));

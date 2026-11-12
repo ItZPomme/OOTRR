@@ -70,6 +70,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "random_spawn": (False, bool,
                      "Point d'apparition au début de la partie tiré par la seed parmi les zones hors donjons "
                      "(data/spawns.json), selon l'âge de départ"),
+    "shuffle_songs": ("vanilla", ("vanilla", "shuffle", "random"),
+                      "Chants : vanilla = à leur place ; shuffle = mélangés entre les 12 emplacements de chants ; "
+                      "random = les emplacements de chants rejoignent le pool (un chant peut être n'importe où, "
+                      "n'importe quel objet peut être donné à la place d'un chant)"),
     "spawn_point": (0, int,
                     "Interne : point d'apparition (rang dans data/spawns.json + 1, 0 = maison de Link), fixé par "
                     "random_spawn ou le départ adulte ; à laisser à 0"),

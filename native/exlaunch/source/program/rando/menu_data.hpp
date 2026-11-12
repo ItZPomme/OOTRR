@@ -20,7 +20,7 @@ constexpr int kPageCount = 3;
 inline constexpr uint32_t kPageStructs[kPageCount] = {0x068ab00a, 0x4140784a, 0x2e65116d};
 inline constexpr const char* kPageTables[kPageCount] = {"UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu2.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu3.game__ui__OptionSetTable.bgyml"};
 inline constexpr const char* kPagePrefixes[kPageCount] = {"OoTRR_", "OoTRR2_", "OoTRR3_"};
-constexpr int kMenuSettingCount = 18;
+constexpr int kMenuSettingCount = 19;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x068ab00a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0x068ab00a, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
@@ -31,6 +31,7 @@ inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {21, 0x068ab00a, 0x3b0fc63f, true, 0, {}, {}},  // random_spawn <- IsChangeJumpButton
     {19, 0x068ab00a, 0xc587a7b1, true, 0, {}, {}},  // start_with_consumables <- IsDisplayTextRuby
     {13, 0x4140784a, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
+    {22, 0x4140784a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // shuffle_songs <- CameraRotateSpeed
     {6, 0x4140784a, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
     {11, 0x4140784a, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
     {5, 0x4140784a, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode

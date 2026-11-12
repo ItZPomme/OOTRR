@@ -89,6 +89,7 @@ EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
 # des fées, ou l'objet de la seed avec shuffle_ocarinas), comme dans le jeu d'origine.
 SARIA_GIFT = "LW Gift from Saria"
 OCARINA_OF_TIME_LOCATION = "HF Ocarina of Time Item"
+SONG_OF_TIME_LOCATION = "Song from Ocarina of Time"  # aussi donné directement aux douves (moat_items)
 # jamais de bombes à ces deux lieux (sans sac, un coffre de bombes donne le sac de bombes, constaté en jeu ;
 # le même risque n'a pas pu être écarté pour une scène) ; même règle dans generator.cpp (CanPlace)
 OCARINA_FORBIDDEN_PREFIX = "Item_BombBundle"
@@ -436,6 +437,8 @@ class World:
             loc.shuffle = loc.shop <= shop_count(self.settings)
         if loc.ocarina:
             loc.shuffle = bool(self.settings.get("shuffle_ocarinas"))
+        if loc.kind == "song":
+            loc.shuffle = self.settings.get("shuffle_songs", "vanilla") == "random"
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -473,7 +476,7 @@ class World:
                 raise DataError(f"lieu {loc.name} : objet vanilla manquant")
             if loc.vanilla not in self.items:
                 raise DataError(f"lieu {loc.name} : objet inconnu « {loc.vanilla} » (absent de items.json)")
-            if loc.shuffle and not loc.hashes and not loc.ocarina:
+            if loc.shuffle and not loc.hashes and not loc.ocarina and loc.kind != "song":
                 raise DataError(f"lieu {loc.name} : seuls les coffres (avec hashes) peuvent être mélangés")
             for h in loc.hashes:
                 if h in seen_hashes:
@@ -587,6 +590,15 @@ class World:
     def reward_locations(self) -> list[Location]:
         return [l for l in self.locations.values() if l.kind == "reward"]
 
+    def song_locations(self) -> list[Location]:
+        return [l for l in self.locations.values() if l.kind == "song"]
+
+    def song_gives(self, placements: dict[str, str]) -> dict[str, str]:
+        """{chant d'origine: objet donné à sa place} pour les dons de Dm_SY_Ocarina (un don par chant,
+        choisi selon la mélodie de la scène) ; vide si les chants sont à leur place."""
+        return {l.vanilla: placements.get(l.name, l.vanilla) for l in self.song_locations()
+                if placements.get(l.name, l.vanilla) != l.vanilla}
+
     def reward_event_changes(self, placements: dict[str, str]) -> dict[str, dict[str, str]]:
         """{scène: {récompense d'origine: nouvelle récompense}} pour les boss dont la récompense change."""
         out: dict[str, dict[str, str]] = {}
@@ -610,7 +622,8 @@ class World:
     def moat_items(self, placements: dict[str, str]) -> tuple[str, ...]:
         """Objets donnés directement aux douves (porte ouverte) : l'objet du lieu de l'Ocarina du Temps
         et le Chant du Temps."""
-        return (placements.get(OCARINA_OF_TIME_LOCATION, "Item_Ocarina_Time"), "Item_Melody_TimeSong")
+        return (placements.get(OCARINA_OF_TIME_LOCATION, "Item_Ocarina_Time"),
+                placements.get(SONG_OF_TIME_LOCATION, "Item_Melody_TimeSong"))
 
     def logic_patches(self) -> dict[str, dict[str, str]]:
         """Chaînes à remplacer dans les modules de logique (Logic/<module>.logic.module.ainb)."""

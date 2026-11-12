@@ -50,6 +50,7 @@ python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --inst
 | `starting_age` | `child`, `adult`, `random` | Âge de départ ; adulte = Temple du Temps, porte ouverte et voyage libre imposés, épée de légende donnée |
 | `random_spawn` | oui / non | Départ n'importe où hors donjons (`data/spawns.json`), selon l'âge |
 | `start_with_consumables` | oui / non | 10 bâtons Mojo et 20 noix Mojo au départ |
+| `shuffle_songs` | `vanilla`, `shuffle`, `random` | Chants à leur place, mélangés entre eux, ou dans le pool |
 | `shuffle_ocarinas` | oui / non | Ocarina des fées (Saria) et Ocarina du Temps (douves) mélangés ; non = à leur place |
 | `free_time_travel` | oui (défaut) / non | L'épée renvoie enfant à tout moment (le remake exige le Temple de la Forêt) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + nombre | Condition du pont arc-en-ciel |

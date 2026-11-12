@@ -217,6 +217,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             if vanilla == "Item_Ocarina_Time":
                 mb.moat_items = (t, "Item_Melody_TimeSong")
         mb.ocarina_guard = False
+        # chants : chaque don de Dm_SY_Ocarina donne le jeton de son emplacement (objet de la seed, ou le chant
+        # d'origine si shuffle_songs = vanilla) ; Chant du Temps aussi donné directement aux douves
+        from ..native_logic import song_tokens
+        mb.song_gives = {}
+        for vanilla, t in song_tokens().items():
+            mb.song_gives[vanilla] = t
+            tokens_actors[t] = f"SELF@{vanilla}"
+        mb.moat_items = (mb.moat_items[0], mb.song_gives["Item_Melody_TimeSong"])
         # point d'apparition (random_spawn, départ adulte) : l'introduction lit OoTRR.Spawn (écrit par le module)
         from ..starting import spawns
         mb.spawn_branch = [(s["banc"], s["pos"]) for s in spawns()]

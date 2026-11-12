@@ -113,6 +113,7 @@ pour taper une seed au clavier au lancement (même seed + mêmes réglages = mê
 | Réglage | Effet |
 |---|---|
 | Dungeon Rewards | Pierres et médaillons mélangés entre les boss et la poche de Link. |
+| Songs | Vanilla (chants à leur place), Shuffle (mélangés entre les 12 emplacements de chants), Random (les emplacements de chants rejoignent le pool : un chant peut être dans un coffre, et un PNJ peut donner n'importe quel objet). |
 | Heart Pieces | Quarts de cœur au sol (Freestanding), et aussi réceptacles des boss (All). |
 | Gold Skulltulas | Les Skulltulas d'or lâchent un objet de la seed (Overworld : hors donjons ; All : toutes). |
 | Maps and Compasses | À leur place, données au départ, ou retirées. |
@@ -198,7 +199,7 @@ Fonctions **validées en jeu** : coffres mélangés, cœurs au sol, Skulltulas d
 
 Fonctions **pas encore validées en jeu** (retours bienvenus) : départ adulte, départ aléatoire, cycle
 jour / nuit avec « Skip Child Zelda », bombes d'un coffre sans sac (rubis à la place), garde de l'épée Kokiri,
-Ocarina du Temps mélangé (douves), prix aléatoires élevés des Peste Mojo, titre du bouton « Next Page ».
+Ocarina du Temps mélangé (douves), chants mélangés, prix aléatoires élevés des Peste Mojo, titre du bouton « Next Page ».
 
-Non mélangés : PNJ, chants, petites clés, clés du boss, coffres des mini-jeux. Travail restant :
+Non mélangés : PNJ (sauf Saria et les chants), petites clés, clés du boss, coffres des mini-jeux. Travail restant :
 [`ROADMAP.md`](ROADMAP.md).

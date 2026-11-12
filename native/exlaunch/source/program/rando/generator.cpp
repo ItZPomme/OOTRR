@@ -54,6 +54,7 @@ struct World {
             }
             if (info.shop) shuffle = info.shop <= s[SET_shuffle_shops];  // valeur 0..4 = nombre d'articles
             if (info.ocarina) shuffle = s[SET_shuffle_ocarinas] != 0;
+            if (info.kind == kKindSong) shuffle = s[SET_shuffle_songs] == kSongsRandom;
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -413,6 +414,25 @@ struct Fill {
                 if (scratch.Beaten()) break;
             }
             for (int i = 0; i < reward_count; i++) placement[rewards[i]] = reward_items[i];
+        }
+        if (s[SET_shuffle_songs] == kSongsShuffle) {  // chants mélangés entre eux (fill.py, même méthode)
+            int16_t songs[kLocationCount], song_items[kLocationCount];
+            int song_count = 0;
+            for (int l = 0; l < kLocationCount; l++)
+                if (kLocations[l].kind == kKindSong) {
+                    songs[song_count] = static_cast<int16_t>(l);
+                    song_items[song_count++] = static_cast<int16_t>(kLocations[l].vanilla);
+                }
+            static int16_t song_trial[kLocationCount];
+            for (int t = 0; t < 200; t++) {
+                rng.Shuffle(song_items, song_count);
+                for (int l = 0; l < kLocationCount; l++) song_trial[l] = placement[l];
+                for (int i = 0; i < song_count; i++) song_trial[songs[i]] = song_items[i];
+                scratch.Init(w, pool_item, shuffled_count);
+                scratch.Sweep(song_trial);
+                if (scratch.Beaten()) break;
+            }
+            for (int i = 0; i < song_count; i++) placement[songs[i]] = song_items[i];
         }
 
         // 1. cartes et boussoles dans leur propre donjon

@@ -96,7 +96,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -145,6 +145,9 @@ class ModBuilder:
                                                [{"NextBanc": start_warp[0], "NextStartPos": start_warp[1],
                                                  "BootEventName": ""}])
                 report += warp_report
+            if self.song_gives and flow == self.SONG_FLOW:
+                new, song_report = self._song_gives(new)
+                report += song_report
             if self.spawn_branch and flow == self.START_FLOW:
                 new, spawn_nodes = self._spawn_nodes(new)
                 new, spawn_report = insert_flow(new, self.START_ENTRY, spawn_nodes)
@@ -512,6 +515,28 @@ class ModBuilder:
                                              "cases": {0: "after", 1: "old"}}], before=idx)  # 0 = oui (déjà l'Ocarina du Temps) : pas de don
         except KeyError as exc:
             return flow, [f"garde de l'ocarina impossible : {exc}"]
+
+    # chants : Dm_SY_Ocarina donne chaque chant par sa propre action (choisie selon la mélodie de la scène).
+    # song_gives = {chant d'origine: objet ou jeton donné à la place}. Seule l'action de don change : le nom
+    # de la Berceuse sert aussi à tester si Link la connaît (EventQueryCheckIsGet).
+    SONG_FLOW = "Dm_SY_Ocarina"
+    song_gives: dict[str, str] | None = None
+
+    def _song_gives(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_action_event, insert_flow
+
+        report = []
+        found = {}
+        for song in self.song_gives:
+            idx = find_action_event(flow, *self.POUCH_ACTION, "Actor", song)
+            if idx is None:
+                raise KeyError(f"{self.SONG_FLOW} : don de {song} introuvable")
+            found[song] = idx
+        for song, idx in found.items():  # copie de l'action avec l'autre objet, l'originale est sautée
+            flow, r = insert_flow(flow, None, [{"copy_event": idx, "set": {"Actor": self.song_gives[song]},
+                                                "next": "after"}], before=idx)
+            report += r
+        return flow, report
 
     # menu natif : point d'apparition choisi en jeu ; l'introduction lit deux entiers GameData
     # `spawn_branch_entry` = (dizaines, unités) de k (0 = rien, k = téléportation vers spawn_branch[k - 1]).

@@ -75,6 +75,18 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   ocarinas progressifs (le deuxième obtenu est l'Ocarina du Temps) ; double don des douves (don direct +
   scène) ignoré **[fichiers]** (à tester en jeu).
 
+## Chants
+
+- Les 12 chants sont donnés par le script commun `Dm_SY_Ocarina` (appelé par les scènes `Dm_MelodyGet_*`) :
+  une question `EventQueryMelodyTypeForNormal` (mélodie de la scène) mène à une action d'inventaire par
+  chant. Le nom de la Berceuse y sert aussi à `EventQueryCheckIsGet` (jeu libre de l'ocarina) : seule
+  l'action de don est copiée avec l'autre objet (`ModBuilder.song_gives`), l'originale est sautée **[fichiers]**.
+- `shuffle_songs` : vanilla, shuffle (permutation entre les emplacements de chants, comme les récompenses de
+  boss), random (emplacements de chants dans le pool). Menu natif : chaque don devient le jeton de son
+  emplacement ; le Chant du Temps est aussi donné directement aux douves (doublon ignoré) **[fichiers]**
+  (à tester en jeu : la leçon de la scène joue toujours le chant d'origine, et une scène qui se rejouerait
+  si le chant n'est pas obtenu redonnerait l'objet).
+
 ## Boutiques, Peste Mojo, Skulltulas
 
 - **Liste d'un marchand : ne jamais ajouter `Release` à un article qui n'en a pas** : la lecture de

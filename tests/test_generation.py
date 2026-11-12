@@ -37,6 +37,8 @@ PRESETS = {
     "boutiques et Skulltulas": {"shuffle_shops": "2", "shuffle_skulltulas": "all", "shuffle_hearts": "all"},
     "Skulltulas toutes": {"shuffle_skulltulas": "all", "shuffle_hearts": "freestanding", "open_forest": "open"},
     "ocarinas mélangés": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "open_door_of_time": True},
+    "chants mélangés": {"shuffle_songs": "shuffle", "shuffle_rewards": "shuffled"},
+    "chants aléatoires": {"shuffle_songs": "random", "shuffle_hearts": "all", "skip_child_zelda": True},
     "départ adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 17},
     "adulte, apparition aléatoire": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 30, "free_time_travel": True},
     "départ aléatoire enfant": {"random_spawn": True, "spawn_point": 12, "start_with_consumables": True},
@@ -145,10 +147,17 @@ class GenerationTests(unittest.TestCase):
             self.assertEqual(placed, pool, f"seed {seed}")
             # les lieux fixes gardent leur objet (sauf les récompenses de boss mélangées entre elles)
             rewards = {l.name for l in world.reward_locations()}
+            songs = {l.name for l in world.song_locations()}
+            songs_shuffled = world.settings.get("shuffle_songs") == "shuffle"
             for loc in world.fixed_locations():
                 if world.settings["shuffle_rewards"] == "shuffled" and loc.name in rewards:
                     continue
+                if songs_shuffled and loc.name in songs:
+                    continue
                 self.assertEqual(result.placements[loc.name], loc.vanilla)
+            if songs_shuffled:  # chants mélangés entre eux : permutation des chants d'origine
+                self.assertEqual(sorted(result.placements[n] for n in songs),
+                                 sorted(world.locations[n].vanilla for n in songs))
             self.assertEqual(sorted(result.placements[n] for n in rewards),
                              sorted(world.locations[n].vanilla for n in rewards))
             # cœurs au sol : seulement des objets autorisés ; lieux incertains sans progression

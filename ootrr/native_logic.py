@@ -25,7 +25,7 @@ import json
 from pathlib import Path
 
 from .settings import SETTINGS
-from .world import (DATA_DIR, JUNK_REPLACEMENT, LINKS_POCKET, OCARINA_EVENTS, OCARINA_OF_TIME_LOCATION,
+from .world import (DATA_DIR, JUNK_REPLACEMENT, LINKS_POCKET, OCARINA_EVENTS, OCARINA_OF_TIME_LOCATION, SONG_OF_TIME_LOCATION,
                     OPEN_DOOR_START, SARIA_GIFT, SKIP_CHILD_ZELDA, World)
 from .search import RETURN_TO_CHILD
 
@@ -319,6 +319,10 @@ class Exporter:
             "kRewardsShuffled": enum_value("shuffle_rewards", "shuffled"),
             "kAccessibilityAll": enum_value("accessibility", "all"),
             "kKindReward": KINDS.index("reward"),
+            "kKindSong": KINDS.index("song"),
+            "kSongsShuffle": enum_value("shuffle_songs", "shuffle"),
+            "kSongsRandom": enum_value("shuffle_songs", "random"),
+            "kSongOfTimeLocation": w["lid"][SONG_OF_TIME_LOCATION],
         }
         lines += [f"constexpr int32_t {k} = {v};" for k, v in consts.items()]
         lines.append(f"inline constexpr int32_t kOpenDoorStart[] = {{{', '.join(str(w['lid'][n]) for n in OPEN_DOOR_START)}}};")
@@ -421,6 +425,13 @@ def skulltula_tokens() -> dict[int, str]:
     le module natif donne l'objet placé au ramassage (modèle, textes et ajout redirigés)."""
     w = Exporter().world()
     return {h: token(i) for i, l in enumerate(w["locations"]) if l["skulltula"] for h in l["hashes"]}
+
+
+def song_tokens() -> dict[str, str]:
+    """{chant d'origine: jeton de son emplacement} (dons de Dm_SY_Ocarina, menu natif)."""
+    w = Exporter().world()
+    names = [i["name"] for i in w["items"]]
+    return {names[l["vanilla"]]: token(i) for i, l in enumerate(w["locations"]) if l["kind"] == KINDS.index("song")}
 
 
 def ocarina_tokens() -> dict[str, tuple[str, str]]:

@@ -74,6 +74,19 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
                 break
         for loc, item in zip(rewards, items):
             placements[loc.name] = item
+    if world.settings.get("shuffle_songs") == "shuffle":
+        # chants mélangés entre les emplacements de chants (même méthode ; même ordre dans generator.cpp)
+        songs = world.song_locations()
+        items = [l.vanilla for l in songs]
+        everything = [item for item, _ in world.pool()]
+        for _ in range(200):
+            rng.shuffle(items)
+            trial = dict(placements)
+            trial.update({loc.name: item for loc, item in zip(songs, items)})
+            if State(world, everything).sweep(trial).beaten():
+                break
+        for loc, item in zip(songs, items):
+            placements[loc.name] = item
     shuffled = world.shuffled_locations()
     pool = world.pool()
 

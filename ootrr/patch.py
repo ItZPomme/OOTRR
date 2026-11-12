@@ -62,6 +62,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "event_changes": _merge_events(world.reward_event_changes(result.placements),
                                        world.ocarina_event_changes(result.placements)),
         "moat_items": list(world.moat_items(result.placements)),
+        "song_gives": world.song_gives(result.placements),
         "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
         "start_warp": _start_warp(world),
         "logic_patches": world.logic_patches(),

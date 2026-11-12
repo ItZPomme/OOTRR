@@ -48,7 +48,10 @@ def build(world: World, result: Result) -> dict[str, Any]:
     spheres = playthrough(world, result)
     required = required_items(world, result, spheres)
     areas: dict[str, dict[str, str]] = {}
-    for loc in sorted(world.shuffled_locations(), key=lambda l: (l.dungeon or l.region, l.name)):
+    listed = world.shuffled_locations()
+    if world.settings.get("shuffle_songs") == "shuffle":  # chants mélangés entre eux (hors pool)
+        listed = listed + world.song_locations()
+    for loc in sorted(listed, key=lambda l: (l.dungeon or l.region, l.name)):
         areas.setdefault(loc.dungeon or loc.region, {})[loc.name] = result.placements[loc.name]
     return {
         "version": __version__,
