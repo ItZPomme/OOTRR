@@ -593,6 +593,14 @@ void ReplaceTokenAtSource(u8* info) {
         if (ootrr::ingame::KeepsToken(index)) return;  // Skulltula : le jeton reste, objet donné au ramassage
         EnsureSeedForCurrentGame();
         const char* real = ootrr::ingame::ItemFor(index);
+        // bombes sans sac : le coffre donnerait le sac de bombes (par un autre chemin que l'ajout à
+        // l'inventaire, constaté en jeu) -> rubis bleu (5) ; ocarinas progressifs
+        {
+            s32 bomb_rupees = 0;
+            const char* adjusted = ootrr::ingame::AdjustItem(Main(), real, &bomb_rupees);
+            if (bomb_rupees) real = "TBox_Rupee_Blue";
+            else if (adjusted) real = adjusted;
+        }
         params->values[i] = real;
         // objet différent de l'original : retirer la scène de l'objet d'origine (event « drop ») et,
         // pour un coffre à contenu conditionnel, l'objet testé et son remplaçant (comme patch.chest_changes)
@@ -713,6 +721,20 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 }
                 const char* item = ok && !t[k + 4] ? ootrr::ingame::ItemFor(location) : nullptr;
                 if (item) item = GroundItem(item);
+                if (item && ootrr::ingame::RecentOcarinaToken(location)) {
+                    Log(t);
+                    Log("OoTRR: jeton d'ocarina deja donne (douves : don direct puis scene), ignore");
+                    return 1;
+                }
+                if (item) {
+                    s32 bomb_rupees = 0;
+                    if (const char* adjusted = ootrr::ingame::AdjustItem(Main(), item, &bomb_rupees)) item = adjusted;
+                    if (bomb_rupees) {
+                        LogValue("OoTRR: bombes sans sac -> rubis, nouveau total",
+                                 static_cast<u64>(ootrr::ingame::AddRupees(Main(), bomb_rupees)));
+                        return 1;
+                    }
+                }
                 if (item) {
                     static char text[128];
                     size_t n = 0;
@@ -757,6 +779,29 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 Log(name->text);
                 Log(text);
                 Log("OoTRR: recompense remplacee (avant / apres)");
+                return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
+            }
+        }
+        // objet donné sous son vrai nom (coffre, scène) : ocarinas progressifs, bombes sans sac
+        if (name && name->text) {
+            s32 bomb_rupees = 0;
+            const char* adjusted = ootrr::ingame::AdjustItem(Main(), name->text, &bomb_rupees);
+            if (bomb_rupees) {
+                Log(name->text);
+                LogValue("OoTRR: bombes sans sac -> rubis, nouveau total",
+                         static_cast<u64>(ootrr::ingame::AddRupees(Main(), bomb_rupees)));
+                return 1;
+            }
+            if (adjusted) {
+                static char text[128];
+                size_t n = 0;
+                for (; adjusted[n] && n < sizeof(text) - 1; n++) text[n] = adjusted[n];
+                text[n] = 0;
+                static PouchName replaced;
+                replaced = {text, static_cast<s32>(sizeof(text)), 0};
+                Log(name->text);
+                Log(text);
+                Log("OoTRR: ocarina progressif (avant / apres)");
                 return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
             }
         }

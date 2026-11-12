@@ -31,7 +31,7 @@
     },
     "Lost Woods Bridge": {
       "locations": {
-        "LW Gift from Saria": {"rule": "is_child and Deku_Tree_Clear", "vanilla": "Item_Ocarina_Fairy", "_note": "prudent : Saria attend peut-être la fin de l'Arbre Mojo (forêt ouverte)"}
+        "LW Gift from Saria": {"rule": "is_child and Deku_Tree_Clear", "vanilla": "Item_Ocarina_Fairy", "ocarina": true, "_note": "prudent : Saria attend peut-être la fin de l'Arbre Mojo (forêt ouverte)"}
       },
       "exits": {
         "Kokiri Forest": "True",
@@ -77,7 +77,7 @@
 
     "Hyrule Field": {
       "locations": {
-        "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time"},
+        "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time", "ocarina": true},
         "HF Deku Scrub Heart Piece": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
         "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and has_all_stones", "vanilla": "Item_Melody_TimeSong"},
         "HF Tektite Grotto Freestanding PoH": {"rule": "can_open_grotto and (can_use(Iron_Boots) or has_gold_scale)", "vanilla": "Obj_Heart_Piece"},

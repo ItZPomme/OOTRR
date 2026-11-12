@@ -35,6 +35,7 @@ PRESETS = {
     "skulltulas": {"shuffle_skulltulas": "all", "shuffle_scrubs": True, "maps_compasses": "shuffle"},
     "pont": {"bridge": "medallions", "bridge_count": 6, "shuffle_rewards": "shuffled",
              "skip_child_zelda": True, "free_time_travel": False, "accessibility": "beatable"},
+    "ocarinas": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "shuffle_hearts": "all"},
 }
 
 

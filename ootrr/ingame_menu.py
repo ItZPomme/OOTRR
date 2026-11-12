@@ -77,6 +77,7 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         # un modèle de ligne (liste, bascule, séparateur) reste affiché si la page n'en a aucun :
         # chaque page a au moins une liste, une bascule et un séparateur
         (SEPARATOR, "", None),
+        ("shuffle_ocarinas", "IsUseGyro", None),
         ("logic_lens_required", "IsChangeJumpButton", None),
     ],
     [  # page 3 : boutiques et Peste Mojo
@@ -139,6 +140,7 @@ TEXTS_EN = {
     "skip_cutscenes": ("Skip Cutscenes", "Mark cutscenes that change nothing as already seen.",
                        {"none": "None", "safe": "Safe"}),
     "logic_lens_required": ("Lens Required", "The logic requires the Lens of Truth for invisible paths.", {}),
+    "shuffle_ocarinas": ("Shuffle Ocarinas", "The Fairy Ocarina (Saria) and the Ocarina of Time (moat) are shuffled:\nan item of the seed is given in their place. The second ocarina is the Ocarina of Time.", {}),
     "seed_manual": ("Manual Seed", f"Off: random seed {SEED_PLACEHOLDER}. On: a keyboard opens when the game\nstarts to type the seed.", {}),
 }
 TEXTS_FR = {
@@ -168,6 +170,7 @@ TEXTS_FR = {
     "skip_cutscenes": ("Passer les cinématiques", "Les cinématiques sans effet sont marquées comme vues.",
                        {"none": "Aucune", "safe": "Sûres"}),
     "logic_lens_required": ("Monocle requis", "La logique exige le Monocle de Vérité pour les passages invisibles.", {}),
+    "shuffle_ocarinas": ("Ocarinas mélangés", "L'Ocarina des fées (Saria) et l'Ocarina du Temps (douves) sont mélangés :\nun objet de la seed est donné à leur place. Le deuxième ocarina est l'Ocarina du Temps.", {}),
     "seed_manual": ("Seed manuelle", f"Désactivé : seed aléatoire {SEED_PLACEHOLDER}. Activé : un clavier s'ouvre\nau lancement de la partie pour saisir la seed.", {}),
 }
 FRENCH = ("EUfr", "USfr")
@@ -655,6 +658,8 @@ def menu_header(root: dict) -> str:
               f"constexpr int kStartFlagCount = {len(flags)};",
               "inline constexpr StartFlag kStartFlags[kStartFlagCount] = {"] + flags + ["};"]
     enums = []
+    # la Porte du Temps ouverte (Step06) passe après Zelda enfant (Step01) : écrite en dernier
+    skipped = sorted(skipped, key=lambda e: e.startswith("open_door_of_time="))
     for entry in skipped:
         # "réglage=valeur: drapeau=valeur" ; drapeau "#hachage" ou nom, valeur = nom de la valeur d'énumération
         head, flag = entry.split(": ", 1)

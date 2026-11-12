@@ -58,6 +58,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "logic_lens_required": (True, bool, "La logique exige le Monocle de Vérité pour les passages invisibles"),
     "accessibility": ("all", ("all", "beatable"),
                       "all : tous les lieux atteignables ; beatable : seul Ganon doit être battable"),
+    "shuffle_ocarinas": (False, bool,
+                         "Ocarinas mélangés : l'Ocarina des fées (Saria, au pont) et l'Ocarina du Temps (douves) "
+                         "rejoignent le pool, un objet de la seed est donné à leur place ; désactivé : à leur place "
+                         "d'origine. Dans le jeu, le deuxième ocarina obtenu est toujours l'Ocarina du Temps"),
 }
 
 

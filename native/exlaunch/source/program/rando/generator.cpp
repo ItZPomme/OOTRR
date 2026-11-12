@@ -37,7 +37,6 @@ struct World {
         }
         bool skip_rauru = s[SET_skip_cutscenes] == kSkipSafe || s[SET_shuffle_rewards] != kRewardsVanilla;
         if (skip_rauru) start[kLinksPocket] = true;
-        if (s[SET_skip_cutscenes] == kSkipSafe) start[kSariaGift] = true;
         for (int l = 0; l < kLocationCount; l++) {
             const LocationInfo& info = kLocations[l];
             loc_region[l] = start[l] ? kRoot : info.region;
@@ -54,6 +53,7 @@ struct World {
                 shuffle = mode == kSkulltulasAll || (mode == kSkulltulasOverworld && info.dungeon < 0);
             }
             if (info.shop) shuffle = info.shop <= s[SET_shuffle_shops];  // valeur 0..4 = nombre d'articles
+            if (info.ocarina) shuffle = s[SET_shuffle_ocarinas] != 0;
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -81,6 +81,12 @@ struct World {
         // Peste Mojo : objets « au sol », sauf les rubis (un rubis vendu n'irait pas dans la bourse)
         if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name))) return false;
         if (info.shop && !kItems[item].ground) return false;  // vendu par le jeton (rubis ajoutés par le module)
+        if (info.ocarina) {  // pas de bombes données par Saria / les douves (world.OCARINA_FORBIDDEN_PREFIX)
+            const char* name = kItems[item].name;
+            const char* prefix = "Item_BombBundle";
+            while (*prefix && *name == *prefix) { name++; prefix++; }
+            if (!*prefix) return false;
+        }
         if (info.no_progression && IsProgression(item)) return false;
         return true;
     }

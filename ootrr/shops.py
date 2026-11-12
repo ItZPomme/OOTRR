@@ -75,7 +75,11 @@ def shopkeeper_changes(romfs: Path, codec, slots: dict[str, dict[int, tuple[str,
                 new = []
                 for i, g in enumerate(goods):
                     g = dict(g)
-                    g["Release"] = dict(NO_RELEASE)
+                    # condition levée seulement là où elle existe : un « Release » ajouté à un article
+                    # qui n'en avait pas fait planter la lecture de la liste (boutique Goron, constaté :
+                    # appel nul dans la lecture de GoodsList, champ Release, chargement sans fin)
+                    if "Release" in g:
+                        g["Release"] = dict(NO_RELEASE)
                     token, rank = slots.get(shop, {}).get(i, (None, 0))
                     if token and rank <= count:
                         g["Actor"] = actor_path(token)

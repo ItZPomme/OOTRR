@@ -51,7 +51,36 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 - Valeurs utiles : `PlayerStatus.MaxLife` (quarts de cœur, 12 = 3 cœurs), `PlayerStatus.Life`,
   `PouchData.Item_Token_Gold.StockNum` (jetons de Skulltula d'or).
 
+- Ajout à l'inventaire (`0x110d570`) : les coffres donnent avec la raison 7 (événement), comme les scènes
+  (constaté dans le journal) : nom + raison ne suffisent pas à savoir d'où vient un objet.
+- Bombes (`Item_BombBundle_*`) obtenues sans sac : le jeu donne le sac de bombes (signalé en jeu). Remplacer le
+  nom à l'ajout à l'inventaire (`0x110d570`) ne suffit pas : le sac arrive quand même (constaté, coffre de
+  l'épée). Menu natif : le coffre reçoit un rubis bleu à la source si aucun `IsGet.Item_BombBag_*`
+  **[fichiers]** (à tester).
+- Coffre de l'épée Kokiri : `GetEventName = Get_StoneOfForest_GetSword` -> `Dm_Kokiri_0063` met une épée
+  dans la main de Link (`EventTriggerPlayerRequestCreateDynamicEquipmentNoRelationPouch`) même si le coffre
+  contenait autre chose ; l'épée disparaît au rechargement (signalé en jeu, menu natif : retirer
+  `GetEventName` à la source ne suffit pas). Garde ajoutée : la scène ne se joue que si
+  `IsGet.Weapon_Sword_Kokiri` **[fichiers]** (à tester).
+- Lecture d'un booléen GameData (non structuré) : `0x3744460` (gestionnaire, bool*, hachage, index >= 0),
+  fonction du nœud `SeqQueryGetNonStructGameDataBool` **[fichiers]**.
+
+## Ocarinas
+
+- Saria (`Dm_Kokiri_0155`, appelée par `Goto_HyruleCastle:KokiriForest_ArriveLostWood`) et les douves
+  (`Dm_MelodyGet_Time`, après `DoorOfTime:DoorOfTime_GetOcarinaOfTime`) nomment l'ocarina 4 fois : action
+  d'inventaire, `GetPouchContent:DisplayGetByActorName`, ZeldaNotes et un acteur de la scène.
+- La scène de Saria n'est plus passée (l'Ocarina des fées n'est plus donné au départ). `shuffle_ocarinas` :
+  menu natif = les scènes donnent le jeton du lieu (copie de l'ocarina), le module donne l'objet de la seed ;
+  ocarinas progressifs (le deuxième obtenu est l'Ocarina du Temps) ; double don des douves (don direct +
+  scène) ignoré **[fichiers]** (à tester en jeu).
+
 ## Boutiques, Peste Mojo, Skulltulas
+
+- **Liste d'un marchand : ne jamais ajouter `Release` à un article qui n'en a pas** : la lecture de
+  `GoodsList` appelle un pointeur nul (`0x612b24`, champ `Release` lu par `0x3051480`) -> chargement sans
+  fin (Goron City, boutiques à 4 articles, constaté dans le journal d'Eden). Goron, Zora et Missiles n'ont
+  aucun `Release` d'origine ; `shops.py` ne lève plus la condition que là où elle existe **[fichiers]**.
 
 - **Boutiques mélangées (menu natif) [jeu]** (2026-11-11) : voir native/README.md (« Boutiques »).
   Liste des articles d'un marchand : `Component/ShopParam/…` dans son archive, `GoodsList` dans
@@ -136,6 +165,14 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   Forêt fini). Remplacé par une expression toujours vraie si `free_time_travel` **[jeu]**.
   Menu natif : le module lit `OoTRR_FreeTimeTravel_Exp` (drapeau sauvegardé `OoTRR.FreeTimeTravel`,
   posé par le menu, OU `SageOfForest_IsCompleted_Exp`) **[jeu]** (2026-11-10).
+
+## Zelda enfant et cycle jour / nuit
+
+- Rencontrer Zelda (`Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda`) fait passer la quête
+  `Goto_HyruleCastle` à `Complete` (enum hash 3683238313, relevé dans `Goto_HyruleCastle_IsCompleted_Exp`)
+  et `DoorOfTime` à `Step01`. `skip_child_zelda` (et la porte ouverte) posent ces états au départ, pour que
+  le temps passe comme après Zelda **[fichiers]** (à tester en jeu : le mécanisme exact qui fige le temps
+  avant Zelda n'a pas été trouvé dans les fichiers).
 
 ## Récompenses de boss
 

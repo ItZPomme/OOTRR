@@ -12,6 +12,14 @@ PATCH_FORMAT = "ootrr-patch"
 PATCH_VERSION = 2
 
 
+def _merge_events(*parts: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {}
+    for part in parts:
+        for flow, mapping in part.items():
+            out.setdefault(flow, {}).update(mapping)
+    return out
+
+
 def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
     chests = []
     for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
@@ -29,6 +37,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "shop": loc.shop,
             "shop_actor": loc.shop_actor,
             "price": loc.price,
+            "ocarina": loc.ocarina,
         })
     return {
         "format": PATCH_FORMAT,
@@ -44,7 +53,10 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "pack_changes": world.pack_changes(),
         "start_items": world.start_items(result.placements),
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
-        "event_changes": world.reward_event_changes(result.placements),
+        "event_changes": _merge_events(world.reward_event_changes(result.placements),
+                                       world.ocarina_event_changes(result.placements)),
+        "moat_items": list(world.moat_items(result.placements)),
+        "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
         "logic_patches": world.logic_patches(),
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},

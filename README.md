@@ -44,7 +44,8 @@ python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --inst
 |---|---|---|
 | `open_forest` | `closed`, `closed_deku`, `open`, `ask` | Kokiri bloqueurs retirés, murs invisibles désactivés ; `ask` = question au début de la partie (prototype) |
 | `open_door_of_time` | oui / non | Porte ouverte ; lettre et berceuse au départ ; l'Ocarina du Temps reste dans les douves (visible avec les 3 pierres) et donne le Chant du Temps |
-| `skip_child_zelda` | oui / non | Lettre et berceuse de Zelda au départ |
+| `skip_child_zelda` | oui / non | Lettre et berceuse de Zelda au départ, quête du château finie (cycle jour / nuit) |
+| `shuffle_ocarinas` | oui / non | Ocarina des fées (Saria) et Ocarina du Temps (douves) mélangés ; non = à leur place |
 | `free_time_travel` | oui (défaut) / non | L'épée renvoie enfant à tout moment (le remake exige le Temple de la Forêt) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + nombre | Condition du pont arc-en-ciel |
 | `shuffle_rewards` | `vanilla`, `shuffled` | Pierres et médaillons mélangés entre les boss et la poche de Link |
@@ -68,6 +69,8 @@ python -m ootrr.tools.lookup --romfs ... flag IsGet.Item_Hookshot             # 
 python -m ootrr.tools.inventory --romfs ... --out inventaire     # liste tous les coffres du jeu
 python -m ootrr.tools.roundtrip --romfs ...  # vérifie la réécriture BYML sur toutes les cartes
 python -m ootrr.tools.saves backup <nom>     # sauvegardes Eden (aussi restore, list)
+python -m ootrr.tools.ingame_spoiler --romfs ...   # spoiler de la partie du menu en jeu (dernière sauvegarde)
+python -m ootrr.tools.ingame_spoiler --seed 727557 --set shuffle_shops=4   # ... ou seed du menu + réglages
 ```
 
 ## Structure

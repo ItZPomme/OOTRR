@@ -196,6 +196,66 @@ int32_t HeartPieces(std::uintptr_t main_base) {
     return value;
 }
 
+int ReadFlag(std::uintptr_t main_base, uint32_t hash) {
+    void* manager = Manager(main_base);
+    bool value = false;
+    using GetBoolFn2 = bool (*)(void* manager, bool* value, uint32_t hash, int32_t index);
+    if (!manager || !reinterpret_cast<GetBoolFn2>(main_base + kGetBool)(manager, &value, hash, 0)) return -1;
+    return value ? 1 : 0;
+}
+
+namespace {
+constexpr uint32_t kIsGetOcarinaFairy = 0x42bd296f;  // IsGet.Item_Ocarina_Fairy
+constexpr uint32_t kIsGetOcarinaTime = 0x1da2c511;   // IsGet.Item_Ocarina_Time
+constexpr uint32_t kIsGetBombBags[] = {0xa63f1e2d, 0xb2c478da, 0x968a5a79};  // IsGet.Item_BombBag_Small/Medium/Large
+constexpr int32_t kBombRupees = 5;
+
+bool Same(const char* a, const char* b) {
+    while (*a && *a == *b) { a++; b++; }
+    return *a == *b;
+}
+bool Prefix(const char* text, const char* prefix) {
+    while (*prefix && *text == *prefix) { text++; prefix++; }
+    return !*prefix;
+}
+}  // namespace
+
+const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupees) {
+    if (!item) return nullptr;
+    if (Same(item, "Item_Ocarina_Fairy") || Same(item, "Item_Ocarina_Time")) {
+        int fairy = ReadFlag(main_base, kIsGetOcarinaFairy);
+        int time = ReadFlag(main_base, kIsGetOcarinaTime);
+        if (fairy < 0 || time < 0) return nullptr;  // illisible : objet d'origine
+        const char* wanted = (fairy == 1 || time == 1) ? "Item_Ocarina_Time" : "Item_Ocarina_Fairy";
+        return Same(wanted, item) ? nullptr : wanted;
+    }
+    if (Prefix(item, "Item_BombBundle")) {
+        bool bag = false;
+        for (uint32_t h : kIsGetBombBags) {
+            int v = ReadFlag(main_base, h);
+            if (v < 0) return nullptr;
+            bag = bag || v == 1;
+        }
+        if (!bag && rupees) *rupees = kBombRupees;
+    }
+    return nullptr;
+}
+
+namespace {
+uint64_t g_ocarina_tick[2] = {};
+}
+
+bool RecentOcarinaToken(int location) {
+    int slot = location == logic::kSariaGift ? 0 : location == logic::kOcarinaOfTimeLocation ? 1 : -1;
+    if (slot < 0) return false;
+    uint64_t now, freq;
+    asm volatile("mrs %0, cntpct_el0" : "=r"(now));
+    asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
+    bool recent = g_ocarina_tick[slot] && now - g_ocarina_tick[slot] < 60 * freq;
+    g_ocarina_tick[slot] = now;
+    return recent;
+}
+
 void SetHeartPieces(std::uintptr_t main_base, int32_t count) {
     alignas(16) uint8_t node[0x50] = {};
     static int32_t value;

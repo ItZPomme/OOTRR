@@ -93,7 +93,10 @@ class ModBuilder:
 
         report = []
         event_skips = event_skips or {}
-        flows = {self.OCARINA_GUARD[0]} | set(event_changes) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        guards = [g for g in self.EVENT_GUARDS]
+        if self.ocarina_guard:
+            guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -123,9 +126,13 @@ class ModBuilder:
             if scrub_sales and flow == self.SCRUB_FLOW:
                 new, scrub_report = self._scrub_sales(new, scrub_sales)
                 report += scrub_report
-            if flow == self.OCARINA_GUARD[0]:
+            if self.ocarina_guard and flow == self.OCARINA_GUARD[0]:
                 new, guard_report = self._guard_fairy_ocarina(new)
                 report += guard_report
+            for guard in self.EVENT_GUARDS:
+                if guard[0] == flow:
+                    new, guard_report = self._guard_event(new, guard)
+                    report += guard_report
             if questions and flow == self.START_FLOW:
                 new, qnodes = self._question_nodes(new, questions)
                 new, q_report = insert_flow(new, self.START_ENTRY, qnodes)
@@ -242,6 +249,16 @@ class ModBuilder:
     # le jeu remplace l'ocarina possédée par celle qu'on reçoit : Saria ne donne plus
     # l'Ocarina des fées si Link a déjà l'Ocarina du Temps
     OCARINA_GUARD = ("Dm_Kokiri_0155", "Item_Ocarina_Fairy", "IsGet.Item_Ocarina_Time")
+    # désactivée quand l'objet de Saria peut changer (shuffle_ocarinas, menu natif) : il serait perdu
+    ocarina_guard = True
+    moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
+    # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
+    # (flux, acteur, action, paramètre, valeur, drapeau). Coffre de l'épée Kokiri : son événement
+    # (Get_StoneOfForest:GetSword) joue Dm_Kokiri_0063 qui met une épée dans la main de Link, même si le
+    # coffre contenait autre chose (le menu natif ne peut pas retirer GetEventName à temps ; l'épée
+    # disparaît au rechargement)
+    EVENT_GUARDS = [("Get_StoneOfForest", "EventSystemActor", "EventTransition", "EventName", "Dm_Kokiri_0063",
+                     "IsGet.Weapon_Sword_Kokiri")]
 
     # questions posées au début de la nouvelle partie : {réglage: (question, [(drapeau, valeur) si « oui »])}
     QUESTIONS = {
@@ -483,6 +500,22 @@ class ModBuilder:
         except KeyError as exc:
             return flow, [f"garde de l'ocarina impossible : {exc}"]
 
+    def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
+        """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""
+        from .formats.evfl import ensure_actor_member, find_action_event, find_query, insert_flow
+
+        name, actor, action, param, value, flag = guard
+        idx = find_action_event(flow, actor, action, param, value)
+        gd, query = "GameDataActor", "EventQueryIsGameDataBool"
+        flow = ensure_actor_member(flow, gd, "query", query)
+        template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / "DoorOfTime.bfevfl.zs")
+        ask = (template, find_query(template, gd, query))
+        if idx is None or ask[1] is None:
+            raise KeyError(f"{name} : événement {action} {param}={value} introuvable")
+        new, report = insert_flow(flow, None, [{"actor": gd, "query": query, "template": ask, "set": {"GameDataName": flag},
+                                               "cases": {0: "old", 1: "after"}}], before=idx)
+        return new, report + [f"{name}: {value} seulement si {flag}"]
+
     def _moat_gate(self, flow: bytes) -> list[dict]:
         """Douves : avec les 3 pierres, l'Ocarina du Temps et le Chant du Temps sont donnés
         directement (sans dépendre de la scène de Zelda), puis la scène habituelle se joue."""
@@ -495,7 +528,7 @@ class ModBuilder:
         if ask[1] is None or give[1] is None:
             raise KeyError("modèles introuvables pour l'Ocarina du Temps (DoorOfTime)")
         # l'ocarina n'est visible qu'avec les 3 pierres (condition de présence) : pas de question ici
-        items = list(self.MOAT_ITEMS)
+        items = list(self.moat_items)
         return [{"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1], "template": give,
                  "set": {"Actor": item}, "next": i + 1 if i + 1 < len(items) else "old"}
                 for i, item in enumerate(items)]

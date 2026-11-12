@@ -205,6 +205,20 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         from ..native_logic import scrub_price_entries
         mb.scrub_price_entries = scrub_price_entries()  # prix choisi en jeu (réglage scrub_prices)
         report.append(f"Peste Mojo : {len(scrub_sales)} jetons vendus")
+        # ocarinas (Saria au pont, douves) : la scène donne le jeton de son lieu, le module natif donne
+        # l'objet de la seed (l'ocarina d'origine sans shuffle_ocarinas). La garde de Saria (« pas
+        # d'Ocarina des fées si Link a l'Ocarina du Temps ») perdrait l'objet : le module rend les
+        # ocarinas progressifs à la place.
+        from ..native_logic import ocarina_tokens
+        ocarina_events = {}
+        for flow, (vanilla, t) in ocarina_tokens().items():
+            ocarina_events[flow] = {vanilla: t}
+            tokens_actors[t] = f"SELF@{vanilla}"
+            if vanilla == "Item_Ocarina_Time":
+                mb.moat_items = (t, "Item_Melody_TimeSong")
+        mb.ocarina_guard = False
+        common["event_changes"] = ocarina_events
+        report.append(f"ocarinas : {len(ocarina_events)} scènes donnent un jeton")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
     else:
         tokens_actors = None

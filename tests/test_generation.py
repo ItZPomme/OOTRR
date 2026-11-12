@@ -36,6 +36,7 @@ PRESETS = {
     "boutiques": {"shuffle_shops": "4", "shop_prices": "random", "shuffle_scrubs": True},
     "boutiques et Skulltulas": {"shuffle_shops": "2", "shuffle_skulltulas": "all", "shuffle_hearts": "all"},
     "Skulltulas toutes": {"shuffle_skulltulas": "all", "shuffle_hearts": "freestanding", "open_forest": "open"},
+    "ocarinas mélangés": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "open_door_of_time": True},
 }
 
 

@@ -25,8 +25,8 @@ import json
 from pathlib import Path
 
 from .settings import SETTINGS
-from .world import (DATA_DIR, JUNK_REPLACEMENT, LINKS_POCKET, OPEN_DOOR_START, SARIA_GIFT,
-                    SKIP_CHILD_ZELDA, World)
+from .world import (DATA_DIR, JUNK_REPLACEMENT, LINKS_POCKET, OCARINA_EVENTS, OCARINA_OF_TIME_LOCATION,
+                    OPEN_DOOR_START, SARIA_GIFT, SKIP_CHILD_ZELDA, World)
 from .search import RETURN_TO_CHILD
 
 OUT = Path(__file__).resolve().parents[1] / "native" / "exlaunch" / "source" / "program" / "rando" / "logic_data.hpp"
@@ -233,7 +233,7 @@ class Exporter:
                 conditional=bool(lbody.get("conditional", False)), scrub=bool(lbody.get("scrub", False)),
                 skulltula=bool(lbody.get("skulltula", False)), shop=int(lbody.get("shop", 0)),
                 shop_actor=lbody.get("shop_actor") or "", price=int(lbody.get("price", 0)),
-                slot=int(lbody.get("slot", -1)),
+                slot=int(lbody.get("slot", -1)), ocarina=bool(lbody.get("ocarina", False)),
                 hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
@@ -302,6 +302,7 @@ class Exporter:
             "kJunk": w["aid"][JUNK_REPLACEMENT],
             "kLinksPocket": w["lid"][LINKS_POCKET],
             "kSariaGift": w["lid"][SARIA_GIFT],
+            "kOcarinaOfTimeLocation": w["lid"][OCARINA_OF_TIME_LOCATION],
             "kBridgeHearts": enum_value("bridge", "hearts"),
             "kMapsVanilla": enum_value("maps_compasses", "vanilla"),
             "kMapsShuffle": enum_value("maps_compasses", "shuffle"),
@@ -341,13 +342,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; bool ocarina; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}, {str(l['ocarina']).lower()}}},")
         lines.append("};")
         # Peste Mojo : entier GameData du prix (prix / 5), écrit par le module selon les réglages
         from .formats.gamedata import flag_hash
@@ -408,6 +409,14 @@ def skulltula_tokens() -> dict[int, str]:
     le module natif donne l'objet placé au ramassage (modèle, textes et ajout redirigés)."""
     w = Exporter().world()
     return {h: token(i) for i, l in enumerate(w["locations"]) if l["skulltula"] for h in l["hashes"]}
+
+
+def ocarina_tokens() -> dict[str, tuple[str, str]]:
+    """{scène: (ocarina d'origine, jeton)} : Saria et les douves donnent le jeton de leur lieu (action
+    d'inventaire, affichage de l'objet obtenu) ; le module natif donne l'objet de la seed à la place
+    (l'ocarina d'origine si shuffle_ocarinas est désactivé)."""
+    w = Exporter().world()
+    return {flow: (vanilla, token(w["lid"][name])) for name, (flow, vanilla) in OCARINA_EVENTS.items()}
 
 
 SCRUB_PRICE_ENTRY = "OoTRR.Price.{}"  # entier GameData : prix / 5 de la Peste Mojo (choisi par le module)

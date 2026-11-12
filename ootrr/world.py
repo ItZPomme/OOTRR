@@ -50,6 +50,12 @@ REWARD_EVENTS = {
 # reste dans les douves (module modifié pour l'étape Step06), ramassable avec les 3 pierres.
 OPEN_DOOR_START = SKIP_CHILD_ZELDA
 DOOR_OF_TIME_STEP = ("Enum", 931730378, "Step06")  # état de la quête (enum GameData sans nom connu)
+# Rencontrer Zelda (Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda) fait passer la quête Goto_HyruleCastle à
+# Complete et DoorOfTime à Step01 ; c'est ce qui lance le cycle jour / nuit. Avec skip_child_zelda (ou la
+# porte ouverte), ces états sont posés au départ. Enum de Goto_HyruleCastle : hash relevé dans l'expression
+# Goto_HyruleCastle_IsCompleted_Exp.
+MEET_ZELDA_QUEST = ("Enum", 3683238313, "Complete")
+MEET_ZELDA_DOOR_STEP = ("Enum", 931730378, "Step01")
 # l'Ocarina du Temps n'apparaît dans les douves qu'à l'étape Step04 de la quête : Step06 avec la porte ouverte
 OPEN_DOOR_OCARINA = {"HyruleField_Child_Prefab_91f9": {"Step04": "Step06"}}
 # ... et seulement quand Link a les 3 pierres : nouvelle expression booléenne + condition de présence
@@ -67,12 +73,20 @@ MOAT_CHEST = 0x007A7253_0000_0002        # nouvel acteur (hash libre dans la car
 MOAT_LAND_POS = [-2.5, 150.4, 55.5]      # sol, sortie du pont-levis, à côté du point d'arrivée StartPos_DoorOfTime (-0.08, 150.4, 54.2)
 MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
 # skip_cutscenes=safe : scènes de Kaepora Gaebora mises de côté par le tri automatique (elles posent
-# des drapeaux) mais sans objet, la scène de Saria au pont (l'Ocarina des fées est donnée au départ)
-# et la découverte de la forêt à la sortie de la maison (Dm_Kokiri_0045 : caméra, nom du lieu ;
+# des drapeaux) mais sans objet, et la découverte de la forêt à la sortie de la maison (Dm_Kokiri_0045 : caméra, nom du lieu ;
 # écartée par le tri car elle replace Link devant sa porte)
 EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
-                 "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0155", "Dm_Kokiri_0045")
+                 "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0045")
+# La scène de Saria au pont (Dm_Kokiri_0155) n'est plus passée : Saria donne son objet au pont (l'Ocarina
+# des fées, ou l'objet de la seed avec shuffle_ocarinas), comme dans le jeu d'origine.
 SARIA_GIFT = "LW Gift from Saria"
+OCARINA_OF_TIME_LOCATION = "HF Ocarina of Time Item"
+# jamais de bombes à ces deux lieux (sans sac, un coffre de bombes donne le sac de bombes, constaté en jeu ;
+# le même risque n'a pas pu être écarté pour une scène) ; même règle dans generator.cpp (CanPlace)
+OCARINA_FORBIDDEN_PREFIX = "Item_BombBundle"
+# shuffle_ocarinas : scènes qui donnent les ocarinas (action d'inventaire + affichage nommant l'objet)
+OCARINA_EVENTS = {SARIA_GIFT: ("Dm_Kokiri_0155", "Item_Ocarina_Fairy"),
+                  OCARINA_OF_TIME_LOCATION: ("Dm_MelodyGet_Time", "Item_Ocarina_Time")}
 # lieux dont la première découverte est faite par la scène d'arrivée (RSDB Location,
 # IsShowLocationUIFirstTimeInDemo = vrai) ; relevé dans la version 2.0.0
 LOCATIONS_SHOWN_IN_DEMO = (
@@ -254,6 +268,7 @@ class Location:
     shop: int = 0  # article de boutique : rang (mélangé si rang <= shuffle_shops), hashes = l'acteur Shop_*
     shop_actor: str | None = None  # article d'origine (Shop_*)
     price: int = 0  # prix d'origine de l'article
+    ocarina: bool = False  # ocarina donné par une scène (Saria, douves) : mélangé avec shuffle_ocarinas
 
     @property
     def is_chest(self) -> bool:
@@ -395,6 +410,7 @@ class World:
             shop=int(lbody.get("shop", 0)),
             shop_actor=lbody.get("shop_actor"),
             price=int(lbody.get("price", 0)),
+            ocarina=bool(lbody.get("ocarina", False)),
         )
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
@@ -408,6 +424,8 @@ class World:
             loc.shuffle = mode == "all" or (mode == "overworld" and loc.dungeon is None)
         if loc.shop:
             loc.shuffle = loc.shop <= shop_count(self.settings)
+        if loc.ocarina:
+            loc.shuffle = bool(self.settings.get("shuffle_ocarinas"))
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -445,7 +463,7 @@ class World:
                 raise DataError(f"lieu {loc.name} : objet vanilla manquant")
             if loc.vanilla not in self.items:
                 raise DataError(f"lieu {loc.name} : objet inconnu « {loc.vanilla} » (absent de items.json)")
-            if loc.shuffle and not loc.hashes:
+            if loc.shuffle and not loc.hashes and not loc.ocarina:
                 raise DataError(f"lieu {loc.name} : seuls les coffres (avec hashes) peuvent être mélangés")
             for h in loc.hashes:
                 if h in seen_hashes:
@@ -503,6 +521,11 @@ class World:
         if self.skip_rauru():
             for name in SKIP_RAURU_FLAGS:
                 flags[name] = True
+        if self.settings.get("skip_child_zelda") or self.settings.get("open_door_of_time"):
+            # Zelda déjà rencontrée : quête du château finie (le temps passe), Porte du Temps à Step01
+            flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
+            if not self.settings.get("open_door_of_time"):
+                flags[f"#{MEET_ZELDA_DOOR_STEP[1]}"] = MEET_ZELDA_DOOR_STEP[2]
         if self.settings.get("open_door_of_time"):
             # posés par le jeu quand la porte s'ouvre (événement DoorOfTime_OpenDoor)
             flags["Market_Child_TimeTempleDoor_Opened"] = True
@@ -540,8 +563,6 @@ class World:
             names = SKIP_CHILD_ZELDA
         if self.skip_rauru():
             names += (LINKS_POCKET,)
-        if self.settings.get("skip_cutscenes") == "safe":
-            names += (SARIA_GIFT,)
         return names
 
     def start_location_names(self) -> tuple[str, ...]:
@@ -559,6 +580,21 @@ class World:
                 for flow in flows:
                     out.setdefault(flow, {})[loc.vanilla] = placements[name]
         return out
+
+    def ocarina_event_changes(self, placements: dict[str, str]) -> dict[str, dict[str, str]]:
+        """shuffle_ocarinas (mod sans menu) : {scène: {ocarina d'origine: objet placé}} pour Saria et les
+        douves (action d'inventaire, affichage de l'objet obtenu)."""
+        out: dict[str, dict[str, str]] = {}
+        for name, (flow, vanilla) in OCARINA_EVENTS.items():
+            item = placements.get(name, vanilla)
+            if self.locations[name].shuffle and item != vanilla:
+                out.setdefault(flow, {})[vanilla] = item
+        return out
+
+    def moat_items(self, placements: dict[str, str]) -> tuple[str, ...]:
+        """Objets donnés directement aux douves (porte ouverte) : l'objet du lieu de l'Ocarina du Temps
+        et le Chant du Temps."""
+        return (placements.get(OCARINA_OF_TIME_LOCATION, "Item_Ocarina_Time"), "Item_Melody_TimeSong")
 
     def logic_patches(self) -> dict[str, dict[str, str]]:
         """Chaînes à remplacer dans les modules de logique (Logic/<module>.logic.module.ainb)."""
@@ -652,6 +688,8 @@ class World:
         if loc.scrub and (item not in self.ground and item not in self.ground_native
                           or item.startswith("TBox_Rupee_")):
             return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)
+        if loc.ocarina and item.startswith(OCARINA_FORBIDDEN_PREFIX):
+            return False  # bombes données par la scène de Saria / des douves : le jeu pourrait donner le sac
         if loc.no_progression and self.is_progression(item):
             return False
         return True

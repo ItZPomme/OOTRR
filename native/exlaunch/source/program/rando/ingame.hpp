@@ -11,6 +11,7 @@ constexpr std::intptr_t kGetStructHandle = 0x9b3eb0;      // (gestionnaire, poig
 constexpr std::intptr_t kGetStructEnum = 0x404760;        // (gestionnaire, u32* valeur, poignée*, hachage du membre) -> bool
 constexpr std::intptr_t kGetStructBool = 0x179f70;        // (gestionnaire, bool* valeur, poignée*, hachage du membre) -> bool
 constexpr std::intptr_t kGetInt = 0x163d20;               // (gestionnaire, s32* valeur, hachage) -> bool
+constexpr std::intptr_t kGetBool = 0x3744460;             // (gestionnaire, bool* valeur, hachage, index >= 0) -> bool (nœud SeqQueryGetNonStructGameDataBool)
 constexpr std::intptr_t kSetIntNode = 0xc25ce0;           // nœud SeqOneShotSetNonStructGameDataInt (nœud, hachage)
 constexpr std::intptr_t kSetBoolNode = 0x682b00;          // nœud SeqOneShotSetNonStructGameDataBool (nœud, hachage)
 // ajout d'un objet (fonctions du nœud OneShotAddOrRemovePouchContent) :
@@ -50,6 +51,15 @@ int32_t RupeeValue(const char* item);
 int32_t AddRupees(std::uintptr_t main_base, int32_t amount);
 // nombre de quarts de cœur (GameData PouchData.Obj_Heart_Piece.StockNum) ; -1 si illisible
 int32_t HeartPieces(std::uintptr_t main_base);
+// booléen GameData (non structuré) : 1 / 0, -1 si illisible
+int ReadFlag(std::uintptr_t main_base, uint32_t hash);
+// objet réellement donné à la place de `item` (nullptr = inchangé) : ocarinas progressifs (le premier
+// obtenu est l'Ocarina des fées, le suivant l'Ocarina du Temps ; le jeu remplacerait sinon l'Ocarina du
+// Temps par celle des fées) ; bombes sans sac -> *rupees = 5 (le jeu donnerait le sac de bombes)
+const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupees);
+// ocarinas : le jeton du lieu est donné deux fois aux douves (don direct + scène) : vrai si ce jeton
+// vient d'être donné (moins d'une minute), le second don est ignoré
+bool RecentOcarinaToken(int location);
 void SetHeartPieces(std::uintptr_t main_base, int32_t value);
 
 // drapeaux de départ selon les réglages de la dernière génération (nouvelle partie) ; renvoie leur nombre
