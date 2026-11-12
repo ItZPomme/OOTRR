@@ -59,6 +59,8 @@ class Exporter:
             for name, body in content.get("locations", {}).items():
                 if not name.startswith("_"):
                     self.extra_locations[name] = body
+        from .starting import add_spawn_exits
+        self.regions_raw = add_spawn_exits(self.regions_raw)  # même sorties de Root que world.World
         self.logic_items: dict[str, dict] = items_raw["logic"]
         self.actors: dict[str, dict] = items_raw["actors"]
         self.ground = set(items_raw.get("ground", []))
@@ -321,6 +323,14 @@ class Exporter:
         lines += [f"constexpr int32_t {k} = {v};" for k, v in consts.items()]
         lines.append(f"inline constexpr int32_t kOpenDoorStart[] = {{{', '.join(str(w['lid'][n]) for n in OPEN_DOOR_START)}}};")
         lines.append(f"inline constexpr int32_t kSkipChildZelda[] = {{{', '.join(str(w['lid'][n]) for n in SKIP_CHILD_ZELDA)}}};")
+        # départ : points d'apparition (data/spawns.json), âge de chacun (1 = adulte) ; résolu par ingame.cpp
+        from .starting import adult_default, spawns
+        sp = spawns()
+        lines.append(f"constexpr int kSpawnCount = {len(sp)};")
+        lines.append("inline constexpr int32_t kSpawnAdult[kSpawnCount] = {" + ", ".join("1" if s["age"] == "adult" else "0" for s in sp) + "};")
+        lines.append(f"constexpr int32_t kAdultDefaultSpawn = {adult_default()};")
+        lines.append(f"constexpr int32_t kAgeAdult = {enum_value('starting_age', 'adult')};")
+        lines.append(f"constexpr int32_t kAgeRandom = {enum_value('starting_age', 'random')};")
         lines.append("")
         # inventaire, objets
         lines.append(f"constexpr int kInventoryCount = {len(self.inventory)};")
@@ -352,11 +362,13 @@ class Exporter:
         lines.append("};")
         # Peste Mojo : entier GameData du prix (prix / 5), écrit par le module selon les réglages
         from .formats.gamedata import flag_hash
-        scrubs = [(i, flag_hash(SCRUB_PRICE_ENTRY.format(token(i)))) for i, l in enumerate(w["locations"]) if l["scrub"]]
-        lines.append("struct ScrubPrice { int32_t location; uint32_t entry; };")
+        scrubs = [(i, flag_hash(SCRUB_PRICE_ENTRY.format(token(i))), flag_hash(SCRUB_PRICE_UNITS.format(token(i))))
+                  for i, l in enumerate(w["locations"]) if l["scrub"]]
+        lines.append("// prix / 5 écrit en dizaines (tens) et unités (units) : une question du jeu ne gère que 16 cas")
+        lines.append("struct ScrubPrice { int32_t location; uint32_t tens; uint32_t units; };")
         lines.append(f"constexpr int kScrubPriceCount = {len(scrubs)};")
         lines.append("inline constexpr ScrubPrice kScrubPrices[kScrubPriceCount] = {"
-                     + ", ".join(f"{{{i}, 0x{h:08x}}}" for i, h in scrubs) + "};")
+                     + ", ".join(f"{{{i}, 0x{h:08x}, 0x{u:08x}}}" for i, h, u in scrubs) + "};")
         # règles
         lines.append(f"constexpr int kHelperCount = {len(self.helper_offsets)};")
         lines.append("inline constexpr int32_t kHelpers[kHelperCount] = {" + ", ".join(map(str, self.helper_offsets)) + "};")
@@ -419,13 +431,14 @@ def ocarina_tokens() -> dict[str, tuple[str, str]]:
     return {flow: (vanilla, token(w["lid"][name])) for name, (flow, vanilla) in OCARINA_EVENTS.items()}
 
 
-SCRUB_PRICE_ENTRY = "OoTRR.Price.{}"  # entier GameData : prix / 5 de la Peste Mojo (choisi par le module)
+SCRUB_PRICE_ENTRY = "OoTRR.Price.{}"  # entier GameData : dizaines de prix / 5 de la Peste Mojo (choisi par le module)
+SCRUB_PRICE_UNITS = "OoTRR.PriceUnits.{}"  # ... et unités
 
 
-def scrub_price_entries() -> dict[str, str]:
+def scrub_price_entries() -> dict[str, tuple[str, str]]:
     """{jeton: entier GameData} pour les Peste Mojo vendeuses : le script de vente choisit la vente au
     prix (5 x valeur) selon cet entier, écrit par le module natif selon les réglages de prix."""
-    return {t: SCRUB_PRICE_ENTRY.format(t) for t, _ in scrub_tokens().values()}
+    return {t: (SCRUB_PRICE_ENTRY.format(t), SCRUB_PRICE_UNITS.format(t)) for t, _ in scrub_tokens().values()}
 
 
 def scrub_tokens() -> dict[str, tuple[str, list[int]]]:

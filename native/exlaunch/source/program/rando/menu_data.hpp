@@ -8,6 +8,8 @@ constexpr uint32_t kStructHash = 0x068ab00a;  // OoTRRMenu
 constexpr uint32_t kMenuFlagHash = 0xa7ce2e71;  // OoTRR.IsRandomizerMenu
 constexpr uint32_t kGenerateFlagHash = 0x81969956;  // OoTRR.GenerateSeed
 constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
+constexpr uint32_t kSpawnTensHash = 0xe495a913;  // OoTRR.SpawnTens
+constexpr uint32_t kSpawnUnitsHash = 0xbd8c7634;  // OoTRR.SpawnUnits
 // valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu
 // member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une
 // structure cherchent le membre par ce hachage dans la table de la poignée
@@ -18,13 +20,16 @@ constexpr int kPageCount = 3;
 inline constexpr uint32_t kPageStructs[kPageCount] = {0x068ab00a, 0x4140784a, 0x2e65116d};
 inline constexpr const char* kPageTables[kPageCount] = {"UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu2.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu3.game__ui__OptionSetTable.bgyml"};
 inline constexpr const char* kPagePrefixes[kPageCount] = {"OoTRR_", "OoTRR2_", "OoTRR3_"};
-constexpr int kMenuSettingCount = 15;
+constexpr int kMenuSettingCount = 18;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x068ab00a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0x068ab00a, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
     {14, 0x068ab00a, 0x8c5522fc, true, 0, {}, {}},  // free_time_travel <- IsCameraRightLeftReverse
     {15, 0x068ab00a, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
     {0, 0x068ab00a, 0x74b1edd9, false, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {0, 1, 2, 3, 4, 5}},  // bridge <- VoiceLanguage
+    {20, 0x068ab00a, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 2}},  // starting_age <- DisplayMode
+    {21, 0x068ab00a, 0x3b0fc63f, true, 0, {}, {}},  // random_spawn <- IsChangeJumpButton
+    {19, 0x068ab00a, 0xc587a7b1, true, 0, {}, {}},  // start_with_consumables <- IsDisplayTextRuby
     {13, 0x4140784a, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
     {6, 0x4140784a, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
     {11, 0x4140784a, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
@@ -62,13 +67,14 @@ inline constexpr BridgeCount kBridgeCounts[kBridgeCountCount] = {
 // membre de structure (structure != 0) : écrit via la poignée de la structure
 struct StartFlag { int32_t setting; int32_t value; uint32_t flag; uint32_t structure; uint32_t member;
                    bool flag_value; };
-constexpr int kStartFlagCount = 46;
+constexpr int kStartFlagCount = 47;
 inline constexpr StartFlag kStartFlags[kStartFlagCount] = {
     {2, 1, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=closed_deku : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
     {2, 2, 0xe5dc5674, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_007_Child_Blocker_00
     {2, 2, 0x502f6cea, 0x00000000, 0x00000000, false},  // open_forest=open : KokiriForest_Npc_Kokiri_Mido_Child_Blocker
     {3, 1, 0x727c2cbd, 0x00000000, 0x00000000, true},  // open_door_of_time=True : Market_Child_TimeTempleDoor_Opened
     {3, 1, 0xb81f590c, 0x2b05cbb9, 0x82f1829f, true},  // open_door_of_time=True : HavePlayedEvent.Dm_TimeTemple_0010
+    {20, 1, 0xcea220d3, 0x00000000, 0x00000000, false},  // starting_age=adult : Sequence_IsChildhood
     {5, 1, 0x89787395, 0x64e53a1f, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetMap
     {5, 1, 0x06c51ff2, 0x64e53a1f, 0xc7692e3f, true},  // maps_compasses=start_with : DungeonInfo.InsideTheDekuTree.IsGetCompass
     {5, 1, 0xa52c3a19, 0x2bf2a024, 0x58aeb8fb, true},  // maps_compasses=start_with : DungeonInfo.DodongoCavern.IsGetMap

@@ -144,7 +144,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 event_skips=skips, pickups=pickups or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,
-                                start_warp=tuple(test_start.split("=", 1)) if test_start else None,
+                                start_warp=tuple(test_start.split("=", 1)) if test_start
+                                else (tuple(patch["start_warp"]) if patch.get("start_warp") else None),
                                 scrub_sales=scrub_sales or None,
                                 questions=patch.get("ingame_questions") or None,
                                 rsdb_changes=patch.get("rsdb_changes") or None,
@@ -243,6 +244,10 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     seed = seed_to_int(args.seed)
+    from .starting import resolve
+    resolved = settings_mod.build(resolve(settings, seed))  # âge et point d'apparition tirés par la seed
+    if resolved != settings:
+        world = World(resolved)
     t0 = time.perf_counter()
     try:
         result = generate(world, seed)

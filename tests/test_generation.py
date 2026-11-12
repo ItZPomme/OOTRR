@@ -37,6 +37,9 @@ PRESETS = {
     "boutiques et Skulltulas": {"shuffle_shops": "2", "shuffle_skulltulas": "all", "shuffle_hearts": "all"},
     "Skulltulas toutes": {"shuffle_skulltulas": "all", "shuffle_hearts": "freestanding", "open_forest": "open"},
     "ocarinas mélangés": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "open_door_of_time": True},
+    "départ adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 17},
+    "adulte, apparition aléatoire": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 30, "free_time_travel": True},
+    "départ aléatoire enfant": {"random_spawn": True, "spawn_point": 12, "start_with_consumables": True},
 }
 
 

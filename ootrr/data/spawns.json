@@ -1,0 +1,204 @@
+{
+ "_doc": "Points d'apparition au début de la partie (random_spawn, et départ adulte au Temple du Temps), hors donjons. spawn_point = rang dans cette liste + 1 (0 = introduction normale, maison de Link). banc / pos = NextBanc / NextStartPos de l'action EventReserveBancChange (acteur StartPos de ce nom, vérifié dans les cartes). Exclus : la forteresse Gerudo enfant (pas de carte), le Colosse enfant (sortie par le désert impossible), le château adulte (région Ganon). La logique ajoute une sortie de Root vers la région (world.spawn_exits).",
+ "adult_default": "Temple of Time",
+ "spawns": [
+  {
+   "age": "child",
+   "region": "Kokiri Forest",
+   "banc": "KokiriForest_Child",
+   "pos": "KokiriForest_FrontOfLostWood"
+  },
+  {
+   "age": "child",
+   "region": "Lost Woods",
+   "banc": "LostWood_Child",
+   "pos": "LostWood_Entrance"
+  },
+  {
+   "age": "child",
+   "region": "Sacred Forest Meadow",
+   "banc": "SacredForestMeadow_Child",
+   "pos": "ForestMinuet"
+  },
+  {
+   "age": "child",
+   "region": "Hyrule Field",
+   "banc": "HyruleField_Child",
+   "pos": "HyruleField_FrontOfMarket"
+  },
+  {
+   "age": "child",
+   "region": "Market",
+   "banc": "Market_Child",
+   "pos": "Market_Entrance"
+  },
+  {
+   "age": "child",
+   "region": "Temple of Time",
+   "banc": "Market_Child",
+   "pos": "LightPrelude"
+  },
+  {
+   "age": "child",
+   "region": "Hyrule Castle",
+   "banc": "HyruleCastle",
+   "pos": "HyruleCastle_Entrance"
+  },
+  {
+   "age": "child",
+   "region": "Kakariko Village",
+   "banc": "KakarikoVillage_Child",
+   "pos": "KakarikoVillage_Entrance"
+  },
+  {
+   "age": "child",
+   "region": "Graveyard",
+   "banc": "Graveyard_Child",
+   "pos": "GraveYard_KakarikoSide"
+  },
+  {
+   "age": "child",
+   "region": "Death Mountain Trail",
+   "banc": "DeathMountainTrail_Child",
+   "pos": "MountainTrail_GoronCitySide"
+  },
+  {
+   "age": "child",
+   "region": "Goron City",
+   "banc": "GoronCity_Child",
+   "pos": "GoronCity_MountainTrailSide"
+  },
+  {
+   "age": "child",
+   "region": "DMC Lower",
+   "banc": "DeathMountainCrater_Child",
+   "pos": "Crater_GoronCitySide"
+  },
+  {
+   "age": "child",
+   "region": "Zora River",
+   "banc": "ZoraRiver_Child",
+   "pos": "ZoraRiver_FromZoraDomain"
+  },
+  {
+   "age": "child",
+   "region": "Zoras Domain",
+   "banc": "ZoraDomain_Child",
+   "pos": "ZoraDomain_FromZoraRiver"
+  },
+  {
+   "age": "child",
+   "region": "Zoras Fountain",
+   "banc": "ZoraFountain_Child",
+   "pos": "ZoraFountain_FromZoraDomain"
+  },
+  {
+   "age": "child",
+   "region": "Gerudo Valley",
+   "banc": "GerudoValley_Child",
+   "pos": "GerudoValley_Entrance"
+  },
+  {
+   "age": "adult",
+   "region": "Kokiri Forest",
+   "banc": "KokiriForest_Adult",
+   "pos": "KokiriForest_FrontOfLostWood"
+  },
+  {
+   "age": "adult",
+   "region": "Lost Woods",
+   "banc": "LostWood_Adult",
+   "pos": "LostWood_Entrance"
+  },
+  {
+   "age": "adult",
+   "region": "Sacred Forest Meadow",
+   "banc": "SacredForestMeadow_Adult",
+   "pos": "ForestMinuet"
+  },
+  {
+   "age": "adult",
+   "region": "Hyrule Field",
+   "banc": "HyruleField_Adult",
+   "pos": "HyruleField_FrontOfMarket"
+  },
+  {
+   "age": "adult",
+   "region": "Market",
+   "banc": "Market_Adult",
+   "pos": "Market_Entrance"
+  },
+  {
+   "age": "adult",
+   "region": "Temple of Time",
+   "banc": "Market_Adult",
+   "pos": "LightPrelude"
+  },
+  {
+   "age": "adult",
+   "region": "Kakariko Village",
+   "banc": "KakarikoVillage_Adult",
+   "pos": "KakarikoVillage_Entrance"
+  },
+  {
+   "age": "adult",
+   "region": "Graveyard",
+   "banc": "Graveyard_Adult",
+   "pos": "GraveYard_KakarikoSide"
+  },
+  {
+   "age": "adult",
+   "region": "Death Mountain Trail",
+   "banc": "DeathMountainTrail_Adult",
+   "pos": "MountainTrail_GoronCitySide"
+  },
+  {
+   "age": "adult",
+   "region": "Goron City",
+   "banc": "GoronCity_Adult",
+   "pos": "GoronCity_MountainTrailSide"
+  },
+  {
+   "age": "adult",
+   "region": "DMC Lower",
+   "banc": "DeathMountainCrater_Adult",
+   "pos": "Crater_GoronCitySide"
+  },
+  {
+   "age": "adult",
+   "region": "Zora River",
+   "banc": "ZoraRiver_Adult",
+   "pos": "ZoraRiver_FromZoraDomain"
+  },
+  {
+   "age": "adult",
+   "region": "Zoras Domain",
+   "banc": "ZoraDomain_Adult",
+   "pos": "ZoraDomain_FromZoraRiver"
+  },
+  {
+   "age": "adult",
+   "region": "Zoras Fountain",
+   "banc": "ZoraFountain_Adult",
+   "pos": "ZoraFountain_FromZoraDomain"
+  },
+  {
+   "age": "adult",
+   "region": "Gerudo Valley",
+   "banc": "GerudoValley_Adult",
+   "pos": "GerudoValley_Entrance"
+  },
+  {
+   "age": "adult",
+   "region": "Gerudo Fortress",
+   "banc": "GerudoFortress_Adult",
+   "pos": "GerudoFortress_FromGerudoValley"
+  },
+  {
+   "age": "adult",
+   "region": "Desert Colossus",
+   "banc": "DesertColossus_Adult",
+   "pos": "SpiritRequiem"
+  }
+ ]
+}

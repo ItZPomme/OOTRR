@@ -96,7 +96,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -145,6 +145,10 @@ class ModBuilder:
                                                [{"NextBanc": start_warp[0], "NextStartPos": start_warp[1],
                                                  "BootEventName": ""}])
                 report += warp_report
+            if self.spawn_branch and flow == self.START_FLOW:
+                new, spawn_nodes = self._spawn_nodes(new)
+                new, spawn_report = insert_flow(new, self.START_ENTRY, spawn_nodes)
+                report += spawn_report + [f"{flow}: {len(self.spawn_branch)} points d'apparition selon {self.spawn_branch_entry}"]
             if moat_gate and flow == self.MOAT_FLOW:
                 new, moat_report = insert_flow(new, self.MOAT_ENTRY, self._moat_gate(new))
                 report += moat_report
@@ -461,13 +465,14 @@ class ModBuilder:
 
     # prix des Peste Mojo choisi en jeu : {jeton: entier GameData (prix / 5)} (menu natif) ; sans lui,
     # prix fixe
-    scrub_price_entries: dict[str, str] | None = None
+    scrub_price_entries: dict[str, tuple[str, str]] | None = None  # {jeton: (dizaines, unités) de prix / 5}
     PRICE_LEVELS = 20  # 0 à 95 rubis par pas de 5
     INT_BRANCH_TEMPLATE = "Minigame_CatchCucco"  # EventQueryGameDataIntBranch avec un nom fixe
 
     def _scrub_sale_nodes(self, flow: bytes, sale: int, sold: str, price: int, base: int) -> list[dict]:
         """Vente unique de `sold` (étapes relatives : la première a l'indice `base`). Prix choisi en jeu :
-        une question sur l'entier GameData du jeton, puis une vente par prix (5 x valeur)."""
+        valeur = prix / 5 (0 à 19), lue en deux questions (dizaines, unités : une question ne gère que 16
+        cas), puis une vente par prix (5 x valeur)."""
         message = f"EventFlowMsg/Enemy_Event:{self.SCRUB_MSG_PREFIX}{sold}"
         entry = (self.scrub_price_entries or {}).get(sold)
         if not entry:
@@ -475,8 +480,16 @@ class ModBuilder:
         from .formats.evfl import find_query
         template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.INT_BRANCH_TEMPLATE}.bfevfl.zs")
         branch = (template, find_query(template, "GameDataActor", "EventQueryGameDataIntBranch"))
+        tens_entry, units_entry = entry
+        groups = (self.PRICE_LEVELS - 1) // self.BRANCH_BASE + 1
+        first_sale = base + 1 + groups
         nodes = [{"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch", "template": branch,
-                  "set": {"GameDataName": entry}, "cases": {v: base + 1 + v for v in range(self.PRICE_LEVELS)}}]
+                  "set": {"GameDataName": tens_entry}, "cases": {t: base + 1 + t for t in range(groups)}}]
+        for t in range(groups):
+            cases = {u: first_sale + t * self.BRANCH_BASE + u for u in range(self.BRANCH_BASE)
+                     if t * self.BRANCH_BASE + u < self.PRICE_LEVELS}
+            nodes.append({"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch", "template": branch,
+                          "set": {"GameDataName": units_entry}, "cases": cases})
         for v in range(self.PRICE_LEVELS):
             nodes.append({"copy_event": sale, "next": None,
                           "set": {"ActorName": sold, "Price": 5 * v, "SellerMessageId": message}})
@@ -499,6 +512,53 @@ class ModBuilder:
                                              "cases": {0: "after", 1: "old"}}], before=idx)  # 0 = oui (déjà l'Ocarina du Temps) : pas de don
         except KeyError as exc:
             return flow, [f"garde de l'ocarina impossible : {exc}"]
+
+    # menu natif : point d'apparition choisi en jeu ; l'introduction lit deux entiers GameData
+    # `spawn_branch_entry` = (dizaines, unités) de k (0 = rien, k = téléportation vers spawn_branch[k - 1]).
+    # Une question EventQueryGameDataIntBranch ne gère que 16 cas : avec 34, la valeur 22 a mené au cas 15
+    # (constaté en jeu) ; deux questions de 10 cas au plus.
+    spawn_branch: list[tuple[str, str]] | None = None
+    spawn_branch_entry = ("OoTRR.SpawnTens", "OoTRR.SpawnUnits")
+    BRANCH_BASE = 10
+
+    def _spawn_nodes(self, flow: bytes) -> tuple[bytes, list[dict]]:
+        from .formats.evfl import ensure_actor_member, find_action, find_query
+
+        flow = ensure_actor_member(flow, "GameDataActor", "query", "EventQueryGameDataIntBranch")
+        flow = ensure_actor_member(flow, *self.WARP_ACTION[:1], "action", self.WARP_ACTION[1])
+        branch_src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.INT_BRANCH_TEMPLATE}.bfevfl.zs")
+        warp_src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.WARP_TEMPLATE}.bfevfl.zs")
+        branch = (branch_src, find_query(branch_src, "GameDataActor", "EventQueryGameDataIntBranch"))
+        warp = (warp_src, find_action(warp_src, *self.WARP_ACTION))
+        if branch[1] is None or warp[1] is None:
+            raise KeyError("modèles introuvables pour le point d'apparition")
+        tens_entry, units_entry = self.spawn_branch_entry
+        base = self.BRANCH_BASE
+        n = len(self.spawn_branch)
+        groups = n // base + 1  # dizaines 0 .. n // base
+        if groups > 16:
+            raise ValueError("trop de points d'apparition pour deux questions")
+        # nœud 0 : dizaines -> nœud 1 + t ; nœuds 1..groups : unités -> téléportations
+        nodes = [{"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch", "template": branch,
+                  "set": {"GameDataName": tens_entry}, "cases": {t: 1 + t for t in range(groups)}}]
+        warp_index = {}
+        first_warp = 1 + groups
+        for k in range(1, n + 1):
+            warp_index[k] = first_warp + k - 1
+        for t in range(groups):
+            cases = {}
+            for u in range(base):
+                k = t * base + u
+                if k == 0:
+                    cases[u] = "old"
+                elif k <= n:
+                    cases[u] = warp_index[k]
+            nodes.append({"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch", "template": branch,
+                          "set": {"GameDataName": units_entry}, "cases": cases})
+        for banc, pos in self.spawn_branch:
+            nodes.append({"actor": self.WARP_ACTION[0], "action": self.WARP_ACTION[1], "template": warp,
+                          "set": {"NextBanc": banc, "NextStartPos": pos, "BootEventName": ""}, "next": "old"})
+        return flow, nodes
 
     def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
         """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""

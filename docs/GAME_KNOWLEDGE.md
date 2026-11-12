@@ -174,6 +174,30 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   le temps passe comme après Zelda **[fichiers]** (à tester en jeu : le mécanisme exact qui fige le temps
   avant Zelda n'a pas été trouvé dans les fichiers).
 
+## Âge et point de départ
+
+- Changer d'époque (`Market_Child_Field_ChildToAdult` / `Market_Adult_Field_AdultToChild`) =
+  sous-séquence `ReplaceEquipmentForEraChange`, drapeau `Sequence_IsChildhood` (vrai = enfance), puis
+  `EventReserveBancChange` vers la carte de l'autre époque (`Market_Adult` / `Market_Child`) **[fichiers]**.
+- Départ adulte : `Sequence_IsChildhood` faux au départ, téléportation au Temple du Temps
+  (`Market_Adult` / `LightPrelude`), `Weapon_Sword_Master` donnée ; Porte du Temps ouverte et voyage
+  temporel libre imposés (sinon l'enfant n'est atteignable qu'après le Temple de la Forêt, lui-même
+  inaccessible sans le Chant de Saria appris enfant) **[fichiers]** (à tester en jeu).
+- Points d'apparition : acteurs `StartPos` (champ `Name`) des cartes ; liste retenue dans
+  `data/spawns.json` (33, hors donjons). Menu natif : l'introduction lit l'entier `OoTRR.Spawn` (écrit par le
+  module à la génération) et réserve le changement de carte correspondant **[fichiers]** (à tester en jeu).
+- **`EventQueryGameDataIntBranch` : 16 cas au plus (hypothèse forte).** Avec 34 cas, la valeur 22 a mené
+  au cas 15 (constaté en jeu : arrivée devant Jabu-Jabu au lieu du Temple du Temps). Le point d'apparition
+  passe maintenant par deux questions (dizaines `OoTRR.SpawnTens`, unités `OoTRR.SpawnUnits`). Les prix des
+  Peste Mojo (20 valeurs) aussi : `OoTRR.Price.<jeton>` (dizaines) et `OoTRR.PriceUnits.<jeton>` (unités)
+  de prix / 5 **[fichiers]**.
+- Consommables au départ **[jeu]** (2026-11-11) : la quantité maximale vient d'un sac
+  (`ExpansionMaxNumActor` : `Item_StickBag_Small` 10, `Item_NutBag_Small` 20 ; maximum 0 sans sac). Ajouter
+  l'objet ne compte pas sa quantité : petit sac, puis l'objet, puis le stock écrit dans
+  `PouchData.<objet>.StockNum`.
+- La logique suppose que Root (retour au point de départ) reste atteignable, comme pour la maison de Link
+  (non vérifié : le remake reprend peut-être la partie là où elle a été sauvegardée).
+
 ## Récompenses de boss
 
 - Données par des scènes qui nomment l'objet : `Dm_Kokiri_0130` (émeraude), `Dm_DeathMtTrail_0025`

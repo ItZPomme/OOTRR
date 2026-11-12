@@ -3,9 +3,9 @@
   "regions": {
     "Root": {
       "exits": {
-        "Kokiri Forest": "is_child",
-        "Temple of Time": "is_adult and Time_Travel",
-        "Warp Songs": "is_child or Time_Travel"
+        "Kokiri Forest": "is_child and child_access",
+        "Temple of Time": "is_adult and adult_access",
+        "Warp Songs": "(is_child and child_access) or adult_access"
       }
     },
     "Warp Songs": {

@@ -62,6 +62,17 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                          "Ocarinas mélangés : l'Ocarina des fées (Saria, au pont) et l'Ocarina du Temps (douves) "
                          "rejoignent le pool, un objet de la seed est donné à leur place ; désactivé : à leur place "
                          "d'origine. Dans le jeu, le deuxième ocarina obtenu est toujours l'Ocarina du Temps"),
+    "start_with_consumables": (False, bool,
+                               "Bâtons Mojo et noix Mojo au maximum du premier sac (10 bâtons, 20 noix) dès le départ"),
+    "starting_age": ("child", ("child", "adult", "random"),
+                     "Âge de départ : child (jeu d'origine), adult (au Temple du Temps, Porte du Temps ouverte et voyage "
+                     "temporel libre imposés, épée de légende donnée ; Link redevient enfant par l'épée) ou random (tiré par la seed)"),
+    "random_spawn": (False, bool,
+                     "Point d'apparition au début de la partie tiré par la seed parmi les zones hors donjons "
+                     "(data/spawns.json), selon l'âge de départ"),
+    "spawn_point": (0, int,
+                    "Interne : point d'apparition (rang dans data/spawns.json + 1, 0 = maison de Link), fixé par "
+                    "random_spawn ou le départ adulte ; à laisser à 0"),
 }
 
 

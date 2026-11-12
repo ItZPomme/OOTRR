@@ -71,6 +71,10 @@ def to_text(spoiler: dict[str, Any]) -> str:
     ]
     for k, v in spoiler["settings"].items():
         out.append(f"  {k:<22} {v}")
+    from .starting import spawn
+    sp = spawn(spoiler["settings"])
+    age = "adulte" if spoiler["settings"].get("starting_age") == "adult" else "enfant"
+    out.append(f"  Départ : Link {age}, " + (f"{sp['region']} ({sp['banc']} / {sp['pos']})" if sp else "maison de Link"))
     out += ["", "== Objets requis dans les coffres mélangés (voie du héros) =="]
     for entry in spoiler["required"]:
         if entry["shuffled"]:

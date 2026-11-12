@@ -36,6 +36,9 @@ PRESETS = {
     "pont": {"bridge": "medallions", "bridge_count": 6, "shuffle_rewards": "shuffled",
              "skip_child_zelda": True, "free_time_travel": False, "accessibility": "beatable"},
     "ocarinas": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "shuffle_hearts": "all"},
+    "adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 22, "start_with_consumables": True},
+    "apparition": {"spawn_point": 9, "random_spawn": True, "shuffle_scrubs": True},
+    "adulte loin": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 33, "shuffle_rewards": "shuffled"},
 }
 
 

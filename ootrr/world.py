@@ -55,6 +55,14 @@ DOOR_OF_TIME_STEP = ("Enum", 931730378, "Step06")  # état de la quête (enum Ga
 # porte ouverte), ces états sont posés au départ. Enum de Goto_HyruleCastle : hash relevé dans l'expression
 # Goto_HyruleCastle_IsCompleted_Exp.
 MEET_ZELDA_QUEST = ("Enum", 3683238313, "Complete")
+# départ adulte : drapeau de l'époque (vrai = enfance), épée donnée (elle sert à redevenir enfant)
+ADULT_FLAG = "Sequence_IsChildhood"
+ADULT_START_ITEMS = ("Weapon_Sword_Master",)
+# start_with_consumables : premier sac plein (10 bâtons, 20 noix). L'ajout à l'inventaire crée l'objet mais
+# laisse son stock à 0 (constaté en jeu) : le stock est l'entier PouchData.<objet>.StockNum
+START_CONSUMABLES = (("Item_DekuStick", 10), ("Item_DekuNut", 20))
+# ... après le petit sac de chaque objet : sans lui le maximum est 0 et le stock reste à 0 (constaté)
+START_CONSUMABLE_BAGS = ("Item_StickBag_Small", "Item_NutBag_Small")
 MEET_ZELDA_DOOR_STEP = ("Enum", 931730378, "Step01")
 # l'Ocarina du Temps n'apparaît dans les douves qu'à l'étape Step04 de la quête : Step06 avec la porte ouverte
 OPEN_DOOR_OCARINA = {"HyruleField_Child_Prefab_91f9": {"Step04": "Step06"}}
@@ -362,6 +370,8 @@ class World:
             raise DataError(f"aucun événement « {self.GOAL_EVENT} » (condition de victoire)")
 
         usable = {n: b["use"] for n, b in self.logic_items.items() if b.get("use")}
+        from .starting import add_spawn_exits
+        regions_raw = add_spawn_exits(regions_raw)  # Root -> point d'apparition (spawn_point)
         self.compiler = RuleCompiler(self.logic_items, event_names, helpers_raw, settings, usable)
         try:
             self.compiler.compile_all_helpers()
@@ -526,6 +536,12 @@ class World:
             flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
             if not self.settings.get("open_door_of_time"):
                 flags[f"#{MEET_ZELDA_DOOR_STEP[1]}"] = MEET_ZELDA_DOOR_STEP[2]
+        if self.settings.get("start_with_consumables"):
+            for name, count in START_CONSUMABLES:
+                flags[f"PouchData.{name}.StockNum"] = count
+        if self.settings.get("starting_age") == "adult":
+            # comme Market_Child_Field_ChildToAdult (l'âge suit ce drapeau et la carte d'arrivée)
+            flags[ADULT_FLAG] = False
         if self.settings.get("open_door_of_time"):
             # posés par le jeu quand la porte s'ouvre (événement DoorOfTime_OpenDoor)
             flags["Market_Child_TimeTempleDoor_Opened"] = True
@@ -648,7 +664,12 @@ class World:
 
     def start_items(self, placements: dict[str, str] | None = None) -> list[str]:
         """Objets ajoutés à l'inventaire dès la nouvelle partie (action insérée dans l'intro)."""
-        return [(placements or {}).get(name, self.locations[name].vanilla) for name in self._start_location_names()]
+        items = [(placements or {}).get(name, self.locations[name].vanilla) for name in self._start_location_names()]
+        if self.settings.get("starting_age") == "adult":
+            items += list(ADULT_START_ITEMS)
+        if self.settings.get("start_with_consumables"):
+            items += list(START_CONSUMABLE_BAGS) + [name for name, _ in START_CONSUMABLES]
+        return items
 
     def rsdb_changes(self, romfs_locations: list[str] | None = None) -> dict[str, dict[str, dict]]:
         """Lignes des tables RSDB à modifier : {table: {__RowId: {champ: valeur}}}.

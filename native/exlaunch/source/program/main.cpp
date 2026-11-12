@@ -178,6 +178,11 @@ void GenerateSeed() {
     LogValue(ok ? "OoTRR: seed generee" : "OoTRR: echec de la generation, seed", seed);
     if (ok) WriteAllTokenPrices();
     if (ok) {
+        // point d'apparition lu par l'introduction (OpeningEvent : questions sur les dizaines puis les unités ;
+        // une question ne gère que 16 cas)
+        ootrr::ingame::WriteGameDataInt(Main(), ootrr::menu::kSpawnTensHash, ootrr::ingame::SpawnPoint() / 10);
+        ootrr::ingame::WriteGameDataInt(Main(), ootrr::menu::kSpawnUnitsHash, ootrr::ingame::SpawnPoint() % 10);
+        LogValue("OoTRR: point d'apparition", static_cast<u64>(ootrr::ingame::SpawnPoint()));
         ootrr::ingame::WriteSavedSeed(Main(), static_cast<s32>(seed));
         g_trust_memory = true;
         LogValue("OoTRR: drapeaux de depart poses", static_cast<u64>(ootrr::ingame::ApplyStartFlags(Main())));

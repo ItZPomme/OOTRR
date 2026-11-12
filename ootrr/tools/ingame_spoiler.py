@@ -158,6 +158,8 @@ def main(argv=None) -> int:
         return 2
 
     mixed = mix_settings(seed, [value_index(k, settings[k]) for k in SETTINGS])
+    from ..starting import resolve
+    settings = build(resolve(settings, mixed))  # âge et point d'apparition (ingame.cpp, ResolveStart)
     world = World(settings)
     result = generate(world, mixed)
     sp = spoiler_mod.build(world, result)

@@ -2,6 +2,8 @@
   "_doc": "Règles nommées réutilisables dans les régions. Une règle peut appeler un autre helper (pas de récursion). has_explosives : dans le remake, sortir une bombe utilise l'action « soulever », il faut donc le Bracelet Goron en plus du sac (vérifié en jeu).",
   "helpers": {
     "has_explosives":        "Bomb_Bag and Progressive_Strength",
+    "adult_access":          "Time_Travel or setting_is(starting_age, 'adult')",
+    "child_access":          "not setting_is(starting_age, 'adult') or (Time_Travel and (free_time_travel or Forest_Medallion))",
     "can_blast_or_smash":    "has_explosives or can_use(Megaton_Hammer)",
     "can_open_grotto":       "can_blast_or_smash",
     "has_bottle":            "Bottle or Rutos_Letter",

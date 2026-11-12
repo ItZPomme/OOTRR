@@ -58,6 +58,42 @@ uint64_t MixSettings(uint32_t seed, const Settings& settings) {
     return h & 0x7fffffffffffffffull;
 }
 
+namespace {
+// même calcul que ootrr/starting.py (mix)
+uint64_t StartHash(uint64_t seed, uint64_t salt) {
+    uint64_t h = seed * 0x9E3779B97F4A7C15ull + salt * 0xBF58476D1CE4E5B9ull;
+    h ^= h >> 30;
+    h *= 0xBF58476D1CE4E5B9ull;
+    h ^= h >> 27;
+    h *= 0x94D049BB133111EBull;
+    h ^= h >> 31;
+    return h;
+}
+}  // namespace
+
+/* Âge et point d'apparition tirés par la seed du générateur (ootrr/starting.py, resolve) : départ adulte
+ * = Porte du Temps ouverte ; point d'apparition = rang dans data/spawns.json + 1, 0 = maison de Link. */
+void ResolveStart(Settings& s, uint64_t seed) {
+    if (s.values[logic::SET_starting_age] == logic::kAgeRandom)
+        s.values[logic::SET_starting_age] = (StartHash(seed, 1) & 1) ? logic::kAgeAdult : 0;
+    bool adult = s.values[logic::SET_starting_age] == logic::kAgeAdult;
+    if (adult) {  // comme starting.py : Porte du Temps ouverte, voyage temporel libre
+        s.values[logic::SET_open_door_of_time] = 1;
+        s.values[logic::SET_free_time_travel] = 1;
+    }
+    if (s.values[logic::SET_random_spawn]) {
+        int count = 0;
+        for (int i = 0; i < logic::kSpawnCount; i++) count += logic::kSpawnAdult[i] == (adult ? 1 : 0);
+        int pick = static_cast<int>(StartHash(seed, 2) % static_cast<uint64_t>(count));
+        for (int i = 0; i < logic::kSpawnCount; i++) {
+            if (logic::kSpawnAdult[i] != (adult ? 1 : 0)) continue;
+            if (pick-- == 0) { s.values[logic::SET_spawn_point] = i + 1; break; }
+        }
+    } else {
+        s.values[logic::SET_spawn_point] = adult ? logic::kAdultDefaultSpawn : 0;
+    }
+}
+
 bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     void* manager = Manager(main_base);
     auto get_handle = reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle);
@@ -104,8 +140,10 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     r.count = logic::kSettingCount < 16 ? logic::kSettingCount : 16;
     for (int i = 0; i < r.count; i++) r.values[i] = settings.values[i];
     g_seed = seed;
+    uint64_t mixed = MixSettings(seed, settings);
+    ResolveStart(settings, mixed);
     g_settings = settings;
-    g_ready = Generate(settings, MixSettings(seed, settings), g_result);
+    g_ready = Generate(settings, mixed, g_result);
     return g_ready;
 }
 
@@ -144,8 +182,11 @@ void WriteSavedSeed(std::uintptr_t main_base, int32_t seed) { WriteGameDataInt(m
 
 void WriteScrubPrices(std::uintptr_t main_base) {
     if (!g_ready) return;
-    for (const logic::ScrubPrice& s : logic::kScrubPrices)
-        WriteGameDataInt(main_base, s.entry, ShopPrice(s.location) / 5);
+    for (const logic::ScrubPrice& s : logic::kScrubPrices) {
+        int32_t level = ShopPrice(s.location) / 5;  // 0..19, en deux questions de 10 cas au plus
+        WriteGameDataInt(main_base, s.tens, level / 10);
+        WriteGameDataInt(main_base, s.units, level % 10);
+    }
 }
 
 namespace {
@@ -314,6 +355,31 @@ int GiveStartItems(std::uintptr_t main_base) {
         list = logic::kSkipChildZelda;
         count = sizeof(logic::kSkipChildZelda) / sizeof(logic::kSkipChildZelda[0]);
     }
+    auto give = [&](const char* name, int32_t number) {
+        static char text[128];
+        int n = 0;
+        for (; name[n] && n < 127; n++) text[n] = name[n];
+        text[n] = 0;
+        GameString s{text, 128, 0};
+        uint64_t added = add(manager, &s, 0, number, kReasonEvent, 0, 0, false, 0);
+        if (ui) notify(ui, &s, (added & 1) != 0, kReasonEvent);
+    };
+    int given = count;
+    if (g_settings.values[logic::SET_starting_age] == logic::kAgeAdult) {
+        give("Weapon_Sword_Master", 1);  // world.ADULT_START_ITEMS
+        given++;
+    }
+    if (g_settings.values[logic::SET_start_with_consumables]) {  // world.START_CONSUMABLES
+        // sans sac, le maximum est 0 et le stock reste à 0 (constaté) : petit sac d'abord (maximum 10 / 20,
+        // ExpansionMaxNumActor), puis l'objet, puis le stock écrit dans PouchData.<objet>.StockNum
+        give("Item_StickBag_Small", 1);
+        give("Item_NutBag_Small", 1);
+        give("Item_DekuStick", 10);
+        give("Item_DekuNut", 20);
+        WriteGameDataInt(main_base, 0xb9494411, 10);  // PouchData.Item_DekuStick.StockNum
+        WriteGameDataInt(main_base, 0xf30d9f54, 20);  // PouchData.Item_DekuNut.StockNum
+        given += 2;
+    }
     for (int i = 0; i < count; i++) {
         static char text[128];
         const char* name = ItemFor(list[i]);
@@ -324,10 +390,11 @@ int GiveStartItems(std::uintptr_t main_base) {
         uint64_t added = add(manager, &s, 0, 1, kReasonEvent, 0, 0, false, 0);
         if (ui) notify(ui, &s, (added & 1) != 0, kReasonEvent);
     }
-    return count;
+    return given;
 }
 
 bool Ready() { return g_ready; }
+int32_t SpawnPoint() { return g_settings.values[logic::SET_spawn_point]; }
 int32_t SettingValue(int setting) { return g_settings.values[setting]; }
 
 int ReadStructBool(std::uintptr_t main_base, uint32_t structure, uint32_t member) {

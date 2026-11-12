@@ -20,6 +20,12 @@ def _merge_events(*parts: dict[str, dict[str, str]]) -> dict[str, dict[str, str]
     return out
 
 
+def _start_warp(world: World) -> list[str] | None:
+    from .starting import spawn
+    sp = spawn(world.settings)
+    return [sp["banc"], sp["pos"]] if sp else None
+
+
 def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
     chests = []
     for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
@@ -57,6 +63,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
                                        world.ocarina_event_changes(result.placements)),
         "moat_items": list(world.moat_items(result.placements)),
         "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
+        "start_warp": _start_warp(world),
         "logic_patches": world.logic_patches(),
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},

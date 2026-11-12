@@ -28,6 +28,8 @@ from .formats.msbt import add_messages, read_labels
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
 GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
 SEED_ENTRY = "OoTRR.Seed"  # seed de la partie (entier, sauvegardé) : régénérée au chargement
+# point d'apparition (non sauvegardés) : dizaines et unités, écrits à la génération, lus par l'introduction
+SPAWN_ENTRIES = ("OoTRR.SpawnTens", "OoTRR.SpawnUnits")
 OPTION_STRUCT = "OptionData"
 BOOTUP = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs"
 GAME_TABLE = "UI/OptionSetTable/OptionSetTable.game__ui__OptionSetTable.bgyml"
@@ -68,6 +70,10 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         ("skip_child_zelda", "IsUseGyro", None),
         (SEPARATOR, "", None),
         ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
+        (SEPARATOR, "", None),
+        ("starting_age", "DisplayMode", ["child", "adult", "random"]),
+        ("random_spawn", "IsChangeJumpButton", None),
+        ("start_with_consumables", "IsDisplayTextRuby", None),
     ],
     [  # page 2 : ce qui est mélangé
         ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
@@ -141,6 +147,10 @@ TEXTS_EN = {
                        {"none": "None", "safe": "Safe"}),
     "logic_lens_required": ("Lens Required", "The logic requires the Lens of Truth for invisible paths.", {}),
     "shuffle_ocarinas": ("Shuffle Ocarinas", "The Fairy Ocarina (Saria) and the Ocarina of Time (moat) are shuffled:\nan item of the seed is given in their place. The second ocarina is the Ocarina of Time.", {}),
+    "starting_age": ("Starting Age", "Child: Link's house. Adult: Temple of Time, Door of Time open, Master Sword given.\nRandom: chosen by the seed.",
+                     {"child": "Child", "adult": "Adult", "random": "Random"}),
+    "random_spawn": ("Random Spawn", "Start the game anywhere outside dungeons (chosen by the seed).", {}),
+    "start_with_consumables": ("Start With Consumables", "Start with a full first bag of Deku Sticks (10) and Deku Nuts (20).", {}),
     "seed_manual": ("Manual Seed", f"Off: random seed {SEED_PLACEHOLDER}. On: a keyboard opens when the game\nstarts to type the seed.", {}),
 }
 TEXTS_FR = {
@@ -171,6 +181,10 @@ TEXTS_FR = {
                        {"none": "Aucune", "safe": "Sûres"}),
     "logic_lens_required": ("Monocle requis", "La logique exige le Monocle de Vérité pour les passages invisibles.", {}),
     "shuffle_ocarinas": ("Ocarinas mélangés", "L'Ocarina des fées (Saria) et l'Ocarina du Temps (douves) sont mélangés :\nun objet de la seed est donné à leur place. Le deuxième ocarina est l'Ocarina du Temps.", {}),
+    "starting_age": ("Âge de départ", "Enfant : maison de Link. Adulte : Temple du Temps, porte ouverte, Épée de légende donnée.\nAléatoire : tiré par la seed.",
+                     {"child": "Enfant", "adult": "Adulte", "random": "Aléatoire"}),
+    "random_spawn": ("Départ aléatoire", "La partie commence n'importe où hors des donjons (tiré par la seed).", {}),
+    "start_with_consumables": ("Consommables au départ", "Premier sac de bâtons Mojo (10) et de noix Mojo (20) plein dès le départ.", {}),
     "seed_manual": ("Seed manuelle", f"Désactivé : seed aléatoire {SEED_PLACEHOLDER}. Activé : un clavier s'ouvre\nau lancement de la partie pour saisir la seed.", {}),
 }
 FRENCH = ("EUfr", "USfr")
@@ -237,7 +251,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     report.append(f"GameData : entier {SEED_ENTRY} (sauvegardé)")
     # prix des Peste Mojo : non sauvegardés, réécrits par le module à chaque génération / rechargement
     from .native_logic import scrub_price_entries
-    for name in sorted(scrub_price_entries().values()):
+    for name in sorted(n for pair in scrub_price_entries().values() for n in pair) + list(SPAWN_ENTRIES):
         entry = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == -1))
         entry.update({"Hash": U32(flag_hash(name)), "DefaultValue": 0, "ResetTypeValue": 0})
         data["Int"].append(entry)
@@ -456,6 +470,8 @@ def start_flag_table() -> tuple[list[tuple[str, object, str, bool]], list[str]]:
             for name, flag_value in flags.items():
                 if base.get(name) == flag_value:
                     continue
+                if isinstance(flag_value, int) and not isinstance(flag_value, bool):
+                    continue  # entier (ex. stock des consommables) : écrit par le module natif lui-même
                 if not isinstance(flag_value, bool) or name.startswith("#"):
                     skipped.append(f"{setting}={value}: {name}={flag_value}")
                     continue
@@ -584,6 +600,8 @@ def menu_header(root: dict) -> str:
              f"constexpr uint32_t kMenuFlagHash = 0x{flag_hash(MENU_FLAG):08x};  // {MENU_FLAG}",
              f"constexpr uint32_t kGenerateFlagHash = 0x{flag_hash(GENERATE_FLAG):08x};  // {GENERATE_FLAG}",
              f"constexpr uint32_t kSeedHash = 0x{flag_hash(SEED_ENTRY):08x};  // {SEED_ENTRY}",
+             f"constexpr uint32_t kSpawnTensHash = 0x{flag_hash(SPAWN_ENTRIES[0]):08x};  // {SPAWN_ENTRIES[0]}",
+             f"constexpr uint32_t kSpawnUnitsHash = 0x{flag_hash(SPAWN_ENTRIES[1]):08x};  // {SPAWN_ENTRIES[1]}",
              "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
              "// member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une",
              "// structure cherchent le membre par ce hachage dans la table de la poignée",

@@ -45,6 +45,9 @@ python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --inst
 | `open_forest` | `closed`, `closed_deku`, `open`, `ask` | Kokiri bloqueurs retirés, murs invisibles désactivés ; `ask` = question au début de la partie (prototype) |
 | `open_door_of_time` | oui / non | Porte ouverte ; lettre et berceuse au départ ; l'Ocarina du Temps reste dans les douves (visible avec les 3 pierres) et donne le Chant du Temps |
 | `skip_child_zelda` | oui / non | Lettre et berceuse de Zelda au départ, quête du château finie (cycle jour / nuit) |
+| `starting_age` | `child`, `adult`, `random` | Âge de départ ; adulte = Temple du Temps, porte ouverte et voyage libre imposés, épée de légende donnée |
+| `random_spawn` | oui / non | Départ n'importe où hors donjons (`data/spawns.json`), selon l'âge |
+| `start_with_consumables` | oui / non | 10 bâtons Mojo et 20 noix Mojo au départ |
 | `shuffle_ocarinas` | oui / non | Ocarina des fées (Saria) et Ocarina du Temps (douves) mélangés ; non = à leur place |
 | `free_time_travel` | oui (défaut) / non | L'épée renvoie enfant à tout moment (le remake exige le Temple de la Forêt) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + nombre | Condition du pont arc-en-ciel |

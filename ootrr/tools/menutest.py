@@ -217,6 +217,10 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             if vanilla == "Item_Ocarina_Time":
                 mb.moat_items = (t, "Item_Melody_TimeSong")
         mb.ocarina_guard = False
+        # point d'apparition (random_spawn, départ adulte) : l'introduction lit OoTRR.Spawn (écrit par le module)
+        from ..starting import spawns
+        mb.spawn_branch = [(s["banc"], s["pos"]) for s in spawns()]
+        mb.spawn_branch_entry = menu.SPAWN_ENTRIES
         common["event_changes"] = ocarina_events
         report.append(f"ocarinas : {len(ocarina_events)} scènes donnent un jeton")
         report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
