@@ -70,6 +70,41 @@ SEED_PLACEHOLDER = "######"
 # CameraRotateSpeed 5, DisplayMode / OcarinaSongEstimateMode / ControllerRumble 3, LockOnType /
 # OcarinaKeyAssign 2 ; bascules : IsCamera*Reverse, IsUseGyro, IsChangeJumpButton, IsDisplayTextRuby,
 # VoiceSubtitle, VoiceSubtitleSpeakerName (grisé tant que VoiceSubtitle est désactivé).
+# Nombre requis pour le pont : lignes de la page 2 affichées seulement pour leur condition (CheckGameData =
+# drapeau Bool posé par le module natif selon la ligne « bridge » de la page 1, avant l'ouverture de la page).
+# Le jeu ne relit pas la condition quand le mode change sur la même page (constaté en jeu, 2026-11-11), d'où
+# la page suivante. CheckGameData doit être un Bool : une expression n'affiche jamais la ligne (constaté).
+# (condition, ligne, type d'option emprunté, nombres proposés) ; nombre requis = somme des lignes de la
+# condition (cœurs : base + supplément). Plusieurs lignes d'un même type partagent le membre GameData : le
+# module natif présente au jeu la ligne visible (le jeu prend sinon la première ligne du type, même cachée :
+# 0x339c790, constaté en jeu), ramène la valeur dans ses choix, et ses textes sont propres à la condition
+# (bridge_text_prefix). Une valeur au-delà des choix d'une ligne vaut son maximum. Défaut d'un membre
+# partagé : le maximum de sa première ligne.
+BRIDGE_MODE_ROW = "bridge"
+BRIDGE_ROWS = [
+    ("stones", "bridge_stones", "CameraRotateSpeed", (1, 2, 3)),
+    ("medallions", "bridge_medallions", "VoiceLanguage", (1, 2, 3, 4, 5, 6)),
+    ("dungeons", "bridge_dungeons", "VoiceLanguage", (1, 2, 3, 4, 5, 6, 7, 8, 9)),
+    ("hearts", "bridge_hearts_base", "CameraRotateSpeed", (3, 12)),
+    ("hearts", "bridge_hearts_plus", "VoiceLanguage", (0, 1, 2, 3, 4, 5, 6, 7, 8)),
+]
+BRIDGE_ROW_NAMES = tuple(r[1] for r in BRIDGE_ROWS)
+BRIDGE_ROW_DEFAULTS = {r[1]: str(r[3][-1]) for r in BRIDGE_ROWS}
+BRIDGE_ROW_MODES = tuple(dict.fromkeys(r[0] for r in BRIDGE_ROWS))
+BRIDGE_SHOW_EXPS = {mode: f"OoTRR.Menu.Show.{mode}" for mode in BRIDGE_ROW_MODES}
+
+
+def bridge_text_prefix(page_prefix: str, mode: str) -> str:
+    """Préfixe des textes propres à une condition du pont (« OoTRR2_B3_ ») ; le module natif l'essaie en premier."""
+    return f"{page_prefix}B{BRIDGE_MODES.index(mode)}_"
+
+
+def bridge_row_member(row: str) -> str:
+    """Nom du membre GameData d'une ligne du nombre requis (ex. OoTRRMenu2.VoiceLanguage)."""
+    option_type = next(r[2] for r in BRIDGE_ROWS if r[1] == row)
+    return f"{STRUCTS[page_of(row)]}.{option_type}"
+
+
 PAGES: list[list[tuple[str, str, list[str] | None]]] = [
     [  # page 1 : le monde
         (SEED_MANUAL, "VoiceSubtitle", None),
@@ -82,14 +117,18 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         ("bridge", "VoiceLanguage", ["open", "vanilla", "stones", "medallions", "dungeons", "hearts"]),
         (SEPARATOR, "", None),
         ("starting_age", "DisplayMode", ["child", "adult", "random"]),
-        ("random_spawn", "IsChangeJumpButton", None),
         ("start_with_consumables", "IsDisplayTextRuby", None),
         (SEPARATOR, "", None),
         (NEXT_PAGE, NEXT_PAGE_TYPE, None),
     ],
     [  # page 2 : ce qui est mélangé
+        ("bridge_stones", "CameraRotateSpeed", ["1", "2", "3"]),
+        ("bridge_medallions", "VoiceLanguage", [str(n) for n in range(1, 7)]),
+        ("bridge_dungeons", "VoiceLanguage", [str(n) for n in range(1, 10)]),
+        ("bridge_hearts_base", "CameraRotateSpeed", ["3", "12"]),
+        ("bridge_hearts_plus", "VoiceLanguage", [str(n) for n in range(9)]),
+        (SEPARATOR, "", None),
         ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
-        ("shuffle_songs", "CameraRotateSpeed", ["vanilla", "shuffle", "random"]),
         ("shuffle_hearts", "ControllerRumble", ["none", "freestanding", "all"]),
         ("shuffle_skulltulas", "OcarinaSongEstimateMode", ["off", "overworld", "all"]),
         ("maps_compasses", "DisplayMode", ["vanilla", "start_with", "removed"]),
@@ -101,13 +140,15 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         (SEPARATOR, "", None),
         (NEXT_PAGE, NEXT_PAGE_TYPE, None),
     ],
-    [  # page 3 : boutiques et Peste Mojo
+    [  # page 3 : boutiques, Peste Mojo, chants et cadeaux (chants ici : la page 2 n'a plus de type libre à
+        # 3 valeurs, CameraRotateSpeed et VoiceLanguage y servent au nombre requis pour le pont)
         ("shuffle_shops", "CameraRotateSpeed", ["off", "1", "2", "3", "4"]),
         ("shop_prices", "VoiceLanguage", ["vanilla", "affordable", "random"]),
         (SEPARATOR, "", None),
         ("shuffle_scrubs", "IsDisplayTextRuby", None),
         ("scrub_prices", "DisplayMode", ["vanilla", "affordable", "random"]),
         (SEPARATOR, "", None),
+        ("shuffle_songs", "ControllerRumble", ["vanilla", "shuffle", "random"]),
         ("shuffle_gifts", "IsUseGyro", None),
         (SEPARATOR, "", None),
         (NEXT_PAGE, NEXT_PAGE_TYPE, None),
@@ -129,7 +170,8 @@ BRIDGE_COUNTS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 10}
 # base des fichiers du mod du menu : scènes passées, et Kokiri bloqueurs présents selon leur drapeau
 # (comme open_forest = ask) pour que la forêt s'ouvre en jeu selon le réglage
 STATIC_SETTINGS = {"skip_cutscenes": "safe", "open_forest": "ask"}
-SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR and r[0] not in SEED_ROW_NAMES + ACTION_ROW_NAMES]
+SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR
+                and r[0] not in SEED_ROW_NAMES + ACTION_ROW_NAMES + BRIDGE_ROW_NAMES]
 SEED_ROWS = [r for r in ROWS if r[0] in SEED_ROW_NAMES]
 
 
@@ -147,6 +189,13 @@ TEXTS_EN = {
     "bridge": ("Rainbow Bridge", "Condition to open the rainbow bridge to Ganon's Castle.",
                {"open": "Open", "vanilla": "Vanilla", "stones": "Stones", "medallions": "Medallions",
                 "dungeons": "Dungeons", "hearts": "Hearts"}),
+    "bridge_stones": ("Stones Required", "Number of Spiritual Stones needed to open the rainbow bridge.",
+                      {str(n): str(n) for n in range(1, 10)}),
+    "bridge_medallions": ("Medallions Required", "Number of Medallions needed to open the rainbow bridge.", {str(n): str(n) for n in range(1, 10)}),
+    "bridge_hearts_base": ("Hearts Required", "Hearts needed to open the rainbow bridge: this value\nplus the extra hearts below (3 to 20).",
+                           {"3": "3", "12": "12"}),
+    "bridge_hearts_plus": ("Extra Hearts", "Added to the hearts required above.", {str(n): f"+{n}" for n in range(9)}),
+    "bridge_dungeons": ("Rewards Required", "Number of dungeon rewards (Spiritual Stones and Medallions)\nneeded to open the rainbow bridge.", {str(n): str(n) for n in range(1, 10)}),
     "shuffle_rewards": ("Dungeon Rewards", "Shuffle the Spiritual Stones and Medallions between the bosses\nand Link's Pocket.",
                         {"vanilla": "Vanilla", "shuffled": "Shuffled"}),
     "shuffle_songs": ("Songs", "Vanilla: songs in place. Shuffle: songs shuffled between the 12 song locations.\nRandom: song locations join the item pool.",
@@ -184,6 +233,13 @@ TEXTS_FR = {
     "bridge": ("Pont arc-en-ciel", "Condition d'ouverture du pont vers le château de Ganon.",
                {"open": "Ouvert", "vanilla": "Original", "stones": "Pierres", "medallions": "Médaillons",
                 "dungeons": "Donjons", "hearts": "Cœurs"}),
+    "bridge_stones": ("Pierres requises", "Nombre de pierres spirituelles nécessaires pour ouvrir le pont arc-en-ciel.",
+                      {str(n): str(n) for n in range(1, 10)}),
+    "bridge_medallions": ("Médaillons requis", "Nombre de médaillons nécessaires pour ouvrir le pont arc-en-ciel.", {str(n): str(n) for n in range(1, 10)}),
+    "bridge_hearts_base": ("Cœurs requis", "Cœurs nécessaires pour ouvrir le pont arc-en-ciel : cette valeur\nplus les cœurs supplémentaires dessous (3 à 20).",
+                           {"3": "3", "12": "12"}),
+    "bridge_hearts_plus": ("Cœurs supplémentaires", "Ajoutés aux cœurs requis au-dessus.", {str(n): f"+{n}" for n in range(9)}),
+    "bridge_dungeons": ("Récompenses requises", "Nombre de récompenses (pierres et médaillons) nécessaires\npour ouvrir le pont arc-en-ciel.", {str(n): str(n) for n in range(1, 10)}),
     "shuffle_rewards": ("Récompenses des boss", "Mélange les pierres et médaillons entre les boss\net la poche de Link.",
                         {"vanilla": "Original", "shuffled": "Mélangées"}),
     "shuffle_songs": ("Chants", "Original : à leur place. Mélangés : entre les 12 emplacements de chants.\nAléatoires : les emplacements de chants rejoignent le pool.",
@@ -229,14 +285,20 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
     métadonnées de sauvegarde."""
     data = root["Data"]
     idx = index(root)
+    defaults = {**BRIDGE_ROW_DEFAULTS, **(defaults or {})}
     src = next(e for e in data["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
     report = []
+    saved = 0
     for page, struct in enumerate(STRUCTS):
         if any(e["Hash"] == flag_hash(struct) for e in data["Struct"]):
             raise KeyError(f"GameData : structure {struct} déjà présente")
         rows = [r for r in PAGES[page] if r[0] != SEPARATOR]
         types = {flag_hash(t): t for _, t, _ in rows}
-        by_type = {t: (s, values) for s, t, values in rows if s not in SEED_ROW_NAMES + ACTION_ROW_NAMES}
+        # plusieurs lignes du même type (pont) : même membre ; la première donne la valeur par défaut
+        by_type = {}
+        for s, t, values in rows:
+            if s not in SEED_ROW_NAMES + ACTION_ROW_NAMES:
+                by_type.setdefault(t, (s, values))
         members = []
         for m in src["DefaultValue"]:
             section, entry = idx[m["Value"]]
@@ -247,11 +309,12 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
             if section == "Enum" and values is not None and len(values) > len(new["RawValues"]):
                 raise ValueError(f"{name} : {len(new['RawValues'])} valeurs dans le jeu pour {len(values)} choix ({setting})")
             new["SaveFileIndex"] = PROGRESS_SAVE if setting else -1
+            saved += bool(setting)
             new["ResetTypeValue"] = 0
             if any(r[1] == name and r[0] in SEED_ROW_NAMES for r in rows):
                 new["DefaultValue"] = False
                 report.append(f"GameData {struct}.{name} (seed)")
-            if defaults is not None and setting in defaults:
+            if setting in defaults:
                 value = defaults[setting]
                 if values is None and section == "Bool":
                     new["DefaultValue"] = bool(value)
@@ -264,7 +327,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         data["Struct"].append({"DefaultValue": members, "Hash": U32(flag_hash(struct)),
                                "ResetTypeValue": 0, "SaveFileIndex": -1})
         report.append(f"GameData : structure {struct} ({len(members)} membres)")
-    for name in (MENU_FLAG, GENERATE_FLAG):
+    for name in (MENU_FLAG, GENERATE_FLAG) + tuple(BRIDGE_SHOW_EXPS.values()):
         flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == -1))
         flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
         data["Bool"].append(flag)
@@ -286,7 +349,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         entry.update({"Hash": U32(flag_hash(name)), "DefaultValue": 0, "ResetTypeValue": 0})
         data["Int"].append(entry)
         report.append(f"GameData : entier {name}")
-    saved = sum(1 for _ in SETTING_ROWS) + 1 + len(EXTRA_SAVED_FLAGS)
+    saved += 1 + len(EXTRA_SAVED_FLAGS)
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
 
@@ -310,30 +373,84 @@ BRIDGE_MODULE_FILE = "Logic/GanonCastle_Level_Field_00_Prefab_14ba.logic.module.
 BRIDGE_MENU_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_MenuBridge_Ready_Exp"}
 
 
-def bridge_menu_exps() -> dict[str, list[tuple]]:
-    """Expressions du pont valables pour toutes les conditions du menu (nombres : BRIDGE_COUNTS)."""
+def option_enums(root: dict) -> dict[str, list[str]]:
+    """Noms des valeurs (RawValues) de chaque type d'option énumération d'OptionData."""
+    idx = index(root)
+    src = next(e for e in root["Data"]["Struct"] if e["Hash"] == flag_hash(OPTION_STRUCT))
+    types = {flag_hash(t): t for page in PAGES for _, t, _ in page}
+    out = {}
+    for m in src["DefaultValue"]:
+        section, entry = idx[m["Value"]]
+        if section == "Enum" and m["Hash"] in types:
+            out[types[m["Hash"]]] = entry["RawValues"]
+    return out
+
+
+def _or_chunks(names: list[str], prefix: str, exps: dict) -> list[tuple]:
+    """OU sur des expressions nommées, par morceaux de 8 (une expression du jeu a au plus 26 éléments)."""
+    def chain(items):
+        out = []
+        for n in items:
+            out += [("Exp", n)] + ([("OR",)] if out else [])
+        return out
+    if len(names) <= 8:
+        return chain(names)
+    parts = []
+    for i in range(0, len(names), 8):
+        exps[f"{prefix}_{i // 8}"] = chain(names[i:i + 8])
+        parts.append(f"{prefix}_{i // 8}")
+    return chain(parts)
+
+
+def bridge_menu_exps(enums: dict[str, list[str]]) -> dict[str, list[tuple]]:
+    """Expressions du pont valables pour toutes les conditions du menu, avec le nombre choisi dans les lignes
+    de la condition (BRIDGE_ROWS). `enums` : option_enums."""
+    import itertools
+
     from .world import MAX_LIFE, MEDAL_FLAGS, STONE_FLAGS, _at_least
 
     exps: dict[str, list[tuple]] = {}
-    conds: dict[str, list[tuple]] = {}
+    # seuils : « au moins N » récompenses, et « au moins N cœurs » (H_N = MaxLife dans [4N, 4N+3] OU H_N+1)
+    thresholds = {}
     for mode, flags, prefix in (("stones", STONE_FLAGS, "OoTRR_MenuBridgeS"),
                                 ("medallions", MEDAL_FLAGS, "OoTRR_MenuBridgeM"),
                                 ("dungeons", STONE_FLAGS + MEDAL_FLAGS, "OoTRR_MenuBridgeD")):
-        sub = _at_least(flags, min(BRIDGE_COUNTS[mode], len(flags)), prefix)
-        exps.update(sub)
-        conds[mode] = [("Exp", next(iter(sub)))]
-    values = list(range(4 * BRIDGE_COUNTS["hearts"], 81))  # MaxLife en quarts de cœur
-    # « au moins N cœurs » = MaxLife vaut l'une des valeurs ; les expressions du jeu ont au plus 26
-    # éléments : morceaux de 8 valeurs (23 éléments) réunis par une expression de tête
-    top = []
-    for i in range(0, len(values), 8):
-        part = [("IntEq", MAX_LIFE, values[i])]
-        for v in values[i + 1:i + 8]:
-            part += [("IntEq", MAX_LIFE, v), ("OR",)]
-        exps[f"OoTRR_MenuBridgeH_{i // 8}"] = part
-        top += [("Exp", f"OoTRR_MenuBridgeH_{i // 8}")] + ([("OR",)] if top else [])
-    exps["OoTRR_MenuBridgeH"] = top
-    conds["hearts"] = [("Exp", "OoTRR_MenuBridgeH")]
+        exps.update(_at_least(flags, len(flags), prefix))
+        thresholds[mode] = lambda n, p=prefix: f"{p}_0_{n}"
+    for n in range(20, 0, -1):  # MaxLife en quarts de cœur, 80 au plus
+        prog = [("IntEq", MAX_LIFE, 4 * n)]
+        for v in range(4 * n + 1, min(4 * n + 4, 81)):
+            prog += [("IntEq", MAX_LIFE, v), ("OR",)]
+        if n < 20:
+            prog += [("Exp", f"OoTRR_MenuBridgeH_{n + 1}"), ("OR",)]
+        exps[f"OoTRR_MenuBridgeH_{n}"] = prog
+    thresholds["hearts"] = lambda n: f"OoTRR_MenuBridgeH_{n}"
+
+    def row_is(row: str, option_type: str, numbers: tuple, i: int) -> list[tuple]:
+        """La ligne vaut son i-ième choix (le dernier vaut aussi pour les valeurs au-delà : membre partagé)."""
+        raws = enums[option_type]
+        same = raws[i:] if i == len(numbers) - 1 else [raws[i]]
+        member = bridge_row_member(row)
+        test = [("EnumEq", member, same[0])]
+        for raw in same[1:]:
+            test += [("EnumEq", member, raw), ("OR",)]
+        return test
+
+    conds: dict[str, list[tuple]] = {}
+    for mode in BRIDGE_ROW_MODES:
+        rows = [r for r in BRIDGE_ROWS if r[0] == mode]
+        tag = f"OoTRR_MenuBridge{mode[0].upper()}Pick"
+        picks = []
+        for combo in itertools.product(*(range(len(r[3])) for r in rows)):
+            total = sum(r[3][i] for r, i in zip(rows, combo))
+            prog = []
+            for r, i in zip(rows, combo):
+                prog += row_is(r[1], r[2], r[3], i) + ([("AND",)] if prog else [])
+            name = f"{tag}_" + "_".join(map(str, combo))
+            exps[name] = prog + [("Exp", thresholds[mode](total)), ("AND",)]
+            picks.append(name)
+        exps[tag] = _or_chunks(picks, f"{tag}Or", exps)
+        conds[mode] = [("Exp", tag)]
     for original, name in BRIDGE_MENU_EXP.items():
         prog = [("Bool", BRIDGE_FLAGS["open"])]
         for mode, cond in (("vanilla", [("Exp", original)]), *conds.items()):
@@ -426,6 +543,10 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]], page: int
             row = copy.deepcopy(rows[flag_hash(option_type)])
         row.pop("CheckGameData", None)
         row.pop("IsCheckDisplayGameData", None)
+        for mode, bridge_row, _, _ in BRIDGE_ROWS:
+            if setting == bridge_row:  # affichée seulement quand sa condition de pont est choisie
+                row["CheckGameData"] = BRIDGE_SHOW_EXPS[mode]
+                row["IsCheckDisplayGameData"] = True
         if values is not None:
             names = enum_values[option_type][:len(values)]
             if len(names) < len(values):
@@ -453,10 +574,15 @@ def messages(msbt: bytes, language: str) -> bytes:
                 new[f"{prefix}{option_type}_Caption"] = caption.encode()
                 continue
             title, caption, labels = texts[setting]
-            new[f"{prefix}{option_type}_Title"] = title.encode()
-            new[f"{prefix}{option_type}_Caption"] = caption.encode()
-            for i, v in enumerate(values or []):
-                new[f"{prefix}{option_type}_{i:02d}"] = labels.get(v, v).encode()
+            prefixes = [prefix]
+            mode = next((r[0] for r in BRIDGE_ROWS if r[1] == setting), None)
+            if mode:  # ligne du pont : textes propres à la condition (et ceux de la page, première ligne du type)
+                prefixes = [bridge_text_prefix(prefix, mode)] + ([prefix] if f"{prefix}{option_type}_Title" not in new else [])
+            for pre in prefixes:
+                new[f"{pre}{option_type}_Title"] = title.encode()
+                new[f"{pre}{option_type}_Caption"] = caption.encode()
+                for i, v in enumerate(values or []):
+                    new[f"{pre}{option_type}_{i:02d}"] = labels.get(v, v).encode()
     have = read_labels(msbt)
     clash = [k for k in new if k in have]
     if clash:
@@ -689,6 +815,28 @@ def menu_header(root: dict) -> str:
               "inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {"] + fixed + ["};", ""]
     bridge = SETTINGS["bridge"][1]
     counts = [f"    {{{bridge.index(k)}, {v}}},  // {k}" for k, v in BRIDGE_COUNTS.items()]
+    # lignes du nombre requis : si la condition du pont == bridge, le nombre est celui choisi dans la ligne
+    brows = []
+    mode_type = next(t for s, t, _ in ROWS if s == BRIDGE_MODE_ROW)
+    _, mode_entry = idx[src["DefaultValue"][member[flag_hash(mode_type)]]["Value"]]
+    mode_names = mode_entry["RawValues"]
+    for mode, row, option_type, numbers in BRIDGE_ROWS:
+        _, entry = idx[src["DefaultValue"][member[flag_hash(option_type)]]["Value"]]
+        game = ", ".join(f"0x{flag_hash(v):08x}" for v in entry["RawValues"][:len(numbers)])
+        mode_value = flag_hash(mode_names[BRIDGE_MODES.index(mode)])
+        brows.append(f"    {{{bridge.index(mode)}, 0x{flag_hash(STRUCTS[page_of(row)]):08x}, 0x{flag_hash(option_type):08x}, "
+                     f"{len(numbers)}, {{{game}}}, {{{', '.join(map(str, numbers))}}}, "
+                     f"0x{flag_hash(BRIDGE_SHOW_EXPS[mode]):08x}, 0x{mode_value:08x}, "
+                     f"0x{flag_hash(bridge_row_member(row)):08x}}},  // {row}")
+    lines += ["// ligne du mode du pont : structure et membre (le module natif pose les drapeaux d'affichage)",
+              f"constexpr uint32_t kBridgeModeStructure = 0x{flag_hash(STRUCTS[page_of(BRIDGE_MODE_ROW)]):08x};",
+              f"constexpr uint32_t kBridgeModeMember = 0x{flag_hash(mode_type):08x};  // {mode_type}",
+              "// show_flag : drapeau Bool (CheckGameData de la ligne) vrai si le mode lu vaut mode_value",
+              "struct BridgeRow { int32_t bridge; uint32_t structure; uint32_t member; int32_t count;",
+              "                 uint32_t game_values[9]; int32_t counts[9]; uint32_t show_flag; uint32_t mode_value;",
+              "                 uint32_t full_member; };  // full_member : hachage du nom complet (structure.membre)",
+              f"constexpr int kBridgeRowCount = {len(brows)};",
+              "inline constexpr BridgeRow kBridgeRows[kBridgeRowCount] = {"] + brows + ["};"]
     lines += [f"constexpr int32_t kBridgeSetting = {names.index('bridge')};",
               f"constexpr int32_t kBridgeCountSetting = {names.index('bridge_count')};",
               "struct BridgeCount { int32_t bridge; int32_t count; };",

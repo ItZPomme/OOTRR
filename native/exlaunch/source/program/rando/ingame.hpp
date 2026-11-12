@@ -43,6 +43,10 @@ int32_t AddMaxLife(std::uintptr_t main_base, int32_t quarters);
 // lit les réglages du menu et génère une seed ; renvoie false si la génération échoue
 bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read = nullptr);
 
+// menu : drapeaux d'affichage des lignes du nombre requis pour le pont, selon le mode choisi
+// renvoie la valeur lue du mode (hachage du nom de la valeur ; 0 = illisible)
+uint32_t UpdateBridgeRows(std::uintptr_t main_base);
+
 // seed enregistrée dans la partie (GameData OoTRR.Seed) ; 0 = aucune
 int32_t ReadSavedSeed(std::uintptr_t main_base);
 

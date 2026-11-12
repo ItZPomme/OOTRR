@@ -63,10 +63,13 @@ def native_settings(chosen: dict) -> dict:
     """Réglages tels que GenerateFromMenu les construit : défauts, lignes du menu, réglages fixes,
     nombre du pont selon sa condition."""
     s = defaults()
-    s.update(chosen)
+    picks = {r[1]: int(chosen[r[1]]) for r in menu.BRIDGE_ROWS if r[1] in chosen}
+    s.update({k: v for k, v in chosen.items() if k not in picks})
     s.update(menu.FIXED_SETTINGS)
     if s["bridge"] in menu.BRIDGE_COUNTS:
-        s["bridge_count"] = menu.BRIDGE_COUNTS[s["bridge"]]
+        rows = [r[1] for r in menu.BRIDGE_ROWS if r[0] == s["bridge"] and r[1] in picks]
+        # nombre requis = somme des lignes de la condition (cœurs : base + supplément)
+        s["bridge_count"] = sum(picks[r] for r in rows) if rows else menu.BRIDGE_COUNTS[s["bridge"]]
     return build(s)
 
 
@@ -110,6 +113,15 @@ def settings_from_save(entries: dict[int, int], romfs: Path) -> tuple[int, dict]
             chosen[setting] = values[game.index(raw)]
         else:
             missing.append(setting)
+    for _, row, option_type, numbers in menu.BRIDGE_ROWS:  # nombre requis pour le pont
+        h = flag_hash(f"{menu.STRUCTS[menu.page_of(row)]}.{option_type}")
+        _, entry = idx[members[flag_hash(option_type)]]
+        game = [flag_hash(v) for v in entry["RawValues"][:len(numbers)]]
+        all_values = [flag_hash(v) for v in entry["RawValues"]]
+        if entries.get(h) in game:
+            chosen[row] = numbers[game.index(entries[h])]
+        elif entries.get(h) in all_values:  # au-delà des choix de la ligne (membre partagé) : le maximum
+            chosen[row] = numbers[-1]
     if missing:
         print(f"attention : réglages absents de la sauvegarde (valeur par défaut) : {', '.join(missing)}")
     return seed, chosen

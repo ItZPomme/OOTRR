@@ -253,3 +253,21 @@ actif avec un mod OoTRR (romfs).
 
 Note : Eden journalise un « Userspace PANIC » (0x1A80A) à la fermeture du jeu, avec ou sans
 ce module ; ce n'est pas un plantage du module.
+
+### Nombre requis pour le pont (menu validé en jeu, 2026-11-12)
+
+- Lignes en tête de la page 2 (`ingame_menu.BRIDGE_ROWS`) : pierres 1–3, médaillons 1–6, récompenses 1–9,
+  cœurs = base (3 / 12) + supplément (+0 à +8). Chacune n'est affichée que pour sa condition.
+- **Condition d'affichage (validé en jeu, 2026-11-11)** : `CheckGameData` doit être un drapeau **Bool**
+  (`OoTRR.Menu.Show.<condition>`, non sauvegardé) ; une expression n'affiche jamais la ligne. Le jeu lit la
+  condition à l'ouverture de la page, pas quand le mode change sur la même page : le module natif pose les
+  drapeaux selon la ligne « bridge » de la page 1 (`UpdateBridgeRows`, appelé au chargement de la mise en
+  page). Une ligne cachée ne laisse pas de trou.
+- `0x339c790` (ligne par type) prend la **première ligne du type, même cachée** (Ghidra ; constaté en jeu : la
+  ligne « Rewards » plafonnait à 6 = choix de la ligne médaillons). Le crochet `TableRowByType` rend la
+  première ligne visible du type (+0x24 = hachage de `CheckGameData`, 0 sans condition). Lignes d'un même
+  type = même membre GameData : textes propres à la condition (`<préfixe>B<n>_…`, essayés d'abord), valeur
+  ramenée dans les choix de la ligne visible (`kSetEnum` sur le nom complet, non vérifié) ; une valeur au-delà
+  vaut le maximum (natif, expressions, `ingame_spoiler`).
+- Comparaison d'énumération dans une expression : `[12, drapeau]` puis `[2, valeur]` (`encode_bool_exp`, `EnumEq`).
+- Pont en jeu : `bridge_menu_exps`, une expression par combinaison de choix (« lignes valent … ET au moins N »).

@@ -20,7 +20,7 @@ constexpr int kPageCount = 3;
 inline constexpr uint32_t kPageStructs[kPageCount] = {0x068ab00a, 0x4140784a, 0x2e65116d};
 inline constexpr const char* kPageTables[kPageCount] = {"UI/OptionSetTable/OoTRRMenu.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu2.game__ui__OptionSetTable.bgyml", "UI/OptionSetTable/OoTRRMenu3.game__ui__OptionSetTable.bgyml"};
 inline constexpr const char* kPagePrefixes[kPageCount] = {"OoTRR_", "OoTRR2_", "OoTRR3_"};
-constexpr int kMenuSettingCount = 20;
+constexpr int kMenuSettingCount = 19;
 inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {2, 0x068ab00a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // open_forest <- CameraRotateSpeed
     {3, 0x068ab00a, 0xdd849f22, true, 0, {}, {}},  // open_door_of_time <- IsCameraUpDownReverse
@@ -28,10 +28,8 @@ inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {15, 0x068ab00a, 0xa3f5862f, true, 0, {}, {}},  // skip_child_zelda <- IsUseGyro
     {0, 0x068ab00a, 0x74b1edd9, false, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {0, 1, 2, 3, 4, 5}},  // bridge <- VoiceLanguage
     {21, 0x068ab00a, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 2}},  // starting_age <- DisplayMode
-    {22, 0x068ab00a, 0x3b0fc63f, true, 0, {}, {}},  // random_spawn <- IsChangeJumpButton
     {20, 0x068ab00a, 0xc587a7b1, true, 0, {}, {}},  // start_with_consumables <- IsDisplayTextRuby
     {13, 0x4140784a, 0xc713c7da, false, 2, {0x60fc6939, 0x212dc0e7}, {0, 1}},  // shuffle_rewards <- LockOnType
-    {23, 0x4140784a, 0x0ae99f60, false, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {0, 1, 2}},  // shuffle_songs <- CameraRotateSpeed
     {6, 0x4140784a, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_hearts <- ControllerRumble
     {11, 0x4140784a, 0xd607fb6d, false, 3, {0xa87363e6, 0x51245f02, 0x456117b6}, {0, 1, 2}},  // shuffle_skulltulas <- OcarinaSongEstimateMode
     {5, 0x4140784a, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 3}},  // maps_compasses <- DisplayMode
@@ -41,6 +39,7 @@ inline constexpr MenuSetting kMenuSettings[kMenuSettingCount] = {
     {9, 0x2e65116d, 0x74b1edd9, false, 3, {0x69b014ce, 0x82591fa9, 0x2498c397}, {0, 1, 2}},  // shop_prices <- VoiceLanguage
     {7, 0x2e65116d, 0xc587a7b1, true, 0, {}, {}},  // shuffle_scrubs <- IsDisplayTextRuby
     {10, 0x2e65116d, 0xaf497892, false, 3, {0x390b012d, 0xd4b93848, 0xbfae48cb}, {0, 1, 2}},  // scrub_prices <- DisplayMode
+    {23, 0x2e65116d, 0xd9ec5222, false, 3, {0xb6eede09, 0x6bca39bd, 0x390b012d}, {0, 1, 2}},  // shuffle_songs <- ControllerRumble
     {19, 0x2e65116d, 0xa3f5862f, true, 0, {}, {}},  // shuffle_gifts <- IsUseGyro
 };
 
@@ -54,6 +53,21 @@ inline constexpr FixedSetting kFixedSettings[kFixedSettingCount] = {
     {12, 1},  // skip_cutscenes = safe
 };
 
+// ligne du mode du pont : structure et membre (le module natif pose les drapeaux d'affichage)
+constexpr uint32_t kBridgeModeStructure = 0x068ab00a;
+constexpr uint32_t kBridgeModeMember = 0x74b1edd9;  // VoiceLanguage
+// show_flag : drapeau Bool (CheckGameData de la ligne) vrai si le mode lu vaut mode_value
+struct BridgeRow { int32_t bridge; uint32_t structure; uint32_t member; int32_t count;
+                 uint32_t game_values[9]; int32_t counts[9]; uint32_t show_flag; uint32_t mode_value;
+                 uint32_t full_member; };  // full_member : hachage du nom complet (structure.membre)
+constexpr int kBridgeRowCount = 5;
+inline constexpr BridgeRow kBridgeRows[kBridgeRowCount] = {
+    {2, 0x4140784a, 0x0ae99f60, 3, {0x0c415b69, 0xfbe02251, 0x390b012d}, {1, 2, 3}, 0xcd0d6eb5, 0x2498c397, 0xb3d696cf},  // bridge_stones
+    {3, 0x4140784a, 0x74b1edd9, 6, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987}, {1, 2, 3, 4, 5, 6}, 0x95834171, 0x7d30fc45, 0xa238a23b},  // bridge_medallions
+    {4, 0x4140784a, 0x74b1edd9, 9, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987, 0xa683b1fd, 0x8d62c251, 0x1c3498eb}, {1, 2, 3, 4, 5, 6, 7, 8, 9}, 0xb6f0d350, 0x515b9eeb, 0xa238a23b},  // bridge_dungeons
+    {5, 0x4140784a, 0x0ae99f60, 2, {0x0c415b69, 0xfbe02251}, {3, 12}, 0x55eb1199, 0x33c26987, 0xb3d696cf},  // bridge_hearts_base
+    {5, 0x4140784a, 0x74b1edd9, 9, {0x69b014ce, 0x82591fa9, 0x2498c397, 0x7d30fc45, 0x515b9eeb, 0x33c26987, 0xa683b1fd, 0x8d62c251, 0x1c3498eb}, {0, 1, 2, 3, 4, 5, 6, 7, 8}, 0x55eb1199, 0x33c26987, 0xa238a23b},  // bridge_hearts_plus
+};
 constexpr int32_t kBridgeSetting = 0;
 constexpr int32_t kBridgeCountSetting = 1;
 struct BridgeCount { int32_t bridge; int32_t count; };

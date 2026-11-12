@@ -138,6 +138,22 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     for (const menu::FixedSetting& f : menu::kFixedSettings) settings.values[f.setting] = f.value;
     for (const menu::BridgeCount& b : menu::kBridgeCounts)
         if (settings.values[menu::kBridgeSetting] == b.bridge) settings.values[menu::kBridgeCountSetting] = b.count;
+    // nombre requis = somme des lignes de la condition du pont (cœurs : base + supplément) ; valeur par
+    // défaut ci-dessus si aucune n'est lisible
+    bool first_row = true;
+    for (const menu::BridgeRow& b : menu::kBridgeRows) {
+        if (!manager || settings.values[menu::kBridgeSetting] != b.bridge) continue;
+        int page = 0;
+        while (page < menu::kPageCount && menu::kPageStructs[page] != b.structure) page++;
+        uint32_t value = 0;
+        if (page >= menu::kPageCount || !have[page] || !get_enum(manager, &value, &handles[page], b.member)) continue;
+        int32_t picked = b.counts[b.count - 1];  // valeur au-delà des choix : le maximum
+        for (int i = 0; i < b.count; i++)
+            if (b.game_values[i] == value) picked = b.counts[i];
+        if (first_row) settings.values[menu::kBridgeCountSetting] = 0;
+        first_row = false;
+        settings.values[menu::kBridgeCountSetting] += picked;
+    }
     r.count = logic::kSettingCount < 16 ? logic::kSettingCount : 16;
     for (int i = 0; i < r.count; i++) r.values[i] = settings.values[i];
     g_seed = seed;
@@ -146,6 +162,37 @@ bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {
     g_settings = settings;
     g_ready = Generate(settings, mixed, g_result);
     return g_ready;
+}
+
+uint32_t UpdateBridgeRows(std::uintptr_t main_base) {
+    void* manager = Manager(main_base);
+    if (!manager) return 0;
+    Handle handle;
+    uint32_t mode = 0;
+    if (!reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle)(manager, &handle, menu::kBridgeModeStructure) ||
+        !reinterpret_cast<GetEnumFn>(main_base + kGetStructEnum)(manager, &mode, &handle, menu::kBridgeModeMember))
+        return 0;
+    auto set_bool = reinterpret_cast<SetBoolNodeFn>(main_base + kSetBoolNode);
+    auto get_enum = reinterpret_cast<GetEnumFn>(main_base + kGetStructEnum);
+    for (const menu::BridgeRow& b : menu::kBridgeRows) {
+        // ligne affichée : valeur ramenée dans ses choix (médaillons et donjons partagent le membre)
+        Handle row;
+        uint32_t current = 0;
+        if (mode == b.mode_value &&
+            reinterpret_cast<GetHandleFn>(main_base + kGetStructHandle)(manager, &row, b.structure) &&
+            get_enum(manager, &current, &row, b.member)) {
+            bool ok = false;
+            for (int i = 0; i < b.count; i++) ok = ok || b.game_values[i] == current;
+            if (!ok) reinterpret_cast<SetEnumFn>(main_base + kSetEnum)(manager, b.game_values[b.count - 1], b.full_member);
+        }
+        // même écriture que ApplyStartFlags : valeur lue via un pointeur en nœud + 0x40
+        alignas(16) uint8_t node[0x50] = {};
+        static uint8_t value;
+        value = mode == b.mode_value ? 1 : 0;
+        *reinterpret_cast<uint8_t**>(node + 0x40) = &value;
+        set_bool(node, b.show_flag);
+    }
+    return mode;
 }
 
 bool ReadManualSeed(std::uintptr_t main_base, uint32_t* seed) {
