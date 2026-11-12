@@ -122,6 +122,20 @@ dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
   avoir au moins une liste, une bascule et un séparateur : un modèle de ligne sans ligne de son genre
   reste affiché seul (constaté).
 
+### Bouton « Page suivante » / « Lancer la partie » (à tester en jeu)
+
+- Dans `Sequence/Option.module`, A sur une ligne bouton (genre amiibo / Zelda Notes, `ButtonType` 320412644)
+  mène à un aiguillage `Element_S32Selector` sur `SeqQueryGetSelectedOptionType` : 1 = amiibo
+  (`Amiibo.module`), 16 = Zelda Notes, sinon rien. Types d'option (table du code) : 0 None, 1 IsUseAmiibo,
+  2 IsCameraUpDownReverse, 3 IsCameraRightLeftReverse, 4 CameraRotateSpeed, 5 IsUseGyro, 6 IsChangeJumpButton,
+  7 DisplayMode, 8 IsDisplayTextRuby, 9 MessageWindowTransparency, 10 VoiceLanguage, 11 LockOnType,
+  12 OcarinaSongEstimateMode, 13 OcarinaKeyAssign, 14 VoiceSubtitle, 15 VoiceSubtitleSpeakerName,
+  16 ZeldaNoteState, 17 ControllerRumble.
+- `ingame_menu.option_module` ajoute le cas 13 (OcarinaKeyAssign, inutilisé par nos pages) vers une copie de la
+  fin déclenchée par B : chaque page a une ligne bouton de ce type en bas, titre « Page suivante » (dernière
+  page : « Lancer la partie »). L'écran Options normal n'a pas de bouton de ce type. Le modèle amiibo n'est plus
+  caché dans `OoTRRMenu_00`.
+
 ### Boutiques (validé en jeu, 2026-11-11 : boutique Kokiri, 0 / 2 / 4 articles)
 
 - Chaque article mélangeable reste dans la carte (présent si `OoTRR.Shop<rang>` est faux) avec une

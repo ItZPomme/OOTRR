@@ -332,6 +332,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     (out / menu.RETURN_MODULE).write_bytes(new)
     report.append(f"{menu.RETURN_MODULE}: retour enfant si {menu.FREE_TIME_FLAG}")
 
+    # écran d'options : bouton « Page suivante » / « Lancer la partie »
+    raw = (romfs / menu.OPTION_MODULE).read_bytes()
+    new = menu.option_module(raw)
+    mb.restbl.resize_like(menu.OPTION_MODULE, len(raw), len(new))
+    (out / menu.OPTION_MODULE).parent.mkdir(parents=True, exist_ok=True)
+    (out / menu.OPTION_MODULE).write_bytes(new)
+    report.append(f"{menu.OPTION_MODULE}: bouton de type {menu.NEXT_PAGE_TYPE} -> fermeture (page suivante)")
+
     # écran titre
     raw = (romfs / menu.TITLE).read_bytes()
     new = menu.title_sequence(raw)

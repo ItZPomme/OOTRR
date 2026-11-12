@@ -6,6 +6,8 @@ placement « assumed fill » qui garantit des seeds finissables, spoiler log par
 sphères. Il produit un **mod LayeredFS** (seulement les fichiers modifiés) :
 les fichiers du jeu d'origine ne sont jamais touchés et ne sont pas dans ce dépôt.
 
+**Pour jouer** (installation, réglages du menu, spoiler, problèmes) : [`docs/GUIDE.md`](docs/GUIDE.md).
+
 Contributeurs et agents IA : commencer par [`AGENTS.md`](AGENTS.md), puis
 [`docs/GAME_KNOWLEDGE.md`](docs/GAME_KNOWLEDGE.md), [`docs/FORMATS.md`](docs/FORMATS.md),
 [`docs/ROADMAP.md`](docs/ROADMAP.md) et [`CONTRIBUTING.md`](CONTRIBUTING.md).

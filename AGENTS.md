@@ -6,7 +6,7 @@ produit un **mod LayeredFS** (fichiers modifiés seulement) que l'on installe da
 l'émulateur Eden (ou un dérivé de Yuzu). Code, commentaires et docs sont en **français**.
 
 Lire ensuite, dans cet ordre :
-1. [`README.md`](README.md) — utilisation, réglages.
+1. [`README.md`](README.md) — utilisation, réglages ; [`docs/GUIDE.md`](docs/GUIDE.md) pour les joueurs.
 2. [`docs/GAME_KNOWLEDGE.md`](docs/GAME_KNOWLEDGE.md) — tout ce qu'on sait du jeu (drapeaux,
    quêtes, scripts, pièges). **À lire avant de toucher au jeu.**
 3. [`docs/FORMATS.md`](docs/FORMATS.md) — formats de fichiers et outils de lecture.

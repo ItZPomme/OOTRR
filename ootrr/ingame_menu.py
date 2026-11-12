@@ -35,13 +35,14 @@ BOOTUP = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs"
 GAME_TABLE = "UI/OptionSetTable/OptionSetTable.game__ui__OptionSetTable.bgyml"
 MESSAGES = "LayoutMsg/SystemOption_00.msbt"
 TITLE = "Sequence/NormalTitle.module.ainb"
+OPTION_MODULE = "Sequence/Option.module.ainb"
 COMMON_LAYOUTS = "UI/Layout2Archive/Common.Product.100.Nin_Ounce_NVN2.blarc.zs"
 LAYOUT_CATEGORIES = "UI/LayoutArchiveCategory.Product.100.byml.zs"
 GAME_LAYOUT = "SystemOption_00"
 MENU_LAYOUT = "OoTRRMenu_00"  # copie de SystemOption_00 sans le modèle amiibo (aucune ligne amiibo)
 # un modèle inutilisé reste affiché à sa place ; le séparateur sert (lignes SEPARATOR) : ne pas le cacher,
 # ses copies le seraient aussi
-HIDDEN_PANES = ("Pa_AmiiboBtn_00",)
+HIDDEN_PANES: tuple[str, ...] = ()  # chaque page a maintenant une ligne bouton (Page suivante)
 SEPARATOR = "-"
 
 # réglage -> (type d'option emprunté, valeurs du réglage dans l'ordre affiché) ; None = bascule oui / non.
@@ -50,6 +51,15 @@ SEPARATOR = "-"
 # de la partie (pavé numérique) pour la saisir. Pas un réglage : non sauvegardée.
 SEED_MANUAL = "seed_manual"
 SEED_ROW_NAMES = (SEED_MANUAL,)
+# bouton en bas de chaque page (« Page suivante », dernière page « Lancer la partie ») : une ligne du genre
+# bouton (comme Zelda Notes, ButtonType BUTTON_ROW) d'un type d'option qu'aucune page n'utilise. Dans
+# Sequence/Option.module, A sur un bouton passe par un aiguillage sur le type sélectionné (1 = amiibo,
+# 16 = Zelda Notes) : option_module y ajoute ce type, qui ferme l'écran comme B (page suivante).
+NEXT_PAGE = "next_page"
+NEXT_PAGE_TYPE = "OcarinaKeyAssign"
+NEXT_PAGE_TYPE_ID = 13  # rang dans la table des types du code (0 None, 1 IsUseAmiibo … 17 ControllerRumble)
+BUTTON_ROW = 320412644  # ButtonType des lignes bouton (amiibo, Zelda Notes)
+ACTION_ROW_NAMES = (NEXT_PAGE,)
 # repère remplacé par le module natif (texte lu) par la seed aléatoire tirée à l'ouverture du menu
 SEED_PLACEHOLDER = "######"
 # Pages : l'écran d'options s'enchaîne une fois par page (Nouvelle partie -> page 1 -> page 2 ->
@@ -74,6 +84,8 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         ("starting_age", "DisplayMode", ["child", "adult", "random"]),
         ("random_spawn", "IsChangeJumpButton", None),
         ("start_with_consumables", "IsDisplayTextRuby", None),
+        (SEPARATOR, "", None),
+        (NEXT_PAGE, NEXT_PAGE_TYPE, None),
     ],
     [  # page 2 : ce qui est mélangé
         ("shuffle_rewards", "LockOnType", ["vanilla", "shuffled"]),
@@ -85,6 +97,8 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         (SEPARATOR, "", None),
         ("shuffle_ocarinas", "IsUseGyro", None),
         ("logic_lens_required", "IsChangeJumpButton", None),
+        (SEPARATOR, "", None),
+        (NEXT_PAGE, NEXT_PAGE_TYPE, None),
     ],
     [  # page 3 : boutiques et Peste Mojo
         ("shuffle_shops", "CameraRotateSpeed", ["off", "1", "2", "3", "4"]),
@@ -92,6 +106,8 @@ PAGES: list[list[tuple[str, str, list[str] | None]]] = [
         (SEPARATOR, "", None),
         ("shuffle_scrubs", "IsDisplayTextRuby", None),
         ("scrub_prices", "DisplayMode", ["vanilla", "affordable", "random"]),
+        (SEPARATOR, "", None),
+        (NEXT_PAGE, NEXT_PAGE_TYPE, None),
     ],
 ]
 # par page : structure GameData, table de lignes, préfixe des textes (le module natif cherche
@@ -110,7 +126,7 @@ BRIDGE_COUNTS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 10}
 # base des fichiers du mod du menu : scènes passées, et Kokiri bloqueurs présents selon leur drapeau
 # (comme open_forest = ask) pour que la forêt s'ouvre en jeu selon le réglage
 STATIC_SETTINGS = {"skip_cutscenes": "safe", "open_forest": "ask"}
-SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR and r[0] not in SEED_ROW_NAMES]
+SETTING_ROWS = [r for r in ROWS if r[0] != SEPARATOR and r[0] not in SEED_ROW_NAMES + ACTION_ROW_NAMES]
 SEED_ROWS = [r for r in ROWS if r[0] in SEED_ROW_NAMES]
 
 
@@ -188,6 +204,11 @@ TEXTS_FR = {
     "seed_manual": ("Seed manuelle", f"Désactivé : seed aléatoire {SEED_PLACEHOLDER}. Activé : un clavier s'ouvre\nau lancement de la partie pour saisir la seed.", {}),
 }
 FRENCH = ("EUfr", "USfr")
+BUTTON_TITLE_LABEL = "Pa_AmiiboBtn_00-T_BtnTitle_00"
+TEXTS_EN[NEXT_PAGE] = (("Next Page", "Go to the next page of settings (or press B)."),
+                       ("Start the Game", "Generate the seed and start the game (or press B)."))
+TEXTS_FR[NEXT_PAGE] = (("Page suivante", "Passer à la page de réglages suivante (ou appuyer sur B)."),
+                       ("Lancer la partie", "Générer la seed et commencer la partie (ou appuyer sur B)."))
 
 
 def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
@@ -206,7 +227,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
             raise KeyError(f"GameData : structure {struct} déjà présente")
         rows = [r for r in PAGES[page] if r[0] != SEPARATOR]
         types = {flag_hash(t): t for _, t, _ in rows}
-        by_type = {t: (s, values) for s, t, values in rows if s not in SEED_ROW_NAMES}
+        by_type = {t: (s, values) for s, t, values in rows if s not in SEED_ROW_NAMES + ACTION_ROW_NAMES}
         members = []
         for m in src["DefaultValue"]:
             section, entry = idx[m["Value"]]
@@ -388,7 +409,12 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]], page: int
         if setting == SEPARATOR:
             out.append(copy.deepcopy(separator))
             continue
-        row = copy.deepcopy(rows[flag_hash(option_type)])
+        if setting == NEXT_PAGE:  # ligne bouton : copie de la ligne Zelda Notes, autre type
+            row = copy.deepcopy(next(r for r in tree["OptionSetArray"]
+                                     if r.get("ButtonType") == BUTTON_ROW and "OptionType" in r))
+            row["OptionType"] = U32(flag_hash(option_type))
+        else:
+            row = copy.deepcopy(rows[flag_hash(option_type)])
         row.pop("CheckGameData", None)
         row.pop("IsCheckDisplayGameData", None)
         if values is not None:
@@ -402,12 +428,20 @@ def option_table(game_table: bytes, enum_values: dict[str, list[str]], page: int
 
 
 def messages(msbt: bytes, language: str) -> bytes:
-    texts = TEXTS_FR if language in FRENCH else TEXTS_EN
+    texts = TEXTS_EN  # menu en anglais dans toutes les langues (choix du joueur) ; TEXTS_FR gardés
     new = {}
     for page, rows in enumerate(PAGES):
         prefix = PREFIXES[page]
         for setting, option_type, values in rows:
             if setting == SEPARATOR:
+                continue
+            if setting == NEXT_PAGE:
+                last = page == len(PAGES) - 1
+                title, caption = texts[NEXT_PAGE][1 if last else 0]
+                # le titre du bouton peut venir du texte du volet (comme « Zelda Notes ») ou du type
+                new[f"{prefix}{BUTTON_TITLE_LABEL}"] = title.encode()
+                new[f"{prefix}{option_type}_Title"] = title.encode()
+                new[f"{prefix}{option_type}_Caption"] = caption.encode()
                 continue
             title, caption, labels = texts[setting]
             new[f"{prefix}{option_type}_Title"] = title.encode()
@@ -698,3 +732,38 @@ def menu_header(root: dict) -> str:
               f"constexpr int32_t kOpenDoorSetting = {names.index('open_door_of_time')};"]
     lines += ["", "}  // namespace ootrr::menu", ""]
     return "\n".join(lines)
+
+
+def option_module(raw: bytes) -> bytes:
+    """Sequence/Option.module : A sur une ligne bouton du type NEXT_PAGE_TYPE ferme l'écran comme B (le
+    titre enchaîne alors la page suivante, ou la confirmation après la dernière page).
+
+    Dans le graphe, A sur un bouton mène à un aiguillage (Element_S32Selector) sur le type d'option
+    sélectionné (SeqQueryGetSelectedOptionType) : 1 = amiibo, 16 = Zelda Notes, sinon rien. On y ajoute
+    le cas NEXT_PAGE_TYPE_ID vers une copie de la fin utilisée par B (SeqOneShotEnd vers la fermeture).
+    L'écran Options normal n'a aucune ligne bouton de ce type : il ne change pas."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    nodes = script.nodes
+    query = next(n for n in nodes if n.name == "SeqQueryGetSelectedOptionType")
+    switch = next(n for n in nodes if n.type == ainb.NodeType.Element_S32Selector
+                  and any(p.name == "Input" and p.source.src_node_index == query.index for p in n.params.int_inputs))
+    amiibo = next(c for c in switch.child_plugs if getattr(c, "condition", None) == 1)
+    triggers = next(n for n in nodes if n.name == "SeqQueryControllerTrigMaskChecker")
+    trig_b = [i for i, p in enumerate(triggers.params.bool_outputs) if p.name == "TrigB"][0]
+    on_b = next(n for n in nodes if n.type == ainb.NodeType.Element_BoolSelector
+                and any(p.source.src_node_index == triggers.index and p.source.src_output_index == trig_b
+                        for p in n.params.bool_inputs))
+    close = nodes[next(c for c in on_b.child_plugs if c.name == "True").node_index]
+    if close.name != "SeqOneShotEnd" or any(getattr(c, "condition", None) == NEXT_PAGE_TYPE_ID for c in switch.child_plugs):
+        raise ValueError("Option.module : structure inattendue")
+    end = copy.deepcopy(close)
+    end.index = len(nodes)
+    end.guid = str(uuid.UUID(int=(0x4F6F5452 << 96) | (0x4000 << 48) | (0x8000 << 32) | len(nodes)))
+    nodes.append(end)
+    plug = copy.deepcopy(amiibo)
+    plug.node_index = end.index
+    plug.condition = NEXT_PAGE_TYPE_ID
+    switch.child_plugs.insert(switch.child_plugs.index(amiibo) + 1, plug)
+    return script.to_binary()

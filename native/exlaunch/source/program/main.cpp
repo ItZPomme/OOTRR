@@ -416,6 +416,7 @@ const char* GroundItem(const char* item) {
  * const char** étiquette ; 0 = trouvé). Les balises de nom (ex. Shop_SelectItemName dans un message de
  * vente) l'appellent sans passer par 0xa6afe0 : texte <jeton>_Name… redirigé vers celui de l'objet. */
 int g_inner_logs = 12;
+int g_button_logs = 12;
 
 HOOK_DEFINE_TRAMPOLINE(FindMessageInner) {
     static u64 Callback(void* manager, void* out, const char** file, const char** label) {
@@ -438,6 +439,27 @@ HOOK_DEFINE_TRAMPOLINE(FindMessageInner) {
                 }
                 if (result == 0) return result;
             }
+        }
+        // menu : textes des volets (ex. titre du bouton « Pa_AmiiboBtn_00-T_BtnTitle_00 ») cherchés ici sans
+        // passer par 0xa6afe0 : même redirection par page « <préfixe><étiquette> »
+        if (g_menu && label && *label && file && *file) {
+            bool button = false;
+            for (const char* p = *label; *p; p++)
+                if (p[0] == 'B' && p[1] == 't' && p[2] == 'n' && p[3] == 'T') button = true;
+            static char name[160];
+            size_t n = 0;
+            for (const char* p = ootrr::menu::kPagePrefixes[g_page]; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+            for (const char* p = *label; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+            name[n] = 0;
+            const char* mine = name;
+            u64 result = Orig(manager, out, file, &mine);
+            if (button && g_button_logs > 0) {
+                g_button_logs--;
+                Log(*file);
+                Log(name);
+                LogValue("OoTRR: titre de bouton du menu (recherche interieure), resultat", result);
+            }
+            if (result == 0) return result;
         }
         return Orig(manager, out, file, label);
     }
@@ -499,6 +521,16 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
                 }
                 return found;
             }
+        }
+        if (g_menu && label && *label && g_button_logs > 0) {
+            for (const char* p = *label; *p; p++)
+                if (p[0] == 'B' && p[1] == 't' && p[2] == 'n' && p[3] == 'T') {
+                    g_button_logs--;
+                    if (file && *file) Log(*file);
+                    Log(*label);
+                    Log("OoTRR: titre de bouton du menu demande (0xa6afe0)");
+                    break;
+                }
         }
         if (g_menu && file && *file && label && *label && SameString(*file, kOptionMessages)) {
             char name[160];
