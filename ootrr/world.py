@@ -94,6 +94,13 @@ EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
 # Step01 : avec ses scènes marquées vues (EXTRA_SKIPPED) ou Zelda passée (quête Complete), la lumière restait
 # figée. L'étape qui pose le drapeau est sautée (la palette « First » n'est qu'un éclairage de première arrivée).
 FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
+# Le temps ne s'écoule qu'après l'arrivée à l'entrée de la plaine : 0x345c020 (« heure figée ? », appelé par
+# l'avance de l'heure 0x3cdf70) répond « libre » si la quête Meet_DekuTree est à Ready, ou si
+# HyruleField_ArriveEntrance est vrai et HrlField_HasEnteredFirstTime_Adult faux ; sinon l'heure ne bouge plus et
+# les demandes d'heure (Chant du Soleil) sont effacées sans être appliquées (trace native en jeu, 2026-11-12 :
+# 6 h 00 pendant toute la partie, demandes 0 h et 20 h ignorées). HyruleField_ArriveEntrance n'est posé que par la
+# scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 132), jamais jouée avec les scènes passées ou Zelda passée.
+TIME_FLOW_FLAG = "HyruleField_ArriveEntrance"
 # La scène de Saria au pont (Dm_Kokiri_0155) n'est plus passée : Saria donne son objet au pont (l'Ocarina
 # des fées, ou l'objet de la seed avec shuffle_ocarinas), comme dans le jeu d'origine.
 SARIA_GIFT = "LW Gift from Saria"
@@ -550,6 +557,8 @@ class World:
     def start_flags(self) -> dict[str, bool]:
         """Drapeaux de sauvegarde à activer dès la nouvelle partie."""
         flags: dict[str, bool] = {}
+        # cycle jour / nuit : voir TIME_FLOW_FLAG (toujours, quels que soient les réglages)
+        flags[TIME_FLOW_FLAG] = True
         if self.settings.get("maps_compasses") == "start_with":
             for loc in self.locations.values():
                 if loc.dungeon_item:
