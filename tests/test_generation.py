@@ -39,6 +39,8 @@ PRESETS = {
     "ocarinas mélangés": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "open_door_of_time": True},
     "chants mélangés": {"shuffle_songs": "shuffle", "shuffle_rewards": "shuffled"},
     "chants aléatoires": {"shuffle_songs": "random", "shuffle_hearts": "all", "skip_child_zelda": True},
+    "cadeaux mélangés": {"shuffle_gifts": True, "shuffle_ocarinas": True, "shuffle_hearts": "freestanding"},
+    "cadeaux, boutiques": {"shuffle_gifts": True, "shuffle_shops": "3", "skip_child_zelda": True, "accessibility": "beatable"},
     "départ adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 17},
     "adulte, apparition aléatoire": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 30, "free_time_travel": True},
     "départ aléatoire enfant": {"random_spawn": True, "spawn_point": 12, "start_with_consumables": True},
@@ -186,6 +188,27 @@ class GenerationTests(unittest.TestCase):
         for name, overrides in PRESETS.items():
             with self.subTest(preset=name):
                 self._check(overrides, range(1, N_SEEDS + 1))
+
+    def test_gifts(self):
+        """shuffle_gifts : les 17 cadeaux sont mélangés, sans bombes ni rubis ; les modifications de scènes
+        nomment l'objet placé (mod sans menu) et chaque événement visé existe dans gifts.json."""
+        off = World(settings_mod.build())
+        self.assertFalse([l for l in off.locations.values() if l.gift and l.shuffle])
+        world = World(settings_mod.build({"shuffle_gifts": True}))
+        gifts = [l for l in world.locations.values() if l.gift]
+        self.assertEqual(len(gifts), 17)
+        self.assertTrue(all(l.shuffle for l in gifts))
+        for seed in range(1, 6):
+            result = generate(world, seed)
+            changes = world.gift_event_changes(result.placements)
+            for loc in gifts:
+                item = result.placements[loc.name]
+                self.assertFalse(item.startswith("Item_BombBundle") or item.startswith("TBox_Rupee_"), loc.name)
+                for flow, event, param, old in world.gift_edits[loc.name]:
+                    got = [e for e in changes.get(flow, []) if e[:3] == (event, param, old)]
+                    self.assertEqual(bool(got), item != old, (loc.name, item))
+                    if got:
+                        self.assertEqual(got[0][3], item)
 
     def test_deterministic(self):
         a = generate(World(settings_mod.build()), 42).placements

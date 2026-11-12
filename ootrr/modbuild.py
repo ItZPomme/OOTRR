@@ -89,14 +89,15 @@ class ModBuilder:
         event_changes : {flux: {ancien nom: nouveau nom}} (ex. l'objet donné)
         event_skips   : {flux: [scènes]} étapes qui jouent ces scènes, à sauter
         start_items   : objets ajoutés à l'inventaire au début de l'introduction"""
-        from .formats.evfl import add_actions, find_action, insert_flow, replace_strings, skip_event_steps
+        from .formats.evfl import (add_actions, find_action, insert_flow, replace_event_strings, replace_strings,
+                                   skip_event_steps)
 
         report = []
         event_skips = event_skips or {}
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW} | set(event_changes)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -114,6 +115,12 @@ class ModBuilder:
                 new, count = replace_strings(new, mapping)
                 if count == 0:
                     raise KeyError(f"{flow} : aucune des chaînes {list(mapping)} n'est utilisée")
+            if flow in self.gift_edits:
+                # cadeaux (data/gifts.json) : paramètres texte d'événements précis -> jeton du lieu ou objet placé
+                new, gift_report = replace_event_strings(new, self.gift_edits[flow])
+                if gift_report:
+                    raise KeyError(f"{flow} : cadeau différent du relevé ({'; '.join(gift_report)})")
+                report.append(f"{flow}: {len(self.gift_edits[flow])} cadeaux")
             if start_items and flow == self.START_FLOW:
                 # action « ajouter à l'inventaire » copiée de la scène où Saria donne l'ocarina (sans animation)
                 template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
@@ -261,6 +268,8 @@ class ModBuilder:
     OCARINA_GUARD = ("Dm_Kokiri_0155", "Item_Ocarina_Fairy", "IsGet.Item_Ocarina_Time")
     # désactivée quand l'objet de Saria peut changer (shuffle_ocarinas, menu natif) : il serait perdu
     ocarina_guard = True
+    # cadeaux : {flux: [(événement, paramètre, texte d'origine, nouveau texte)]} (World.gift_event_changes ou jetons)
+    gift_edits: dict = {}
     moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
     # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
     # (flux, acteur, action, paramètre, valeur, drapeau). Coffre de l'épée Kokiri : son événement

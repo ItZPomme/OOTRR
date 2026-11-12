@@ -659,29 +659,75 @@ def replace_strings(d: bytes, mapping: dict[str, str]) -> tuple[bytes, int]:
     """Remplace chaque chaîne de mapping partout où un pointeur la désigne.
 
     Retourne (nouveau fichier, nombre de pointeurs redirigés)."""
-    reloc, size = _header(d)
     refs = string_refs(d)
-    targets = {old: refs[old] for old in mapping if old in refs}
-    if not targets:
-        return d, 0
+    return _redirect_slots(d, [(mapping[old], slots) for old, slots in refs.items() if old in mapping])
 
+
+def event_param_slot(d: bytes, event: int, param: str) -> tuple[int, str | None] | None:
+    """(emplacement du pointeur, texte actuel) du paramètre texte `param` de l'événement n° `event`
+    (action, condition ou sous-séquence) ; None s'il n'existe pas ou n'est pas un texte."""
+    reloc, _ = _header(d)
+    fc = _flowchart_full(d)
+    if not 0 <= event < fc["n_events"]:
+        return None
+    o = fc["events"] + event * EVENT_SIZE
+    if d[o + 8] not in (EV_ACTION, EV_SWITCH, EV_SUBFLOW):
+        return None
+    p = _q(d, o + 0x10)
+    if not p:
+        return None
+    n = struct.unpack_from("<H", d, p + 2)[0]
+    names = _dic_names(d, _q(d, p + 8))
+    for i in range(n):
+        if names[i] != param:
+            continue
+        pv = _q(d, p + 0x10 + 8 * i)
+        if d[pv] != 5:  # 5 = texte
+            return None
+        slot = pv + 0x10
+        return slot, _string_at(d, _q(d, slot), reloc)
+    return None
+
+
+def replace_event_strings(d: bytes, edits: list[tuple[int, str, str, str]]) -> tuple[bytes, list[str]]:
+    """Modifie des paramètres texte d'événements précis : [(événement, paramètre, texte attendu, nouveau texte)].
+
+    Contrairement à replace_strings, une chaîne partagée par d'autres événements (comme l'objet testé par une
+    condition) reste intacte. Un événement dont le texte actuel diffère de celui attendu est ignoré et
+    signalé dans le rapport (autre version du jeu)."""
+    groups: list[tuple[str, list[int]]] = []
+    report = []
+    for event, param, old, new in edits:
+        found = event_param_slot(d, event, param)
+        if found is None or found[1] != old:
+            report.append(f"événement {event} : {param} = {found[1] if found else None!r}, attendu {old!r}")
+            continue
+        groups.append((new, [found[0]]))
+    out, _ = _redirect_slots(d, groups)
+    return out, report
+
+
+def _redirect_slots(d: bytes, groups: list[tuple[str, list[int]]]) -> tuple[bytes, int]:
+    """Écrit chaque nouvelle chaîne en fin de données et redirige les pointeurs `slots` vers elle."""
+    reloc, size = _header(d)
+    if not groups:
+        return d, 0
     body = bytearray(d[:reloc])
     relt = bytearray(d[reloc:size])
-    new_offsets: dict[str, int] = {}
-    for old in targets:
-        new = mapping[old]
-        if len(body) % 2:
-            body.append(0)
-        new_offsets[old] = len(body)
-        raw = new.encode("utf-8")
-        body += struct.pack("<H", len(raw)) + raw + b"\0"
+    count = 0
+    offsets: dict[str, int] = {}
+    for new, slots in groups:
+        if new not in offsets:
+            if len(body) % 2:
+                body.append(0)
+            offsets[new] = len(body)
+            raw = new.encode("utf-8")
+            body += struct.pack("<H", len(raw)) + raw + b"\0"
     while len(body) % 8:
         body.append(0)
-
-    count = 0
-    for old, slots in targets.items():
+    for new, slots in groups:
         for slot in slots:
-            struct.pack_into("<Q", body, slot, new_offsets[old])
+            struct.pack_into("<Q", body, slot, offsets[new])
             count += 1
 
     new_reloc = len(body)

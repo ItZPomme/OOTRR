@@ -132,6 +132,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         logic = patch.get("logic_patches") or {}
         if logic:
             print(f"Modules de logique modifiés : {', '.join(sorted(logic))}")
+        if (patch.get("settings") or {}).get("shuffle_gifts"):
+            print("Cadeaux mélangés : les objets sont donnés sous leur nom (non validé en jeu hors du menu natif)")
         event_changes = patch.get("event_changes") or {}
         if event_changes:
             print(f"Récompenses de boss modifiées dans {len(event_changes)} scènes")
@@ -141,6 +143,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
             builder.moat_items = tuple(patch["moat_items"])
         builder.ocarina_guard = bool(patch.get("ocarina_guard", True))
         builder.song_gives = patch.get("song_gives") or None
+        builder.gift_edits = {f: [tuple(e) for e in v] for f, v in (patch.get("gift_changes") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),

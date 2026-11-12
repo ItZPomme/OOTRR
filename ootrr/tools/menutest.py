@@ -225,6 +225,15 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             mb.song_gives[vanilla] = t
             tokens_actors[t] = f"SELF@{vanilla}"
         mb.moat_items = (mb.moat_items[0], mb.song_gives["Item_Melody_TimeSong"])
+        # cadeaux (mini-jeux, Grandes Fées, Darunia…) : les scènes nomment le jeton du lieu ; le module natif
+        # donne l'objet de la seed (l'objet d'origine sans shuffle_gifts)
+        from ..native_logic import gift_tokens
+        mb.gift_edits = {}
+        for lname, (t, vanilla, edits) in gift_tokens().items():
+            tokens_actors[t] = f"SELF@{vanilla}"
+            for flow, event, param, old in edits:
+                mb.gift_edits.setdefault(flow, []).append((event, param, old, t))
+        report.append(f"cadeaux : {len(gift_tokens())} lieux donnent un jeton")
         # point d'apparition (random_spawn, départ adulte) : l'introduction lit OoTRR.Spawn (écrit par le module)
         from ..starting import spawns
         mb.spawn_branch = [(s["banc"], s["pos"]) for s in spawns()]

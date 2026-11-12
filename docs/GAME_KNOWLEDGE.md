@@ -87,6 +87,26 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   (à tester en jeu : la leçon de la scène joue toujours le chant d'origine, et une scène qui se rejouerait
   si le chant n'est pas obtenu redonnerait l'objet).
 
+## Cadeaux (mini-jeux, Grandes Fées…) **[fichiers]**
+
+- Ces objets **ne passent pas** par `EventTriggerAddOrRemovePouchContent` : les scripts les nomment dans un
+  paramètre texte d'une sous-séquence. Deux mécanismes : `NpcCommon:NpcCommon_HandOver_NpcToPlayer_NoDisplay`
+  (paramètre `ReveiveItem` ; tirs `MiniGame_HitTarget`, bowling, pêche, Anju `Minigame_CatchCucco`) et
+  `Dm_SY_GetInEvent:GetInEvent_*` (paramètre `ActorName` ; Grandes Fées `Dm_FairyFountain_*`, Darunia
+  `Dm_Goron_0030`, carte Gerudo `Dm_Gerudo_0025`, `Dm_LostWood_0040`, tir à cheval, plongée, Flèches de
+  lumière `Dm_TimeTemple_0130`). Le sac / carquois donné dépend de ce que Link possède (condition
+  `EventQueryIsExistInPouch` sur le niveau moyen) : une variante par objet, relevées dans `data/gifts.json`
+  (flux, n° d'événement, paramètre, texte d'origine).
+- `evfl.replace_event_strings` ne change que ces événements précis : la chaîne « Item_BulletBag_Medium » est
+  **partagée** avec la condition `IsExistInPouch` (pointeur unique), `replace_strings` la casserait.
+- Avec le menu natif, chaque lieu donne le jeton `OoTRR_Lnnnn` (copie de l'objet d'origine) et le crochet
+  `PouchAdd` donne l'objet de la seed, comme pour les ocarinas ; réglage `shuffle_gifts`, ligne « Gifts » (page 3).
+  Sans menu, le nom de l'objet placé remplace directement le texte. **Pas encore validé en jeu.**
+- Non faits : lettre de Zelda (`Dm_HrlCastle_0050`, interfère avec `skip_child_zelda`), Talon (la bouteille de lait
+  passe par `GetInEventInBottle` / `HandOver_EmptyBottle`, bouteille avec contenu), lettre de Ruto (nom non trouvé dans
+  les scripts), 5 Poes (`Npc_Hylia_048_BottleShop`, `GetInEvent_Poeshop`) et boutique de potions : absents de la
+  logique actuelle ; bowling 2e prix, tir à cheval 1000 points et autres quarts de cœur : mécanisme non relevé.
+
 ## Boutiques, Peste Mojo, Skulltulas
 
 - **Liste d'un marchand : ne jamais ajouter `Release` à un article qui n'en a pas** : la lecture de
