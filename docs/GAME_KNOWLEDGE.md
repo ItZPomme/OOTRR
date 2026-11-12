@@ -210,8 +210,7 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
 - Rencontrer Zelda (`Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda`) fait passer la quête
   `Goto_HyruleCastle` à `Complete` (enum hash 3683238313, relevé dans `Goto_HyruleCastle_IsCompleted_Exp`)
   et `DoorOfTime` à `Step01`. `skip_child_zelda` (et la porte ouverte) posent ces états au départ, pour que
-  le temps passe comme après Zelda **[fichiers]** (à tester en jeu : le mécanisme exact qui fige le temps
-  avant Zelda n'a pas été trouvé dans les fichiers).
+  le temps passe comme après Zelda **[fichiers]** ; ce n'était pas suffisant : voir `HyruleField_ArriveEntrance` ci-dessous.
 - **Lumière figée de la plaine enfant [fichiers]** : `WorldParam/HyruleField_Child` a une
   `ConditionEnvTimePalette` (`GameDataCondition: HyruleField_ChangeENV`) vers `MainField_Bluesky_First`
   (`Pack/EnvPalette.pack`), copie de `MainField_Bluesky` avec `IsForceMainLight: true` (soleil fixe,
@@ -222,6 +221,7 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   vue, quête `Goto_HyruleCastle` à Step01) que dans une partie normale : l'étape 182 est sautée
   (`world.FIELD_FIRST_PALETTE_STEP`, à tester en jeu sur une nouvelle partie).
 - `IsWorldTimeStop` / `IsDisableTimeProgress` sont des réglages d'événement (EventSetting), pas un état global.
+- **Le temps ne s'écoule qu'après `HyruleField_ArriveEntrance` [jeu, trace native]** : 0x345c020 fige l'heure sauf si `Meet_DekuTree` est à Ready, ou `HyruleField_ArriveEntrance` vrai et `HrlField_HasEnteredFirstTime_Adult` faux (posé par `Dm_TimeTemple_0055`, effacé à l'arrivée dans une zone par `Dm_SY_BancChangeArrive`). Heure figée = demandes d'heure ignorées (Chant du Soleil : nuit visuelle seulement). Le drapeau vient du hibou (`Goto_HyruleCastle_Kaepora_00`) : posé au départ, **validé en jeu** (2026-11-12). Vitesse constatée : environ 2 minutes de jeu par seconde.
 
 ## Âge et point de départ
 
