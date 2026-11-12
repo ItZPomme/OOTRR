@@ -270,7 +270,7 @@ inline constexpr LocationInfo kLocations[kLocationCount] = {
     {"LH Child Fishing", 41, 0, 1660, 69, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, false},
     {"LH Adult Fishing", 41, 0, 1661, 6, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, true},
     {"LH Lab Dive", 41, 0, 1662, 69, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, false},
-    {"LH Sun", 41, 0, 1680, 27, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, false},
+    {"LH Sun", 41, 0, 1680, 27, -1, true, 0, 3, false, 0, false, false, false, 0, "", 0, false, false},
     {"LH Freestanding PoH", 41, 0, 1692, 69, -1, true, 0, 1, false, 0, false, false, false, 0, "", 0, false, false},
     {"Song from Malon", 42, 1, 1694, 34, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, false},
     {"LLR Talons Chickens", 42, 0, 1703, 17, -1, false, 0, 0, false, 0, false, false, false, 0, "", 0, false, false},

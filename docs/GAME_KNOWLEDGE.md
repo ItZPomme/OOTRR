@@ -107,6 +107,13 @@ les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
   les scripts), 5 Poes (`Npc_Hylia_048_BottleShop`, `GetInEvent_Poeshop`) et boutique de potions : absents de la
   logique actuelle ; bowling 2e prix, tir à cheval 1000 points et autres quarts de cœur : mécanisme non relevé.
 
+- **Flèche de feu** : objet au sol `Obj_Arrow_Fire` (base `Obj_Item_Base`, comme les quarts de cœur) dans
+  `HyruleField_Adult_Static`, créé par `HyruleField_LakeHylia_Adult_Prefab_5313` (quête `SubEvent_GetFireArrow`
+  à Ready, plage horaire, flèche tirée dans le soleil -> scène `Dm_LakeHrl_0030`, Step03). Lieu `pickup: "item"`
+  (avec `actor`), mélangé avec `shuffle_gifts` ; jeton comme les cœurs au sol **[fichiers]**.
+- Rivière Zora (enfant) : rochers `Obj_BrokenRock_A_01` à l'entrée, à détruire à la bombe (pas de version
+  adulte) **[jeu, d'origine]**.
+
 ## Boutiques, Peste Mojo, Skulltulas
 
 - **Liste d'un marchand : ne jamais ajouter `Release` à un article qui n'en a pas** : la lecture de
