@@ -77,6 +77,9 @@ def encode_bool_exp(program: list) -> list[list[int]]:
         if step[0] == "IntEq":  # entier == constante : codes 15 (drapeau Int) puis 16 (constante)
             out += [[15, flag_hash(step[1])], [16, int(step[2])]]
             continue
+        if step[0] == "EnumEq":  # énumération == valeur (nom) : codes 12 (drapeau Enum) puis 2 (hachage de la valeur)
+            out += [[12, flag_hash(step[1])], [2, flag_hash(step[2])]]
+            continue
         op = BOOL_EXP_OPS[step[0]]
         out.append([op, flag_hash(step[1])] if len(step) > 1 else [op])
     return out

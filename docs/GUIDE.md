@@ -103,25 +103,25 @@ pour taper une seed au clavier au lancement (même seed + mêmes réglages = mê
 | Open Door of Time | Porte du Temps ouverte dès le départ. |
 | Free Time Travel | L'Épée de légende renvoie Link enfant à tout moment (le remake exige sinon le Temple de la Forêt). |
 | Skip Child Zelda | Lettre et Berceuse de Zelda au départ ; la quête du château est finie (le cycle jour / nuit démarre). |
-| Rainbow Bridge | Condition du pont vers le château de Ganon : Open, Vanilla, Stones (3), Medallions (6), Dungeons (9), Hearts (10). |
+| Rainbow Bridge | Condition du pont vers le château de Ganon : Open, Vanilla, Stones, Medallions, Dungeons, Hearts. Le nombre requis se choisit en haut de la page 2. |
 | Starting Age | Child (maison de Link), Adult (Temple du Temps, Épée de légende donnée, porte ouverte et voyage libre imposés) ou Random. |
-| Random Spawn | La partie commence n'importe où hors des donjons (selon l'âge de départ). |
 | Start With Consumables | Petits sacs de bâtons et de noix Mojo pleins (10 et 20). |
 
 **Page 2 — ce qui est mélangé**
 
+En haut de la page, selon la condition du pont choisie page 1 : Stones Required (1–3), Medallions Required
+(1–6), Rewards Required (1–9), ou Hearts Required (3 ou 12) + Extra Hearts (+0 à +8).
+
 | Réglage | Effet |
 |---|---|
 | Dungeon Rewards | Pierres et médaillons mélangés entre les boss et la poche de Link. |
-| Songs | Vanilla (chants à leur place), Shuffle (mélangés entre les 12 emplacements de chants), Random (les emplacements de chants rejoignent le pool : un chant peut être dans un coffre, et un PNJ peut donner n'importe quel objet). |
 | Heart Pieces | Quarts de cœur au sol (Freestanding), et aussi réceptacles des boss (All). |
 | Gold Skulltulas | Les Skulltulas d'or lâchent un objet de la seed (Overworld : hors donjons ; All : toutes). |
 | Maps and Compasses | À leur place, données au départ, ou retirées. |
 | Shuffle Ocarinas | Saria et les douves donnent un objet de la seed ; le 2e ocarina obtenu est l'Ocarina du Temps. |
-| Gifts | Récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed (nouveau, pas encore validé en jeu). |
 | Lens Required | La logique exige le Monocle de Vérité pour les passages invisibles. |
 
-**Page 3 — boutiques et Peste Mojo**
+**Page 3 — boutiques, Peste Mojo, chants et cadeaux**
 
 | Réglage | Effet |
 |---|---|
@@ -129,6 +129,8 @@ pour taper une seed au clavier au lancement (même seed + mêmes réglages = mê
 | Shop Prices | Vanilla (prix de l'article remplacé, 99 max), Affordable (10), Random (0 à 95). |
 | Deku Scrubs | Les 5 Peste Mojo qui vendent un objet unique vendent un objet de la seed. |
 | Deku Scrub Prices | Vanilla (40), Affordable (10), Random (0 à 95). |
+| Songs | Vanilla (chants à leur place), Shuffle (mélangés entre les 12 emplacements de chants), Random (les emplacements de chants rejoignent le pool : un chant peut être dans un coffre, et un PNJ peut donner n'importe quel objet). |
+| Gifts | Récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed (nouveau, pas encore validé en jeu). |
 
 Toujours actif dans le menu : les cinématiques sans effet sur la partie sont passées.
 
@@ -198,7 +200,7 @@ Fonctions **validées en jeu** : coffres mélangés, cœurs au sol, Skulltulas d
 (boutique Kokiri), récompenses des boss (poche de Link), forêt ouverte, Porte du Temps, voyage libre, pont
 (ouvert), cartes et boussoles au départ, objets de Saria mélangés, consommables au départ.
 
-Fonctions **pas encore validées en jeu** (retours bienvenus) : départ adulte, départ aléatoire, cycle
+Fonctions **pas encore validées en jeu** (retours bienvenus) : départ adulte, cycle
 jour / nuit avec « Skip Child Zelda », bombes d'un coffre sans sac (rubis à la place), garde de l'épée Kokiri,
 Ocarina du Temps mélangé (douves), chants mélangés, prix aléatoires élevés des Peste Mojo, titre du bouton « Next Page ».
 

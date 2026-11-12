@@ -249,7 +249,8 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     actor_changes[OCARINA_OF_TIME_ACTOR] = {"Presence": {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False,
                                                          "IsNegation": False}}
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
-                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps()},
+                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps(menu.option_enums(read_byml(mb.codec.decompress(
+                           next((romfs / "GameData").glob("GameDataList*.byml.zs"))))))},
                        moat_gate=True, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu

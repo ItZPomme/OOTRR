@@ -7,7 +7,7 @@ Liste de bugs et d'améliorations issus d'une session de test. Cocher quand corr
 
 ### Bugs
 - [ ] Médaillon de l'Ombre non obtenu en commençant avec : cause = le module natif ne donnait pas l'objet de « Links Pocket » (corrigé dans `GiveStartItems`, compilé, **à valider en jeu**).
-- [ ] La logique suppose qu'on commence au Domaine Zora : départ aléatoire désactivé (`RANDOM_SPAWN_ENABLED = False`, Python et natif) ; l'option du menu reste mais est sans effet. **À valider en jeu**.
+- [ ] La logique suppose qu'on commence au Domaine Zora : départ aléatoire désactivé (`RANDOM_SPAWN_ENABLED = False`, Python et natif) ; la ligne « Random Spawn » est retirée du menu. **À valider en jeu**.
 - [ ] Boutique infinie (article rachetable à l'infini, constaté en jeu) : **bloqué, besoin d'une expérience en jeu**. Le jeton copie `Shop_Weapon_Shield_Deku` (ligne `PouchActorInfo` du bouclier, rachetable) ; `NoRespawn` ne suffit pas. Un drapeau « vendu » par article (32 emplacements, `OoTRR.Sold<n>`, expression `Shop<rang> ET NON Sold<n>` en condition de présence) retirerait le jeton, mais un lien du marchand vers un acteur absent bloque le curseur (voir `dual_actor_changes`) : risque de boutique inutilisable. Pistes à tester d'abord : jeton basé sur une ligne `PouchActorInfo` d'article à achat unique ; observer ce que fait le jeu d'un article d'origine acheté (panneau `Shop_Board_SoldOut`).
 - [ ] Cycle jour/nuit toujours non fonctionnel : **bloqué, rétro-ingénierie nécessaire**. Les drapeaux de départ (`Goto_HyruleCastle=Complete`, `DoorOfTime=Step01`) sont bien posés (menu natif : `kStartEnums`) mais ne suffisent pas. Cherché dans les fichiers sans succès : aucun nom de drapeau ni paramètre lié à l'écoulement du temps (`WorldParam` ne contient que lever/coucher du soleil ; seules actions d'événement connues : `EventTrigger_SetTime`, `EventTrigger_RequestVisualOnlyTime`, `EventQueryTimeDivision`, Chant du Soleil dans `Dm_SY_Ocarina_SunSong`). Le blocage est dans le code du jeu (Ghidra : gestionnaire du monde / `WorldManagerController`). Test utile : le Chant du Soleil change-t-il l'heure ? Le temps passe-t-il après avoir rencontré Zelda dans une partie normale ?
 - [ ] Les réceptacles de cœur obtenus par un jeton ne comptent qu'au changement d'âge : le module natif augmente maintenant `PlayerStatus.MaxLife` (+4 quarts) et rend la vie (`AddMaxLife`, compilé, **à valider en jeu** ; boss et réceptacles d'origine non touchés).
@@ -30,7 +30,7 @@ Liste de bugs et d'améliorations issus d'une session de test. Cocher quand corr
 
 ### Menu / réglages
 - [ ] Menu : le bouton de fin de page affiche « Zelda Notes » au lieu de « Next Page » : le titre vient du volet partagé `Pa_AmiiboBtn_00-T_BtnTitle_00` (texte du jeu « Zelda Notes », sans préfixe `OoTRR_`) ; `ingame_menu.messages` écrit bien `OoTRR_…BtnTitle_00` mais la mise en page ne le lit pas. Piste : le texte vient d'un `.bflyt` du bouton (pas du `.buil`) ; remplacer le texte globalement changerait aussi l'écran Options normal (à éviter), ou faire lire une autre étiquette à la copie `OoTRRMenu_00`. Non résolu.
-- [ ] Condition du pont : impossible de choisir le nombre de pierres, médaillons, récompenses, cœurs.
+- [ ] Condition du pont : nombre requis au choix en haut de la page 2 (voir « Pont arc-en-ciel ») ; menu **validé en jeu**, ouverture du pont au nombre choisi à vérifier.
 
 ## Peste Mojo vendeurs (scrubsanity)
 - Mécanisme validé en jeu (une Peste Mojo vend n'importe quel objet, message dans la langue du jeu).
@@ -52,6 +52,9 @@ Liste de bugs et d'améliorations issus d'une session de test. Cocher quand corr
 
 ## Pont arc-en-ciel
 - Conditions implémentées (open, vanilla, stones, medallions, dungeons, hearts) : **à tester en jeu**.
+- Menu natif : nombre requis au choix en page 2 (pierres 1–3, médaillons 1–6, récompenses 1–9, cœurs 3–20),
+  lignes affichées selon la condition : **validé en jeu** (2026-11-12). Reste à vérifier en jeu que le pont
+  s'ouvre au nombre choisi pour chaque condition.
 
 ## Questions en jeu (« menu » au lancement)
 - Prototype : `open_forest=ask` (question oui/non au début de la nouvelle partie) — **à tester**.

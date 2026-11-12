@@ -47,6 +47,8 @@ namespace {
     bool g_page_ready[ootrr::menu::kPageCount] = {};
     // page affichée : l'écran d'options s'ouvre une fois par page (mise en page chargée à chaque fois)
     int g_page = 0;
+    // condition du pont lue à l'ouverture de la page (index du réglage bridge ; -1 = inconnue) : textes « <préfixe>B<n>_ »
+    int g_bridge_mode = -1;
     int g_layouts = 0;
 
     uintptr_t Main() { return exl::util::modules::GetTargetStart(); }
@@ -375,8 +377,34 @@ HOOK_DEFINE_TRAMPOLINE(TableRow) {
     static void* Callback(void* table, u32 i) { return Orig(PickTable(table), i); }
 };
 
+int g_row_type_logs = 6;
+
 HOOK_DEFINE_TRAMPOLINE(TableRowByType) {
-    static void* Callback(void* table, s32 type) { return Orig(PickTable(table), type); }
+    static void* Callback(void* table, s32 type) {
+        void* picked = PickTable(table);
+        // menu : plusieurs lignes du même type (nombre requis pour le pont) ; le jeu prend la première, même
+        // cachée. On rend la première ligne visible du type : sans condition (+0x24 = 0) ou dont la condition
+        // est le drapeau d'affichage de la condition du pont lue à l'ouverture de la page.
+        if (g_menu && picked) {
+            u32 count = *reinterpret_cast<u32*>(picked);
+            u8* rows = *reinterpret_cast<u8**>(reinterpret_cast<u8*>(picked) + 8);
+            for (u32 i = 0; rows && i < count && i < 64; i++) {
+                u8* row = rows + i * 0x28;
+                if (*reinterpret_cast<s32*>(row) != type) continue;
+                u32 cond = *reinterpret_cast<u32*>(row + 0x24);
+                bool visible = cond == 0;
+                for (const ootrr::menu::BridgeRow& b : ootrr::menu::kBridgeRows)
+                    if (cond == b.show_flag && b.bridge == g_bridge_mode) visible = true;
+                if (g_row_type_logs > 0 && cond != 0) {
+                    g_row_type_logs--;
+                    LogValue("OoTRR: ligne par type, condition (type << 32 | condition)",
+                             (static_cast<u64>(static_cast<u32>(type)) << 32) | cond);
+                }
+                if (visible) return row;
+            }
+        }
+        return Orig(picked, type);
+    }
 };
 
 /* Jeton d'emplacement (OoTRR_Lnnnn) : l'objet donné par un cœur au sol porte le nom du jeton ; la
@@ -535,6 +563,26 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
                 }
         }
         if (g_menu && file && *file && label && *label && SameString(*file, kOptionMessages)) {
+            // lignes du nombre requis pour le pont : affichées selon le mode (le jeu relit-il la condition ?)
+            static u32 last_mode = 0;
+            u32 mode = ootrr::ingame::UpdateBridgeRows(Main());
+            if (mode != last_mode) {
+                last_mode = mode;
+                LogValue("OoTRR: mode du pont lu dans le menu (hachage)", mode);
+            }
+            if (g_bridge_mode >= 0 && g_bridge_mode < 10) {  // textes propres à la condition du pont
+                char name[160];
+                size_t n = 0;
+                for (const char* p = ootrr::menu::kPagePrefixes[g_page]; *p && n < sizeof(name) - 4; p++) name[n++] = *p;
+                name[n++] = 'B';
+                name[n++] = static_cast<char>('0' + g_bridge_mode);
+                name[n++] = '_';
+                for (const char* p = *label; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+                name[n] = 0;
+                const char* mine = name;
+                u64 found = Orig(out, file, &mine, extra);
+                if (found & 1) return found;
+            }
             char name[160];
             size_t n = 0;
             for (const char* p = ootrr::menu::kPagePrefixes[g_page]; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
@@ -574,6 +622,10 @@ HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
             g_layouts++;
             g_trace = 4;
             LogValue("OoTRR: mise en page du menu, page", static_cast<u64>(g_page + 1));
+            u32 mode = ootrr::ingame::UpdateBridgeRows(Main());
+            g_bridge_mode = -1;
+            for (const ootrr::menu::BridgeRow& b : ootrr::menu::kBridgeRows)
+                if (b.mode_value == mode) g_bridge_mode = b.bridge;
         }
         return Orig(layout, a1, a2, a3, name, a5, a6, a7, a8, a9, a10);
     }
