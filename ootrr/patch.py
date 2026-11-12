@@ -44,6 +44,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "shop_actor": loc.shop_actor,
             "price": loc.price,
             "ocarina": loc.ocarina,
+            "gift": loc.gift,
         })
     return {
         "format": PATCH_FORMAT,
@@ -61,6 +62,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
         "event_changes": _merge_events(world.reward_event_changes(result.placements),
                                        world.ocarina_event_changes(result.placements)),
+        "gift_changes": {f: [list(e) for e in v] for f, v in world.gift_event_changes(result.placements).items()},
         "moat_items": list(world.moat_items(result.placements)),
         "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
         "start_warp": _start_warp(world),

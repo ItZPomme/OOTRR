@@ -51,6 +51,7 @@ python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --inst
 | `random_spawn` | oui / non | Départ n'importe où hors donjons (`data/spawns.json`), selon l'âge |
 | `start_with_consumables` | oui / non | 10 bâtons Mojo et 20 noix Mojo au départ |
 | `shuffle_ocarinas` | oui / non | Ocarina des fées (Saria) et Ocarina du Temps (douves) mélangés ; non = à leur place |
+| `shuffle_gifts` | oui / non | 17 cadeaux mélangés : récompenses de tirs, bowling, tir à cheval, plongée, pêche adulte, Anju, Darunia, carte Gerudo, Flèches de lumière, 6 Grandes Fées (vérifié dans les fichiers, **à valider en jeu** ; jetons avec le menu natif) |
 | `free_time_travel` | oui (défaut) / non | L'épée renvoie enfant à tout moment (le remake exige le Temple de la Forêt) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + nombre | Condition du pont arc-en-ciel |
 | `shuffle_rewards` | `vanilla`, `shuffled` | Pierres et médaillons mélangés entre les boss et la poche de Link |

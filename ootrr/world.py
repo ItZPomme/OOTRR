@@ -277,6 +277,7 @@ class Location:
     shop_actor: str | None = None  # article d'origine (Shop_*)
     price: int = 0  # prix d'origine de l'article
     ocarina: bool = False  # ocarina donné par une scène (Saria, douves) : mélangé avec shuffle_ocarinas
+    gift: bool = False  # cadeau donné par une scène ou un PNJ (data/gifts.json) : mélangé avec shuffle_gifts
 
     @property
     def is_chest(self) -> bool:
@@ -342,6 +343,10 @@ class World:
                 if name in extra_locations:
                     raise DataError(f"{path.name} : lieu « {name} » défini deux fois")
                 extra_locations[name] = body
+
+        self.gift_edits: dict[str, list[tuple[str, int, str, str]]] = {
+            name: [tuple(e) for e in edits]
+            for name, edits in _read_json(data_dir / "gifts.json")["gifts"].items()}
 
         # --- capacités logiques et objets réels
         self.logic_items: dict[str, dict] = items_raw["logic"]
@@ -421,6 +426,7 @@ class World:
             shop_actor=lbody.get("shop_actor"),
             price=int(lbody.get("price", 0)),
             ocarina=bool(lbody.get("ocarina", False)),
+            gift=bool(lbody.get("gift", False)),
         )
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
@@ -436,6 +442,8 @@ class World:
             loc.shuffle = loc.shop <= shop_count(self.settings)
         if loc.ocarina:
             loc.shuffle = bool(self.settings.get("shuffle_ocarinas"))
+        if loc.gift:
+            loc.shuffle = bool(self.settings.get("shuffle_gifts"))
         region.locations.append(loc)
         self.locations[lname] = loc
 
@@ -473,7 +481,7 @@ class World:
                 raise DataError(f"lieu {loc.name} : objet vanilla manquant")
             if loc.vanilla not in self.items:
                 raise DataError(f"lieu {loc.name} : objet inconnu « {loc.vanilla} » (absent de items.json)")
-            if loc.shuffle and not loc.hashes and not loc.ocarina:
+            if loc.shuffle and not loc.hashes and not loc.ocarina and not loc.gift:
                 raise DataError(f"lieu {loc.name} : seuls les coffres (avec hashes) peuvent être mélangés")
             for h in loc.hashes:
                 if h in seen_hashes:
@@ -484,6 +492,8 @@ class World:
                     raise DataError(f"lieu {loc.name} : pickup doit valoir freestanding ou boss")
                 if loc.vanilla not in self.ground_native or not loc.hashes:
                     raise DataError(f"lieu {loc.name} : un cœur au sol doit avoir un hash et un objet d'origine au sol")
+            if loc.gift and loc.name not in self.gift_edits:
+                raise DataError(f"lieu {loc.name} : cadeau absent de gifts.json")
             if loc.dungeon_item:
                 if loc.dungeon_item not in ("map", "compass"):
                     raise DataError(f"lieu {loc.name} : dungeon_item doit valoir map ou compass")
@@ -607,6 +617,19 @@ class World:
                 out.setdefault(flow, {})[vanilla] = item
         return out
 
+    def gift_event_changes(self, placements: dict[str, str]) -> dict[str, list[tuple[int, str, str, str]]]:
+        """shuffle_gifts (mod sans menu) : {scène: [(événement, paramètre, texte d'origine, objet placé)]}.
+        Avec le menu natif, ootrr.native_logic.gift_tokens donne le jeton du lieu à la place de l'objet."""
+        out: dict[str, list[tuple[int, str, str, str]]] = {}
+        for name, edits in self.gift_edits.items():
+            if not self.locations[name].shuffle:
+                continue
+            item = placements.get(name)
+            for flow, event, param, old in edits:
+                if item and item != old:
+                    out.setdefault(flow, []).append((event, param, old, item))
+        return out
+
     def moat_items(self, placements: dict[str, str]) -> tuple[str, ...]:
         """Objets donnés directement aux douves (porte ouverte) : l'objet du lieu de l'Ocarina du Temps
         et le Chant du Temps."""
@@ -711,6 +734,8 @@ class World:
             return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)
         if loc.ocarina and item.startswith(OCARINA_FORBIDDEN_PREFIX):
             return False  # bombes données par la scène de Saria / des douves : le jeu pourrait donner le sac
+        if loc.gift and (item.startswith(OCARINA_FORBIDDEN_PREFIX) or item.startswith("TBox_Rupee_")):
+            return False  # bombes (le jeu pourrait donner le sac) et rubis (pas d'inventaire) : pas donnés par une scène
         if loc.no_progression and self.is_progression(item):
             return False
         return True

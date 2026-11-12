@@ -117,6 +117,7 @@ pour taper une seed au clavier au lancement (même seed + mêmes réglages = mê
 | Gold Skulltulas | Les Skulltulas d'or lâchent un objet de la seed (Overworld : hors donjons ; All : toutes). |
 | Maps and Compasses | À leur place, données au départ, ou retirées. |
 | Shuffle Ocarinas | Saria et les douves donnent un objet de la seed ; le 2e ocarina obtenu est l'Ocarina du Temps. |
+| Gifts | Récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed (nouveau, pas encore validé en jeu). |
 | Lens Required | La logique exige le Monocle de Vérité pour les passages invisibles. |
 
 **Page 3 — boutiques et Peste Mojo**

@@ -236,6 +236,7 @@ class Exporter:
                 skulltula=bool(lbody.get("skulltula", False)), shop=int(lbody.get("shop", 0)),
                 shop_actor=lbody.get("shop_actor") or "", price=int(lbody.get("price", 0)),
                 slot=int(lbody.get("slot", -1)), ocarina=bool(lbody.get("ocarina", False)),
+                gift=bool(lbody.get("gift", False)),
                 hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
@@ -352,13 +353,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; bool ocarina; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; bool ocarina; bool gift; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}, {str(l['ocarina']).lower()}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}, {str(l['ocarina']).lower()}, {str(l['gift']).lower()}}},")
         lines.append("};")
         # Peste Mojo : entier GameData du prix (prix / 5), écrit par le module selon les réglages
         from .formats.gamedata import flag_hash
@@ -429,6 +430,19 @@ def ocarina_tokens() -> dict[str, tuple[str, str]]:
     (l'ocarina d'origine si shuffle_ocarinas est désactivé)."""
     w = Exporter().world()
     return {flow: (vanilla, token(w["lid"][name])) for name, (flow, vanilla) in OCARINA_EVENTS.items()}
+
+
+def gift_tokens() -> dict[str, tuple[str, str, list[tuple[str, int, str, str]]]]:
+    """{nom du lieu: (jeton, objet d'origine, [(flux, événement, paramètre, texte d'origine)])} pour les cadeaux
+    (data/gifts.json) : les scènes nomment le jeton du lieu, le module natif donne l'objet placé (l'objet
+    d'origine si shuffle_gifts est désactivé)."""
+    w = Exporter().world()
+    gifts = _read(DATA_DIR / "gifts.json")["gifts"]
+    out = {}
+    for name, edits in gifts.items():
+        i = w["lid"][name]
+        out[name] = (token(i), w["items"][w["locations"][i]["vanilla"]]["name"], [tuple(e) for e in edits])
+    return out
 
 
 SCRUB_PRICE_ENTRY = "OoTRR.Price.{}"  # entier GameData : dizaines de prix / 5 de la Peste Mojo (choisi par le module)

@@ -62,6 +62,9 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                          "Ocarinas mélangés : l'Ocarina des fées (Saria, au pont) et l'Ocarina du Temps (douves) "
                          "rejoignent le pool, un objet de la seed est donné à leur place ; désactivé : à leur place "
                          "d'origine. Dans le jeu, le deuxième ocarina obtenu est toujours l'Ocarina du Temps"),
+    "shuffle_gifts": (False, bool,
+                      "Cadeaux mélangés : récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), "
+                      "Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed"),
     "start_with_consumables": (False, bool,
                                "Bâtons Mojo et noix Mojo au maximum du premier sac (10 bâtons, 20 noix) dès le départ"),
     "starting_age": ("child", ("child", "adult", "random"),

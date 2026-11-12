@@ -42,7 +42,7 @@
       "locations": {
         "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
         "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
-        "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium"},
+        "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium", "gift": true},
         "LW Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
@@ -97,9 +97,9 @@
     "Market": {
       "locations": {
         "Market Treasure Chest Game":          {"rule": "is_child and can_use(Lens_of_Truth)", "vanilla": "Obj_Heart_Piece"},
-        "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large"},
+        "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large", "gift": true},
         "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece"},
-        "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large"},
+        "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large", "gift": true},
         "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"}
       },
       "exits": {
@@ -113,7 +113,7 @@
       "locations": {
         "HC Zeldas Letter":      {"rule": "True", "vanilla": "Item_ZeldaLetter"},
         "Song from Impa":        {"kind": "song", "rule": "True", "vanilla": "Item_Melody_ZeldaLullaby"},
-        "HC Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_DinFire"}
+        "HC Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_DinFire", "gift": true}
       },
       "exits": {
         "Market": "True"
@@ -121,7 +121,7 @@
     },
     "Ganons Castle Grounds": {
       "locations": {
-        "OGC Great Fairy Reward": {"rule": "has_strength3 and great_fairy", "vanilla": "Item_FairyBless_DefenseDouble"}
+        "OGC Great Fairy Reward": {"rule": "has_strength3 and great_fairy", "vanilla": "Item_FairyBless_DefenseDouble", "gift": true}
       },
       "exits": {
         "Market": "True",
@@ -139,7 +139,7 @@
     },
     "Temple of Time": {
       "locations": {
-        "ToT Light Arrows Cutscene": {"rule": "is_adult and Shadow_Medallion and Spirit_Medallion", "vanilla": "Item_Arrow_Light"},
+        "ToT Light Arrows Cutscene": {"rule": "is_adult and Shadow_Medallion and Spirit_Medallion", "vanilla": "Item_Arrow_Light", "gift": true},
         "Sheik at Temple":           {"kind": "song", "rule": "is_adult and Forest_Medallion", "vanilla": "Item_Melody_LightPrelude"}
       },
       "exits": {
@@ -161,12 +161,12 @@
 
     "Kakariko Village": {
       "locations": {
-        "Kak Anju as Child":             {"rule": "is_child", "vanilla": "Item_Bottle"},
+        "Kak Anju as Child":             {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true},
         "Kak Man on Roof":               {"rule": "is_child or can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Piece"},
         "Kak Windmill Freestanding PoH": {"rule": "is_adult or can_use(Boomerang)", "vanilla": "Obj_Heart_Piece", "hashes": [13389209437182306002], "pickup": "freestanding"},
         "Song from Windmill":            {"kind": "song", "rule": "is_adult and Ocarina", "vanilla": "Item_Melody_StormSong"},
         "Sheik in Kakariko":             {"kind": "song", "rule": "is_adult and Forest_Medallion and Fire_Medallion and Water_Medallion", "vanilla": "Item_Melody_ShadowNocturne"},
-        "Kak Shooting Gallery Reward":   {"rule": "can_use(Bow)", "vanilla": "Item_Quiver_Medium"},
+        "Kak Shooting Gallery Reward":   {"rule": "can_use(Bow)", "vanilla": "Item_Quiver_Medium", "gift": true},
         "Kak Second Freestanding PoH":   {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [17926402522258180222], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu (maison d'Impa ?) : jamais d'objet nécessaire"}
       },
       "events": {
@@ -210,7 +210,7 @@
     },
     "Death Mountain Summit": {
       "locations": {
-        "DMT Great Fairy Reward": {"rule": "can_blast_or_smash and great_fairy", "vanilla": "Item_FairyBless_MP"}
+        "DMT Great Fairy Reward": {"rule": "can_blast_or_smash and great_fairy", "vanilla": "Item_FairyBless_MP", "gift": true}
       },
       "exits": {
         "Death Mountain Trail": "True",
@@ -229,7 +229,7 @@
     },
     "DMC Lower": {
       "locations": {
-        "DMC Great Fairy Reward": {"rule": "can_use(Megaton_Hammer) and great_fairy", "vanilla": "Item_FairyBless_MPDouble"},
+        "DMC Great Fairy Reward": {"rule": "can_use(Megaton_Hammer) and great_fairy", "vanilla": "Item_FairyBless_MPDouble", "gift": true},
         "DMC Deku Scrub Heart Piece": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
       },
       "exits": {
@@ -249,7 +249,7 @@
     },
     "Goron City": {
       "locations": {
-        "GC Darunias Joy":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron"},
+        "GC Darunias Joy":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
         "GC Rolling Goron as Child": {"rule": "is_child and (has_explosives or Progressive_Strength)", "vanilla": "Item_BombBag_Medium"},
         "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or can_use(Bow) or Progressive_Strength)", "vanilla": "Goron_Tunic"}
       },
@@ -283,7 +283,7 @@
     },
     "Zoras Domain": {
       "locations": {
-        "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver"},
+        "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver", "gift": true},
         "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic"}
       },
       "events": {
@@ -297,7 +297,7 @@
     },
     "Zoras Fountain": {
       "locations": {
-        "ZF Great Fairy Reward":       {"rule": "has_explosives and great_fairy", "vanilla": "Item_FaroreWind"},
+        "ZF Great Fairy Reward":       {"rule": "has_explosives and great_fairy", "vanilla": "Item_FaroreWind", "gift": true},
         "ZF Iceberg Freestanding PoH": {"rule": "is_adult", "vanilla": "Obj_Heart_Piece", "hashes": [12406896586250888098], "pickup": "freestanding"},
         "ZF Bottom Freestanding PoH":  {"rule": "can_use(Iron_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [8030885465575590602], "pickup": "freestanding"}
       },
@@ -312,7 +312,7 @@
       "locations": {
         "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter"},
         "LH Child Fishing":    {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
-        "LH Adult Fishing":    {"rule": "is_adult", "vanilla": "Item_Scale_Gold"},
+        "LH Adult Fishing":    {"rule": "is_adult", "vanilla": "Item_Scale_Gold", "gift": true},
         "LH Lab Dive":         {"rule": "has_gold_scale or (can_use(Iron_Boots) and can_use(Progressive_Hookshot))", "vanilla": "Obj_Heart_Piece"},
         "LH Sun":              {"rule": "is_adult and Water_Medallion and can_use(Bow)", "vanilla": "Item_Arrow_Fire"},
         "LH Freestanding PoH": {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [13469300937852836203], "pickup": "freestanding", "_note": "dans la carte de la plaine (version adulte), près de la maison du lac"}
@@ -347,8 +347,8 @@
     "Gerudo Fortress": {
       "locations": {
         "GF HBA 1000 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Obj_Heart_Piece"},
-        "GF HBA 1500 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Item_Quiver_Large"},
-        "GF Gerudo Membership Card": {"rule": "is_adult", "vanilla": "Item_Token_Gerudo"}
+        "GF HBA 1500 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Item_Quiver_Large", "gift": true},
+        "GF Gerudo Membership Card": {"rule": "is_adult", "vanilla": "Item_Token_Gerudo", "gift": true}
       },
       "exits": {
         "Gerudo Valley": "True",
@@ -365,7 +365,7 @@
     "Desert Colossus": {
       "locations": {
         "Sheik at Colossus":           {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_SpiritRequiem"},
-        "Colossus Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_NayruLove"},
+        "Colossus Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_NayruLove", "gift": true},
         "Colossus Freestanding PoH":   {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [10592092054086534681], "pickup": "freestanding"}
       },
       "exits": {

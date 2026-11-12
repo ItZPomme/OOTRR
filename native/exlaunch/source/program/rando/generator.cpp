@@ -54,6 +54,7 @@ struct World {
             }
             if (info.shop) shuffle = info.shop <= s[SET_shuffle_shops];  // valeur 0..4 = nombre d'articles
             if (info.ocarina) shuffle = s[SET_shuffle_ocarinas] != 0;
+            if (info.gift) shuffle = s[SET_shuffle_gifts] != 0;
             loc_shuffle[l] = shuffle;
         }
         free_return = s[SET_free_time_travel] != 0;
@@ -86,6 +87,13 @@ struct World {
             const char* prefix = "Item_BombBundle";
             while (*prefix && *name == *prefix) { name++; prefix++; }
             if (!*prefix) return false;
+        }
+        if (info.gift) {  // ni bombes (sac) ni rubis (pas d'inventaire) : world.can_place
+            const char* name = kItems[item].name;
+            const char* prefix = "Item_BombBundle";
+            while (*prefix && *name == *prefix) { name++; prefix++; }
+            if (!*prefix) return false;
+            if (IsRupee(kItems[item].name)) return false;
         }
         if (info.no_progression && IsProgression(item)) return false;
         return true;
