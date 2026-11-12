@@ -10,6 +10,7 @@ constexpr uint32_t kGenerateFlagHash = 0x81969956;  // OoTRR.GenerateSeed
 constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 constexpr uint32_t kSpawnTensHash = 0xe495a913;  // OoTRR.SpawnTens
 constexpr uint32_t kSpawnUnitsHash = 0xbd8c7634;  // OoTRR.SpawnUnits
+constexpr uint32_t kShopSoldHash = 0xfd99856b;  // OoTRR.ShopSold
 // valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu
 // member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une
 // structure cherchent le membre par ce hachage dans la table de la poignée

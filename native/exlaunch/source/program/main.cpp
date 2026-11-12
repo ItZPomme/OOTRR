@@ -154,6 +154,28 @@ u64 ReadTick() {
 bool g_trust_memory = false;
 bool g_giving_start = false;  // objets de départ en cours (leurs chants passent)
 int g_song_blocks = 0;
+// chants placés dans un coffre (donnés sous leur vrai nom, pas par un jeton) : autorisés une fois chacun
+const char* g_chest_songs[16] = {};
+
+bool IsSongName(const char* t) {
+    const char* prefix = "Item_Melody_";
+    int k = 0;
+    while (prefix[k] && t[k] == prefix[k]) k++;
+    return !prefix[k];
+}
+
+void AllowChestSong(const char* song) {
+    for (const char*& s : g_chest_songs)
+        if (s && SameString(s, song)) return;
+    for (const char*& s : g_chest_songs)
+        if (!s) { s = song; return; }
+}
+
+bool TakeChestSong(const char* song) {
+    for (const char*& s : g_chest_songs)
+        if (s && SameString(s, song)) { s = nullptr; return true; }
+    return false;
+}
 bool g_pending_start_items = false;  // objets de départ à donner une fois l'inventaire prêt  // seed de nouvelle partie pas encore visible dans GameData (écriture différée)
 
 void LogMenuRead(const ootrr::ingame::MenuRead& r) {
@@ -180,6 +202,8 @@ void GenerateSeed() {
     bool ok = ootrr::ingame::GenerateFromMenu(Main(), seed, &read);
     LogMenuRead(read);
     LogValue(ok ? "OoTRR: seed generee" : "OoTRR: echec de la generation, seed", seed);
+    // nouvelle partie : aucun article vendu (l'entier n'est pas remis à zéro par « Nouvelle partie »)
+    if (ok) ootrr::ingame::WriteGameDataInt(Main(), ootrr::menu::kShopSoldHash, 0);
     if (ok) WriteAllTokenPrices();
     if (ok) {
         // point d'apparition lu par l'introduction (OpeningEvent : questions sur les dizaines puis les unités ;
@@ -242,6 +266,19 @@ void WriteTokenPrice(int location);
 const char* GroundItem(const char* item);
 int g_model_logs = 24;
 
+/* Article jeton de boutique déjà acheté (OoTRR.ShopSold) : il redevient l'objet d'origine de l'emplacement
+ * (texte, modèle au prochain chargement, prix d'origine, objet donné). Sans cela l'article restait en vente
+ * et l'objet de la seed se rachetait à l'infini (constaté en jeu). Un article retiré de la liste ou de la
+ * carte bloquerait le curseur du marchand (lien vers un acteur absent) : on garde l'article. */
+const char* ShopSoldItem(int location, const char* item) {
+    if (!item || !ootrr::ingame::Ready() || !ootrr::ingame::IsShop(location)) return item;
+    return ootrr::ingame::IsShopSold(Main(), location) ? ootrr::ingame::VanillaItem(location) : item;
+}
+
+const char* PlacedItem(int location) {
+    return ShopSoldItem(location, location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr);
+}
+
 /* Modèle d'un jeton de cœur au sol : Component/ModelInfo/OoTRR_Lnnnn… (et AnimationParam) redirigé
  * vers le fichier de l'objet placé par la seed (copié dans l'archive du jeton sous son chemin). */
 const char* TokenModelPath(const char* path) {
@@ -254,9 +291,13 @@ const char* TokenModelPath(const char* path) {
         int location = TokenLocation(p);
         const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
         if (!item) return nullptr;
-        item = GroundItem(item);
-        for (const auto& m : ootrr::ground::kGroundModels)
-            if (SameString(m.item, item)) return kind == 0 ? m.model : m.anim;
+        item = ShopSoldItem(location, item);
+        // nom de l'objet tel quel d'abord : la table connaît « Obj_Token_Gold », que GroundItem change en
+        // « Item_Token_Gold » (nom pour les textes) ; sans cela le jeton d'or gardait le modèle de sa base
+        // (bouclier Mojo pour un article de boutique, constaté en jeu)
+        for (const char* name : {item, GroundItem(item)})
+            for (const auto& m : ootrr::ground::kGroundModels)
+                if (SameString(m.item, name)) return kind == 0 ? m.model : m.anim;
         return nullptr;  // pas de modèle connu : celui du cœur
     }
     return nullptr;
@@ -452,7 +493,7 @@ HOOK_DEFINE_TRAMPOLINE(FindMessageInner) {
     static u64 Callback(void* manager, void* out, const char** file, const char** label) {
         if (label && *label) {
             int location = TokenLocation(*label);
-            const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+            const char* item = location >= 0 ? PlacedItem(location) : nullptr;
             if (item) {
                 static char name[160];
                 size_t n = 0;
@@ -495,6 +536,40 @@ HOOK_DEFINE_TRAMPOLINE(FindMessageInner) {
     }
 };
 
+/* Recherche d'une étiquette dans un fichier de messages déjà chargé (0xa6b250 : x0 = fichier, x1 = étiquette,
+ * résultat de 0x18 octets via x8 : { texte, longueur, index… } ; texte nul = absent). Le rappel de texte des
+ * mises en page (0x3780cd0) l'appelle directement avec « <volet>-<zone de texte> » : c'est ainsi que le
+ * bouton de fin de page reçoit « Zelda Notes » (Pa_AmiiboBtn_00-T_BtnTitle_00 dans SystemOption_00), sans
+ * passer par 0xa6afe0 / 0xa6b060. Pendant le menu, on essaie d'abord « <préfixe de page><étiquette> ». */
+struct MessageSlice {
+    const char* text;
+    s32 length;
+    u32 index;
+    u64 extra;
+    ~MessageSlice() {}
+};
+int g_pane_logs = 12;
+
+HOOK_DEFINE_TRAMPOLINE(MessageInFile) {
+    static MessageSlice Callback(void* file, const char* label) {
+        if (g_menu && label && label[0] == 'P' && label[1] == 'a' && label[2] == '_') {
+            char name[160];
+            size_t n = 0;
+            for (const char* p = ootrr::menu::kPagePrefixes[g_page]; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+            for (const char* p = label; *p && n < sizeof(name) - 1; p++) name[n++] = *p;
+            name[n] = 0;
+            MessageSlice mine = Orig(file, name);
+            if (g_pane_logs > 0) {
+                g_pane_logs--;
+                Log(name);
+                LogValue("OoTRR: texte de volet du menu (0xa6b250), trouve", mine.text ? 1 : 0);
+            }
+            if (mine.text) return mine;
+        }
+        return Orig(file, label);
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(FindMessage) {
     static u64 Callback(void* out, const char** file, const char** label, u64 extra) {
         // message de vente d'une Peste Mojo (OoTRR_Scrub_<jeton>) -> celui de l'objet placé
@@ -523,7 +598,7 @@ HOOK_DEFINE_TRAMPOLINE(FindMessage) {
         }
         if (label && *label) {
             int location = TokenLocation(*label);
-            const char* item = location >= 0 ? ootrr::ingame::ItemFor(location) : nullptr;
+            const char* item = location >= 0 ? PlacedItem(location) : nullptr;
             if (item) {
                 static char name[160];
                 const char* suffix = *label + 11;  // « _GetCaption »…
@@ -693,6 +768,7 @@ void ReplaceTokenAtSource(u8* info) {
             else if (adjusted) real = adjusted;
         }
         params->values[i] = real;
+        if (IsSongName(real)) AllowChestSong(real);  // chant dans un coffre : son ajout ne sera pas bloqué
         // objet différent de l'original : retirer la scène de l'objet d'origine (event « drop ») et,
         // pour un coffre à contenu conditionnel, l'objet testé et son remplaçant (comme patch.chest_changes)
         if (!SameString(real, ootrr::ingame::VanillaItem(index))) {
@@ -804,11 +880,12 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
         if (name && name->text && !g_giving_start && ootrr::ingame::Ready()
             && ootrr::ingame::SettingValue(ootrr::logic::SET_shuffle_songs) != 0) {
             const char* t = name->text;
-            const char* prefix = "Item_Melody_";
-            int k = 0;
-            while (prefix[k] && t[k] == prefix[k]) k++;
-            if (!prefix[k]) {
+            if (IsSongName(t) && TakeChestSong(t)) {
                 Log(t);
+                LogValue("OoTRR: chant d'un coffre accepte, raison", reason);
+            } else if (IsSongName(t)) {
+                Log(t);
+                LogValue("OoTRR: chant d'origine ignore, raison", reason);
                 LogValue("OoTRR: chant d'origine ignore (chants melanges), total", static_cast<u64>(++g_song_blocks));
                 return 1;
             }
@@ -827,8 +904,14 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                     if (c < '0' || c > '9') ok = false;
                     else location = location * 10 + (c - '0');
                 }
-                const char* item = ok && !t[k + 4] ? ootrr::ingame::ItemFor(location) : nullptr;
+                const char* item = ok && !t[k + 4] ? PlacedItem(location) : nullptr;
                 if (item) item = GroundItem(item);
+                // article jeton de boutique : premier achat = objet de la seed, puis l'article redevient
+                // l'objet d'origine (PlacedItem) à son prix d'origine
+                if (item && ootrr::ingame::IsShop(location) && !ootrr::ingame::IsShopSold(Main(), location)) {
+                    LogValue("OoTRR: article de boutique vendu, masque", static_cast<u64>(ootrr::ingame::MarkShopSold(Main(), location)));
+                    WriteTokenPrice(location);
+                }
                 if (item && ootrr::ingame::RecentOcarinaToken(location)) {
                     Log(t);
                     Log("OoTRR: jeton d'ocarina deja donne (douves : don direct puis scene), ignore");
@@ -934,7 +1017,8 @@ void WriteTokenPrice(int location) {
     if (location < 0 || location >= 1024) return;
     if (!ootrr::ingame::Ready() || !ootrr::ingame::IsShop(location)) return;
     for (s32* price : g_token_price[location])
-        if (price) *price = ootrr::ingame::ShopPrice(location);
+        if (price) *price = ootrr::ingame::IsShopSold(Main(), location) ? ootrr::ingame::SoldShopPrice(location)
+                                                                       : ootrr::ingame::ShopPrice(location);
 }
 
 // prix de tous les articles jetons : dès que la seed est prête, avant qu'une boutique ne charge
@@ -994,6 +1078,7 @@ extern "C" void exl_main(void* x0, void* x1) {
     TableRowByType::InstallAtOffset(kTableRowByType);
     FindMessage::InstallAtOffset(kFindMessage);
     FindMessageInner::InstallAtOffset(0xa6b060);
+    MessageInFile::InstallAtOffset(0xa6b250);
     GetStructHandle::InstallAtOffset(kGetStructHandle);
     LoadLayout::InstallAtOffset(kLoadLayout);
     SetChallengeStep::InstallAtOffset(0x2cf54a0);

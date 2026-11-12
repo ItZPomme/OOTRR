@@ -28,6 +28,9 @@ from .formats.msbt import add_messages, read_labels
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
 GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
 SEED_ENTRY = "OoTRR.Seed"  # seed de la partie (entier, sauvegardé) : régénérée au chargement
+# articles jetons de boutique déjà achetés (entier sauvegardé, un bit par article dans l'ordre des
+# emplacements de boutique) : le module natif donne ensuite l'objet d'origine de l'emplacement
+SHOP_SOLD_ENTRY = "OoTRR.ShopSold"
 # point d'apparition (non sauvegardés) : dizaines et unités, écrits à la génération, lus par l'introduction
 SPAWN_ENTRIES = ("OoTRR.SpawnTens", "OoTRR.SpawnUnits")
 OPTION_STRUCT = "OptionData"
@@ -338,10 +341,11 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
         data["Bool"].append(flag)
         report.append(f"GameData : drapeau {name} (sauvegardé)")
-    seed = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
-    seed.update({"Hash": U32(flag_hash(SEED_ENTRY)), "DefaultValue": 0, "ResetTypeValue": 0})
-    data["Int"].append(seed)
-    report.append(f"GameData : entier {SEED_ENTRY} (sauvegardé)")
+    for name in (SEED_ENTRY, SHOP_SOLD_ENTRY):
+        entry = copy.deepcopy(next(e for e in data["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE))
+        entry.update({"Hash": U32(flag_hash(name)), "DefaultValue": 0, "ResetTypeValue": 0})
+        data["Int"].append(entry)
+        report.append(f"GameData : entier {name} (sauvegardé)")
     # prix des Peste Mojo : non sauvegardés, réécrits par le module à chaque génération / rechargement
     from .native_logic import scrub_price_entries
     for name in sorted(n for pair in scrub_price_entries().values() for n in pair) + list(SPAWN_ENTRIES):
@@ -349,7 +353,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         entry.update({"Hash": U32(flag_hash(name)), "DefaultValue": 0, "ResetTypeValue": 0})
         data["Int"].append(entry)
         report.append(f"GameData : entier {name}")
-    saved += 1 + len(EXTRA_SAVED_FLAGS)
+    saved += 2 + len(EXTRA_SAVED_FLAGS)  # seed et articles vendus (OoTRR.ShopSold)
     report += add_saved_entries(root, PROGRESS_SAVE, saved)
     return report
 
@@ -771,6 +775,7 @@ def menu_header(root: dict) -> str:
              f"constexpr uint32_t kSeedHash = 0x{flag_hash(SEED_ENTRY):08x};  // {SEED_ENTRY}",
              f"constexpr uint32_t kSpawnTensHash = 0x{flag_hash(SPAWN_ENTRIES[0]):08x};  // {SPAWN_ENTRIES[0]}",
              f"constexpr uint32_t kSpawnUnitsHash = 0x{flag_hash(SPAWN_ENTRIES[1]):08x};  // {SPAWN_ENTRIES[1]}",
+             f"constexpr uint32_t kShopSoldHash = 0x{flag_hash(SHOP_SOLD_ENTRY):08x};  // {SHOP_SOLD_ENTRY}",
              "// valeur lue -> valeur du réglage : bool = 0/1 ; énumération = index de la valeur du jeu",
              "// member = hachage du nom du membre (ex. CameraRotateSpeed) : les accesseurs GameData d'une",
              "// structure cherchent le membre par ce hachage dans la table de la poignée",

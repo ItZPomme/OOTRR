@@ -525,4 +525,39 @@ int32_t ShopPrice(int location) {
     return price > 99 ? 99 : price;  // sans bourse dans la logique
 }
 
+// articles jetons achetés : un bit par emplacement de boutique (rang parmi les emplacements de boutique,
+// 32 au plus) dans l'entier sauvegardé OoTRR.ShopSold
+int ShopSlot(int location) {
+    if (location < 0 || location >= logic::kLocationCount || !IsShop(location)) return -1;
+    int slot = 0;
+    for (int i = 0; i < location; i++) slot += IsShop(i) ? 1 : 0;
+    return slot < 32 ? slot : -1;
+}
+
+bool IsShopSold(std::uintptr_t main_base, int location) {
+    int slot = ShopSlot(location);
+    if (slot < 0) return false;
+    void* manager = Manager(main_base);
+    int32_t mask = 0;
+    if (!manager || !reinterpret_cast<GetIntFn>(main_base + kGetInt)(manager, &mask, menu::kShopSoldHash)) return false;
+    return (static_cast<uint32_t>(mask) >> slot) & 1;
+}
+
+int32_t MarkShopSold(std::uintptr_t main_base, int location) {
+    int slot = ShopSlot(location);
+    if (slot < 0) return -1;
+    void* manager = Manager(main_base);
+    int32_t mask = 0;
+    if (!manager || !reinterpret_cast<GetIntFn>(main_base + kGetInt)(manager, &mask, menu::kShopSoldHash)) return -1;
+    mask = static_cast<int32_t>(static_cast<uint32_t>(mask) | (1u << slot));
+    WriteGameDataInt(main_base, menu::kShopSoldHash, mask);
+    return mask;
+}
+
+// prix d'un article déjà acheté : celui de l'article d'origine (l'objet donné redevient celui d'origine)
+int32_t SoldShopPrice(int location) {
+    int32_t price = logic::kLocations[location].price;
+    return price > 99 ? 99 : price;
+}
+
 }  // namespace ootrr::ingame
