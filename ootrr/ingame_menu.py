@@ -26,6 +26,9 @@ from .formats.gamedata import flag_hash, index
 from .formats.msbt import add_messages, read_labels
 
 MENU_FLAG = "OoTRR.IsRandomizerMenu"
+# posé par le module natif quand une page du menu se ferme : vrai = B (page précédente, ou menu principal depuis
+# la page 1), faux = bouton de fin de page (page suivante) ; lu par la séquence du titre après chaque page
+MENU_BACK_FLAG = "OoTRR.MenuBack"
 GENERATE_FLAG = "OoTRR.GenerateSeed"  # levé au début de la partie : le module natif génère la seed
 SEED_ENTRY = "OoTRR.Seed"  # seed de la partie (entier, sauvegardé) : régénérée au chargement
 # articles jetons de boutique déjà achetés (entier sauvegardé, un bit par article dans l'ordre des
@@ -274,9 +277,9 @@ TEXTS_FR = {
 FRENCH = ("EUfr", "USfr")
 BUTTON_TITLE_LABEL = "Pa_AmiiboBtn_00-T_BtnTitle_00"
 TEXTS_EN[NEXT_PAGE] = (("Next Page", "Go to the next page of settings (or press B)."),
-                       ("Start the Game", "Generate the seed and start the game (or press B)."))
+                       ("Start the Game", "Generate the seed and start the game (or press B)."), "Press A")
 TEXTS_FR[NEXT_PAGE] = (("Page suivante", "Passer à la page de réglages suivante (ou appuyer sur B)."),
-                       ("Lancer la partie", "Générer la seed et commencer la partie (ou appuyer sur B)."))
+                       ("Lancer la partie", "Générer la seed et commencer la partie (ou appuyer sur B)."), "Appuyer sur A")
 
 
 def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
@@ -330,7 +333,7 @@ def gamedata_struct(root: dict, defaults: dict | None = None) -> list[str]:
         data["Struct"].append({"DefaultValue": members, "Hash": U32(flag_hash(struct)),
                                "ResetTypeValue": 0, "SaveFileIndex": -1})
         report.append(f"GameData : structure {struct} ({len(members)} membres)")
-    for name in (MENU_FLAG, GENERATE_FLAG) + tuple(BRIDGE_SHOW_EXPS.values()):
+    for name in (MENU_FLAG, GENERATE_FLAG, MENU_BACK_FLAG) + tuple(BRIDGE_SHOW_EXPS.values()):
         flag = copy.deepcopy(next(e for e in data["Bool"] if e.get("SaveFileIndex") == -1))
         flag.update({"Hash": U32(flag_hash(name)), "DefaultValue": False, "ResetTypeValue": 0})
         data["Bool"].append(flag)
@@ -576,6 +579,9 @@ def messages(msbt: bytes, language: str) -> bytes:
                 new[f"{prefix}{BUTTON_TITLE_LABEL}"] = title.encode()
                 new[f"{prefix}{option_type}_Title"] = title.encode()
                 new[f"{prefix}{option_type}_Caption"] = caption.encode()
+                # état affiché à droite d'une ligne bouton : celui de Zelda Notes (« ZELDA NOTES disabled »)
+                for state in ("ZeldaNote_00", "ZeldaNote_01"):
+                    new[f"{prefix}{state}"] = texts[NEXT_PAGE][2].encode()
                 continue
             title, caption, labels = texts[setting]
             prefixes = [prefix]
@@ -713,9 +719,49 @@ def title_sequence(raw: bytes) -> bytes:
         menu.guid = new_guid()
         nodes.append(menu)
         pages.append(menu)
+    # après chaque page : sélecteur sur MENU_BACK_FLAG (posé par le module natif) -> page précédente (menu
+    # principal depuis la page 1 : sortie « Non » de la confirmation de nouvelle partie), sinon page suivante
+    # (confirmation après la dernière). Modèles : requête de drapeau, sélecteur booléen, fin à transition.
+    no = next(t for t in confirm.transition_plugs if t.transition.command_name == "No")
+    query_tpl = next(n for n in nodes if n.name == "SeqQueryGetNonStructGameDataBool")
+    selector_tpl = next(n for n in nodes if n.type == ainb.NodeType.Element_BoolSelector
+                        and len(n.child_plugs) == 2 and n.params.bool_inputs)
+    end_tpl = next(n for n in nodes if n.name == "SeqOneShotEnd" and not n.flags.is_root_node() and n.transition_plugs)
+
+    def goto(node_index: int):
+        end = copy.deepcopy(end_tpl)
+        end.index = len(nodes)
+        end.guid = new_guid()
+        t = end.transition_plugs[0]
+        t.node_index = node_index
+        t.transition = Transition(transition_type=t.transition.transition_type,
+                                  update_post_calc=t.transition.update_post_calc,
+                                  command_name=t.transition.command_name)
+        nodes.append(end)
+        return end
+
     for k, menu in enumerate(pages):
+        query = copy.deepcopy(query_tpl)
+        query.index = len(nodes)
+        query.guid = new_guid()
+        for p in query.params.string_inputs:
+            if p.name == "GameDataFullName":
+                p.default_value = MENU_BACK_FLAG
+        nodes.append(query)
+        selector = copy.deepcopy(selector_tpl)
+        selector.index = len(nodes)
+        selector.guid = new_guid()
+        selector.flags = type(selector_tpl.flags)(4)  # racine : cible d'une transition
+        selector.queries[:] = [query.index]
+        selector.params.bool_inputs[0].source.src_node_index = query.index
+        selector.params.bool_inputs[0].source.src_output_index = 0
+        nodes.append(selector)
+        back = goto(pages[k - 1].index if k > 0 else no.node_index)
+        forward = goto(pages[k + 1].index if k + 1 < len(pages) else confirm.index)
+        for plug in selector.child_plugs:
+            plug.node_index = back.index if plug.name == "True" else forward.index
         end = menu.transition_plugs[0]
-        end.node_index = pages[k + 1].index if k + 1 < len(pages) else confirm.index
+        end.node_index = selector.index
         end.transition = Transition(transition_type=end.transition.transition_type,
                                     update_post_calc=end.transition.update_post_calc,
                                     command_name=end.transition.command_name)
@@ -772,6 +818,7 @@ def menu_header(root: dict) -> str:
              f"constexpr uint32_t kStructHash = 0x{flag_hash(STRUCT):08x};  // {STRUCT}",
              f"constexpr uint32_t kMenuFlagHash = 0x{flag_hash(MENU_FLAG):08x};  // {MENU_FLAG}",
              f"constexpr uint32_t kGenerateFlagHash = 0x{flag_hash(GENERATE_FLAG):08x};  // {GENERATE_FLAG}",
+             f"constexpr uint32_t kMenuBackHash = 0x{flag_hash(MENU_BACK_FLAG):08x};  // {MENU_BACK_FLAG}",
              f"constexpr uint32_t kSeedHash = 0x{flag_hash(SEED_ENTRY):08x};  // {SEED_ENTRY}",
              f"constexpr uint32_t kSpawnTensHash = 0x{flag_hash(SPAWN_ENTRIES[0]):08x};  // {SPAWN_ENTRIES[0]}",
              f"constexpr uint32_t kSpawnUnitsHash = 0x{flag_hash(SPAWN_ENTRIES[1]):08x};  // {SPAWN_ENTRIES[1]}",
@@ -902,8 +949,10 @@ def option_module(raw: bytes) -> bytes:
 
     Dans le graphe, A sur un bouton mène à un aiguillage (Element_S32Selector) sur le type d'option
     sélectionné (SeqQueryGetSelectedOptionType) : 1 = amiibo, 16 = Zelda Notes, sinon rien. On y ajoute
-    le cas NEXT_PAGE_TYPE_ID vers une copie de la fin utilisée par B (SeqOneShotEnd vers la fermeture).
-    L'écran Options normal n'a aucune ligne bouton de ce type : il ne change pas."""
+    le cas NEXT_PAGE_TYPE_ID vers le nœud de fin utilisé par B (SeqOneShotEnd vers la fermeture). Une copie
+    de ce nœud (première version) ne faisait rien en jeu (constaté) : la fin est reconnue par son nœud, et un
+    nœud peut avoir plusieurs parents (ex. les fins 29 et 67 du jeu). L'écran Options normal n'a aucune ligne
+    bouton de ce type : il ne change pas."""
     import ainb
 
     script = ainb.AINB.from_binary(raw)
@@ -920,12 +969,11 @@ def option_module(raw: bytes) -> bytes:
     close = nodes[next(c for c in on_b.child_plugs if c.name == "True").node_index]
     if close.name != "SeqOneShotEnd" or any(getattr(c, "condition", None) == NEXT_PAGE_TYPE_ID for c in switch.child_plugs):
         raise ValueError("Option.module : structure inattendue")
-    end = copy.deepcopy(close)
-    end.index = len(nodes)
-    end.guid = str(uuid.UUID(int=(0x4F6F5452 << 96) | (0x4000 << 48) | (0x8000 << 32) | len(nodes)))
-    nodes.append(end)
     plug = copy.deepcopy(amiibo)
-    plug.node_index = end.index
+    plug.node_index = close.index
     plug.condition = NEXT_PAGE_TYPE_ID
     switch.child_plugs.insert(switch.child_plugs.index(amiibo) + 1, plug)
+    # … mais cet aiguillage n'est atteint que si SeqQueryIsOnAmiiboButtonOfOption répond oui, ce qui n'est pas le cas
+    # sur notre ligne ; un aiguillage ajouté juste après « A pressé » ne faisait rien non plus (constaté). Le module
+    # natif transforme donc A en B sur cette ligne (main.cpp, TrigMaskChecker).
     return script.to_binary()

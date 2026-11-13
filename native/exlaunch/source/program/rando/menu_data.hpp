@@ -7,6 +7,7 @@ namespace ootrr::menu {
 constexpr uint32_t kStructHash = 0x068ab00a;  // OoTRRMenu
 constexpr uint32_t kMenuFlagHash = 0xa7ce2e71;  // OoTRR.IsRandomizerMenu
 constexpr uint32_t kGenerateFlagHash = 0x81969956;  // OoTRR.GenerateSeed
+constexpr uint32_t kMenuBackHash = 0x58814ed5;  // OoTRR.MenuBack
 constexpr uint32_t kSeedHash = 0xdb81d12e;  // OoTRR.Seed
 constexpr uint32_t kSpawnTensHash = 0xe495a913;  // OoTRR.SpawnTens
 constexpr uint32_t kSpawnUnitsHash = 0xbd8c7634;  // OoTRR.SpawnUnits
