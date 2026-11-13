@@ -143,6 +143,19 @@ class WorldTests(unittest.TestCase):
         covered = replaced | set(data["timeline_kept"]) | {k[len("HavePlayedEvent."):] for k in seen}
         self.assertEqual(set(data["game_skippable"]) - covered, set(data["timeline_unplayed"]))
 
+    def test_no_logic(self):
+        """logic = none: always generated in one attempt, every shuffled location filled, constraints kept."""
+        world = World(settings_mod.build({"logic": "none", "shuffle_hearts": "all", "maps_compasses": "shuffle"}))
+        for seed in range(10):
+            result = generate(world, seed)
+            self.assertEqual(result.attempts, 1)
+            for loc in world.shuffled_locations():
+                self.assertTrue(world.can_place(result.placements[loc.name], loc), loc.name)
+            spoiler = build_spoiler(world, result)
+            if not spoiler["beatable"]:
+                self.assertEqual(spoiler["required"], [])
+        self.assertTrue(build_spoiler(self.world, generate(self.world, 1))["beatable"])
+
     def test_closed_forest_child_stays_in_forest_at_start(self):
         """Sans épée ni Arbre Mojo, l'enfant ne doit pas pouvoir sortir de la forêt."""
         fixed_only = {l.name: l.vanilla for l in self.world.fixed_locations()}

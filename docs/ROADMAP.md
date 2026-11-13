@@ -79,6 +79,10 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   Ganon's castle barriers. Still played: ending, credits, last Ganondorf / Ganon fights, 5 scenes that set the time
   (`EventTrigger_SetTime`: to reproduce in the parent script before skipping them).
 
+- [ ] "Logic" setting (page 3 of the menu, `logic`): Glitchless (the current logic) or No Logic (random placement,
+  placement constraints kept, no beatable check; spoiler marked "not beatable"). Python and native generators
+  identical (`native_check`, 2 no-logic presets); **to validate in game** (menu row, seed generated).
+
 ### Shuffle to extend
 - [ ] Minigames: shuffled rewards (Slingshot, Bow, etc.).
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:

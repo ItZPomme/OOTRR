@@ -319,6 +319,7 @@ class Exporter:
             "kRewardsVanilla": enum_value("shuffle_rewards", "vanilla"),
             "kRewardsShuffled": enum_value("shuffle_rewards", "shuffled"),
             "kAccessibilityAll": enum_value("accessibility", "all"),
+            "kLogicNone": enum_value("logic", "none"),
             "kKindReward": KINDS.index("reward"),
             "kKindSong": KINDS.index("song"),
             "kSongsShuffle": enum_value("shuffle_songs", "shuffle"),

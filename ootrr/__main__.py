@@ -271,6 +271,8 @@ def main(argv: list[str] | None = None) -> int:
         (out_dir / f"{stem}_spoiler.txt").write_text(spoiler_mod.to_text(spoiler), encoding="utf-8")
     print(f"Seed {seed}  hash {spoiler['hash']}  {len(spoiler['playthrough'])} sphères  "
           f"({result.attempts} essai(s), {time.perf_counter() - t0:.2f}s) -> {out_dir / stem}_*")
+    if not spoiler["beatable"]:
+        print("Warning: this seed cannot be finished according to the logic (logic = none).")
 
     if args.romfs:
         build_mod(patch, Path(args.romfs), args.mod_name, args.install,

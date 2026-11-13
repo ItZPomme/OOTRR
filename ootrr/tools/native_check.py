@@ -42,6 +42,9 @@ PRESETS = {
     "chants mélangés": {"shuffle_songs": "shuffle", "shuffle_rewards": "shuffled", "skip_child_zelda": True},
     "chants aléatoires": {"shuffle_songs": "random", "shuffle_hearts": "all", "shuffle_scrubs": True},
     "adulte loin": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 33, "shuffle_rewards": "shuffled"},
+    "no logic": {"logic": "none", "shuffle_rewards": "shuffled", "shuffle_songs": "shuffle", "maps_compasses": "shuffle"},
+    "no logic all": {"logic": "none", "shuffle_songs": "random", "shuffle_hearts": "all", "shuffle_shops": "4",
+                     "shuffle_scrubs": True, "shuffle_skulltulas": "all", "shuffle_gifts": True},
 }
 
 

@@ -59,6 +59,8 @@ def _assumed_fill(world: World, rng: random.Random, items: list[str], locations:
 
 
 def _attempt(world: World, rng: random.Random) -> dict[str, str]:
+    # logic = none: random placement, no reachability check (same random draws as generator.cpp)
+    no_logic = world.settings.get("logic") == "none"
     placements = {l.name: l.vanilla for l in world.fixed_locations()}
     if world.settings.get("shuffle_rewards") == "shuffled":
         # pierres et médaillons mélangés entre les boss et la poche de Link
@@ -70,7 +72,7 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             rng.shuffle(items)
             trial = dict(placements)
             trial.update({loc.name: item for loc, item in zip(rewards, items)})
-            if State(world, everything).sweep(trial).beaten():
+            if no_logic or State(world, everything).sweep(trial).beaten():
                 break
         for loc, item in zip(rewards, items):
             placements[loc.name] = item
@@ -83,7 +85,7 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             rng.shuffle(items)
             trial = dict(placements)
             trial.update({loc.name: item for loc, item in zip(songs, items)})
-            if State(world, everything).sweep(trial).beaten():
+            if no_logic or State(world, everything).sweep(trial).beaten():
                 break
         for loc, item in zip(songs, items):
             placements[loc.name] = item
@@ -100,8 +102,8 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
         placements[rng.choice(free).name] = item
 
     free_pool = [item for item, dungeon in pool if dungeon is None]
-    progression = [i for i in free_pool if world.is_progression(i)]
-    rest = [i for i in free_pool if not world.is_progression(i)]
+    progression = [] if no_logic else [i for i in free_pool if world.is_progression(i)]
+    rest = list(free_pool) if no_logic else [i for i in free_pool if not world.is_progression(i)]
 
     # 2. objets de progression, 3. le reste
     _assumed_fill(world, rng, progression, shuffled, placements)
@@ -135,6 +137,8 @@ def generate(world: World, seed: int, max_attempts: int = 20) -> Result:
             last_error = exc
             continue
         beaten, unreachable = check(world, placements)
+        if world.settings.get("logic") == "none":
+            return Result(seed, attempt, placements, [], unreachable)
         if not beaten:
             last_error = FillError("seed non finissable")
             continue

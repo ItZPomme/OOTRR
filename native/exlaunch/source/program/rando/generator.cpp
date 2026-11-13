@@ -387,6 +387,8 @@ struct Fill {
 
     bool Attempt() {
         const Settings& s = *w.settings;
+        // logic = none: random placement, no reachability check (fill.py, same random draws)
+        const bool no_logic = s[SET_logic] == kLogicNone;
         for (int l = 0; l < kLocationCount; l++) placement[l] = w.loc_shuffle[l] ? -1 : static_cast<int16_t>(kLocations[l].vanilla);
         shuffled_count = 0;
         for (int l = 0; l < kLocationCount; l++)
@@ -418,6 +420,7 @@ struct Fill {
                 rng.Shuffle(reward_items, reward_count);
                 for (int l = 0; l < kLocationCount; l++) trial[l] = placement[l];
                 for (int i = 0; i < reward_count; i++) trial[rewards[i]] = reward_items[i];
+                if (no_logic) break;
                 scratch.Init(w, pool_item, shuffled_count);
                 scratch.Sweep(trial);
                 if (scratch.Beaten()) break;
@@ -437,6 +440,7 @@ struct Fill {
                 rng.Shuffle(song_items, song_count);
                 for (int l = 0; l < kLocationCount; l++) song_trial[l] = placement[l];
                 for (int i = 0; i < song_count; i++) song_trial[songs[i]] = song_items[i];
+                if (no_logic) break;
                 scratch.Init(w, pool_item, shuffled_count);
                 scratch.Sweep(song_trial);
                 if (scratch.Beaten()) break;
@@ -462,7 +466,7 @@ struct Fill {
         int progression_count = 0, rest_count = 0;
         for (int i = 0; i < shuffled_count; i++) {
             if (pool_dungeon[i] >= 0) continue;
-            if (w.IsProgression(pool_item[i]))
+            if (!no_logic && w.IsProgression(pool_item[i]))
                 progression[progression_count++] = pool_item[i];
             else
                 rest[rest_count++] = pool_item[i];
@@ -520,6 +524,12 @@ bool Generate(const Settings& settings, uint64_t seed, SeedResult& out, int max_
         static State check;
         check.Init(world, nullptr, 0);
         check.Sweep(fill.placement);
+        if (settings[SET_logic] == kLogicNone) {  // no logic: the seed may be impossible to finish
+            out.ok = true;
+            out.attempts = attempt;
+            for (int l = 0; l < kLocationCount; l++) out.placement[l] = fill.placement[l];
+            return true;
+        }
         if (!check.Beaten()) continue;
         if (settings[SET_accessibility] == kAccessibilityAll) {
             bool all = true;
