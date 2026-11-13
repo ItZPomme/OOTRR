@@ -489,7 +489,7 @@ def main() -> int:
     text = Exporter().header()
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text, encoding="utf-8", newline="\n")
-    print(f"écrit {OUT} ({len(text)} octets)")
+    print(f"written {OUT} ({len(text)} bytes)")
     return 0
 
 
