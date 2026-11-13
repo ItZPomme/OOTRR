@@ -111,7 +111,7 @@ def build_native(root_gamedata: dict) -> None:
 
 
 def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
-          give: list[str] | None = None, flags: dict | None = None) -> list[str]:
+          give: list[str] | None = None, flags: dict | None = None, compile_native: bool = True) -> list[str]:
     mb = ModBuilder(romfs)
     report = []
     # tout ce qui ne dépend pas de la seed : scènes passées (skip_cutscenes = safe)
@@ -260,7 +260,8 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     raw = mb.codec.decompress(out / rel if (out / rel).exists() else path)
     root = read_byml(raw)
     report += menu.gamedata_struct(root, defaults())
-    build_native(root)
+    if compile_native:
+        build_native(root)  # sinon module déjà compilé (--native, ex. celui d'une release)
     enum_values = {}
     from ..formats.gamedata import flag_hash, index
     idx = index(root)
@@ -382,19 +383,26 @@ def main(argv=None):
                    help="test : objet donné au début de la partie (répétable, ex. Item_Gauntlet_Goron)")
     p.add_argument("--test-flag", action="append", default=[], metavar="NOM=VALEUR",
                    help="test : valeur de départ d'une donnée GameData (ex. PlayerStatus.CurrentRupee=99)")
+    p.add_argument("--native", type=Path, metavar="FICHIER",
+                   help="module natif déjà compilé (subsdk9 d'une release) : pas de compilation, pas besoin de devkitPro")
     a = p.parse_args(argv)
-    if not NATIVE.is_file():
-        raise SystemExit(f"module natif absent : {NATIVE} (compiler native/exlaunch, voir native/README.md)")
+    native = a.native or NATIVE
+    if a.native is None and not DEVKITPRO_BASH.is_file():
+        raise SystemExit("devkitPro absent : donner le module natif d'une release avec --native subsdk9 "
+                         "(voir docs/GUIDE.md)")
+    if a.native is not None and not a.native.is_file():
+        raise SystemExit(f"module natif introuvable : {a.native}")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         flags = {}
         for entry in a.test_flag:
             name, value = entry.split("=", 1)
             flags[name] = {"true": True, "false": False}.get(value.lower(), int(value) if value.lstrip("-").isdigit() else value)
-        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give, flags):
+        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give, flags,
+                          compile_native=a.native is None):
             print(line)
         (root / "exefs").mkdir()
-        shutil.copy2(NATIVE, root / "exefs" / "subsdk9")
+        shutil.copy2(native, root / "exefs" / "subsdk9")
         if a.install:
             print("installé :", install(root, emulator_root(), "OoTRR-menu"))
         else:
