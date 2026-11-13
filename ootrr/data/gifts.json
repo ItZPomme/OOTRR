@@ -59,6 +59,13 @@
     ],
     "Colossus Great Fairy Reward": [
       ["Dm_FairyFountain_Nayru", 98, "ActorName", "Item_NayruLove"]
+    ],
+    "Kak Man on Roof": [
+      ["Npc_Hylia_001_Adult", 14, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "Graveyard Dampe Gravedigging Tour": [
+      ["Npc_Hylia_Dampe_001", 602, "ActorName", "Obj_Heart_Piece"],
+      ["Npc_Hylia_Dampe_001.110", 602, "ActorName", "Obj_Heart_Piece"]
     ]
   }
 }
