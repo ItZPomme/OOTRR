@@ -56,6 +56,8 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "settings": world.settings,
         "start_flags": world.start_flags(),
         "event_skips": world.event_skips(),
+        "timeline_skips": world.timeline_skips()[0],
+        "timeline_fade_in": world.timeline_skips()[1],
         "rsdb_changes": world.rsdb_changes(),
         "pack_changes": world.pack_changes(),
         "start_items": world.start_items(result.placements),

@@ -315,8 +315,15 @@ def ensure_actor_member(d: bytes, actor: str, kind: str, name: str) -> bytes:
 
 
 def find_action_event(d: bytes, actor: str, action: str, param: str, value: str) -> int | None:
-    """Indice du premier événement « acteur.action » dont le paramètre texte vaut value."""
+    """Index of the first "actor.action" event whose text parameter `param` equals value."""
+    found = find_action_events(d, actor, action, param, value)
+    return found[0] if found else None
+
+
+def find_action_events(d: bytes, actor: str, action: str, param: str, value: str) -> list[int]:
+    """Indices of all "actor.action" events whose text parameter `param` equals value."""
     reloc, _ = _header(d)
+    out = []
     fc = _flowchart_full(d)
     for i in range(fc["n_events"]):
         o = fc["events"] + i * EVENT_SIZE
@@ -332,8 +339,8 @@ def find_action_event(d: bytes, actor: str, action: str, param: str, value: str)
         if param in names:
             child = _q(d, p + 0x10 + 8 * names.index(param))
             if d[child] == 5 and _string_at(d, _q(d, child + 0x10), reloc) == value:
-                return i
-    return None
+                out.append(i)
+    return out
 
 
 def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | None = None) -> tuple[bytes, list[str]]:

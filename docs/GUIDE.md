@@ -168,7 +168,9 @@ Required (1–6), Rewards Required (1–9), or Hearts Required (3 or 12) + Extra
 | Songs | Vanilla (songs in place), Shuffle (shuffled among the 12 song locations), Random (song locations join the pool: a song can be in a chest, and an NPC can give any item). |
 | Gifts | Minigame rewards (shooting galleries, bowling, horseback archery, diving, fishing), Anju, Darunia, Gerudo card, Light Arrows, Fire Arrows, man on the roof, Dampé's gravedigging tour and Great Fairies give a seed item (new, not fully validated in game yet). |
 
-Always on in the menu: cutscenes with no effect on the game are skipped.
+Always on in the menu: cutscenes with no effect on the game, and the cutscenes the game lets you skip with + / X,
+are not played (what they do is kept: items, quest steps, world changes). The ending, the credits, the last fights
+against Ganondorf and Ganon, and a few scenes that change the time of day are still played (skip them with +).
 
 ### Seeing your game's spoiler log
 

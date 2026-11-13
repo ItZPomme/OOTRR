@@ -55,7 +55,7 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `shuffle_rewards` | `vanilla`, `shuffled` | Stones and medallions shuffled between bosses and Link's pocket |
 | `shuffle_hearts` | `none`, `freestanding`, `all` | Freestanding Pieces of Heart (and boss Heart Containers) shuffled |
 | `maps_compasses` | `vanilla`, `start_with`, `shuffle`, `removed` | Maps and compasses |
-| `skip_cutscenes` | `none`, `safe` | Cutscenes without effect marked as seen, Rauru and Saria skipped, interrupting Kokiri disabled |
+| `skip_cutscenes` | `none`, `safe` | Cutscenes without effect marked as seen, cutscenes the game lets you skip (+ / X) never played (their effects kept), Rauru and Saria skipped, interrupting Kokiri disabled |
 | `logic_lens_required`, `accessibility` | | Logic options |
 
 Test options (outside the logic, for in-game experiments): `--test-chest`, `--test-pickup`, `--test-drop`,

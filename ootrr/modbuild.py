@@ -83,21 +83,25 @@ class ModBuilder:
                       moat_gate: bool = False,
                       start_warp: tuple[str, str] | None = None,
                       scrub_sales: dict[str, int] | None = None,
-                      questions: list[str] | None = None) -> list[str]:
+                      questions: list[str] | None = None,
+                      timeline_skips: dict[str, list[str]] | None = None,
+                      timeline_fade_in: list[str] | None = None) -> list[str]:
         """Modifie des flux d'événements (Event/EventFlow/<flux>.bfevfl.zs).
 
         event_changes : {flux: {ancien nom: nouveau nom}} (ex. l'objet donné)
         event_skips   : {flux: [scènes]} étapes qui jouent ces scènes, à sauter
-        start_items   : objets ajoutés à l'inventaire au début de l'introduction"""
+        start_items   : objets ajoutés à l'inventaire au début de l'introduction
+        timeline_skips: {script: [scenes]} skippable timelines replaced with their "already seen" flag"""
         from .formats.evfl import (add_actions, find_action, insert_flow, replace_event_strings, replace_strings,
                                    skip_event_steps)
 
         report = []
         event_skips = event_skips or {}
+        timeline_skips = timeline_skips or {}
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -110,6 +114,9 @@ class ModBuilder:
                 if len(skip_report) < len(event_skips[flow]):
                     raise KeyError(f"{flow} : scène à sauter introuvable parmi {event_skips[flow]}")
                 report += [f"{flow}: {r}" for r in skip_report]
+            if flow in timeline_skips:
+                new, tl_report = self._skip_timelines(new, timeline_skips[flow], set(timeline_fade_in or ()))
+                report += [f"{flow}: {r}" for r in tl_report]
             count = 0
             if mapping:
                 new, count = replace_strings(new, mapping)
@@ -325,6 +332,40 @@ class ModBuilder:
             if "cases" in n:
                 n["cases"] = {k: ("old" if v == total else v) for k, v in n["cases"].items()}
         return flow, nodes
+
+    TIMELINE_TRANSITION = ("EventSystemActor", "EventTransition", "EventName")
+    # templates: "GameDataActor.EventTriggerSetGameDataBool" and "UISystemActor.EventEventFadeIn" (DoorOfTime)
+    TIMELINE_TEMPLATE = "DoorOfTime"
+
+    def _skip_timelines(self, flow: bytes, scenes: list[str], fade_in: set[str]) -> tuple[bytes, list[str]]:
+        """Replaces each step that plays one of these skippable timelines (EventTransition) with
+        HavePlayedEvent.<scene> = true, then a fade-in for the scenes of `fade_in` (transitions that let the
+        timeline fade the screen back in). The rest of the script is unchanged."""
+        from .formats.evfl import ensure_actor_member, find_action, find_action_events, insert_flow
+
+        src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.TIMELINE_TEMPLATE}.bfevfl.zs")
+        setb = (src, find_action(src, "GameDataActor", "EventTriggerSetGameDataBool"))
+        fade = (src, find_action(src, "UISystemActor", "EventEventFadeIn"))
+        if setb[1] is None or fade[1] is None:
+            raise KeyError(f"{self.TIMELINE_TEMPLATE}: template actions not found")
+        flow = ensure_actor_member(flow, "GameDataActor", "action", "EventTriggerSetGameDataBool")
+        if fade_in & set(scenes):
+            flow = ensure_actor_member(flow, "UISystemActor", "action", "EventEventFadeIn")
+        report = []
+        for scene in scenes:
+            steps = find_action_events(flow, *self.TIMELINE_TRANSITION, scene)
+            if not steps:
+                raise KeyError(f"timeline step not found: {scene}")
+            for step in steps:
+                nodes = [{"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": setb,
+                          "set": {"GameDataName": f"HavePlayedEvent.{scene}", "Value": 1}, "next": "after"}]
+                if scene in fade_in:
+                    nodes[0]["next"] = 1
+                    nodes.append({"actor": "UISystemActor", "action": "EventEventFadeIn", "template": fade,
+                                  "next": "after"})
+                flow, _ = insert_flow(flow, None, nodes, before=step)
+                report.append(f"{scene}: step {step} replaced with its flag{' + fade-in' if scene in fade_in else ''}")
+        return flow, report
 
     SCRUB_FLOW = "Enemy_Scrub_Business_Common"
     SCRUB_MSG_PREFIX = "OoTRR_Scrub_"
@@ -829,7 +870,9 @@ class ModBuilder:
               bool_exps: dict[str, list] | None = None,
               start_warp: tuple[str, str] | None = None,
               scrub_sales: dict[str, int] | None = None,
-              questions: list[str] | None = None) -> list[str]:
+              questions: list[str] | None = None,
+              timeline_skips: dict[str, list[str]] | None = None,
+              timeline_fade_in: list[str] | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -934,7 +977,7 @@ class ModBuilder:
             report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps)
         if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
             report += self._write_events(event_changes or {}, out_romfs, event_skips, start_items, moat_gate,
-                                         start_warp, scrub_sales, questions)
+                                         start_warp, scrub_sales, questions, timeline_skips, timeline_fade_in)
         if logic_patches:
             report += self._write_logic(logic_patches, out_romfs)
         if scrub_sales or questions:

@@ -117,7 +117,9 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     from ..settings import build as build_settings
     from ..world import World
     world = World(build_settings(dict(menu.STATIC_SETTINGS)))
+    timeline_skips, timeline_fade_in = world.timeline_skips()
     common = dict(start_flags={**world.start_flags(), **(flags or {})}, event_skips=world.event_skips(),
+                  timeline_skips=timeline_skips, timeline_fade_in=timeline_fade_in,
                   start_warp=tuple(start.split("=", 1)) if start else None,
                   start_items=world.start_items() + list(give or []))
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}
