@@ -152,6 +152,8 @@ u64 ReadTick() {
 }
 
 bool g_trust_memory = false;
+int g_pending_b = 0;  // B à injecter (images restantes) : bouton de fin de page du menu, voir TrigMaskChecker
+bool g_menu_back = false;  // dernière fermeture de page par B du joueur (OoTRR.MenuBack), voir SetMenuBack
 bool g_giving_start = false;  // objets de départ en cours (leurs chants passent)
 int g_song_blocks = 0;
 // chants placés dans un coffre (donnés sous leur vrai nom, pas par un jeton) : autorisés une fois chacun
@@ -692,10 +694,12 @@ HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
                         u64 a8, u64 a9, u64 a10) {
         if (g_menu && name && SameString(name, kGameLayout)) {
             name = kMenuLayout;
-            // une ouverture de l'écran d'options par page
-            g_page = g_layouts < ootrr::menu::kPageCount ? g_layouts : ootrr::menu::kPageCount - 1;
+            // une ouverture de l'écran d'options par page : la première, puis +1 (bouton de fin de page) ou -1 (B)
+            int next = g_layouts == 0 ? 0 : (g_menu_back ? g_page - 1 : g_page + 1);
+            g_page = next < 0 ? 0 : (next >= ootrr::menu::kPageCount ? ootrr::menu::kPageCount - 1 : next);
             g_layouts++;
             g_trace = 4;
+            g_pending_b = 0;  // page suivante : plus de B injecté (bouton de fin de page)
             LogValue("OoTRR: mise en page du menu, page", static_cast<u64>(g_page + 1));
             u32 mode = ootrr::ingame::UpdateBridgeRows(Main());
             g_bridge_mode = -1;
@@ -1110,6 +1114,65 @@ HOOK_DEFINE_TRAMPOLINE(ItemObtained) {
     }
 };
 
+/* Bouton « Next Page » / « Start the Game » du menu (type OcarinaKeyAssign = 13, aucune autre ligne du menu ne l'utilise) :
+ * il doit faire comme B, qui ferme l'écran et enchaîne la page suivante. Un appui sur une ligne bouton ne passe pas par
+ * TrigA : l'écran le détecte (SeqQueryIsDowningAmiiboButtonOfOption) et le script va à l'aiguillage des boutons, qui lit
+ * le type par SeqQueryGetSelectedOptionType (calcul 0x32f97a0, sortie en *(nœud + 0x20)) ; le graphe modifié
+ * (ingame_menu.option_module) n'y suffisait pas (constaté, type lu = 13). Quand cette requête lit 13, on mémorise un B
+ * que le calcul des touches suivant (SeqQueryControllerTrigMaskChecker, 0x7550b0 : TrigA en nœud + 0x28, TrigB en
+ * + 0x30) renvoie au script. */
+constexpr s32 kNextPageOptionType = 13;
+// B est maintenu quelques images : tant que le bouton reste enfoncé, le script repart vers l'aiguillage des boutons
+// sans lire B (un seul B injecté était perdu, constaté) ; arrêté au chargement de la page suivante (LoadLayout)
+int g_next_page_logs = 6;
+
+HOOK_DEFINE_TRAMPOLINE(QuerySelectedOptionType) {
+    static void Callback(u8* node) {
+        Orig(node);
+        u64 out = *reinterpret_cast<u64*>(node + 0x20) & ~3ull;
+        if (g_menu && out && *reinterpret_cast<s32*>(out) == kNextPageOptionType) {
+            if (!g_pending_b && g_next_page_logs > 0) {
+                g_next_page_logs--;
+                Log("OoTRR: menu, bouton de fin de page -> B");
+            }
+            g_pending_b = 30;
+        }
+    }
+};
+
+// OoTRR.MenuBack (lu par la séquence du titre à la fermeture d'une page) : vrai = B du joueur (page précédente, ou menu
+// principal depuis la page 1), faux = bouton de fin de page (page suivante)
+void SetMenuBack(bool back) {
+    if (g_menu_back == back) return;
+    g_menu_back = back;
+    alignas(16) u8 node[0x50] = {};  // nœud SeqOneShotSetNonStructGameDataBool : valeur lue via nœud + 0x40
+    static u8 value;
+    value = back ? 1 : 0;
+    *reinterpret_cast<u8**>(node + 0x40) = &value;
+    reinterpret_cast<void (*)(void*, u32)>(Main() + kSetBoolNode)(node, ootrr::menu::kMenuBackHash);
+}
+
+HOOK_DEFINE_TRAMPOLINE(TrigMaskChecker) {
+    static void Callback(u8* node) {
+        Orig(node);
+        if (!g_menu) {
+            g_pending_b = 0;
+            return;
+        }
+        u8* trig_a = reinterpret_cast<u8*>(*reinterpret_cast<u64*>(node + 0x28) & ~3ull);
+        u8* trig_b = reinterpret_cast<u8*>(*reinterpret_cast<u64*>(node + 0x30) & ~3ull);
+        if (!trig_b) return;
+        if (g_pending_b > 0) {
+            if (trig_a) *trig_a = 0;
+            *trig_b = 1;
+            g_pending_b--;
+            SetMenuBack(false);
+        } else if (*trig_b & 1) {
+            SetMenuBack(true);
+        }
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(SetChallengeStep) {
     static u64 Callback(void* manager, u32 challenge, u32 step, u64 a3, u64 a4, u64 a5) {
         if (g_challenge_logs > 0) {
@@ -1147,6 +1210,8 @@ extern "C" void exl_main(void* x0, void* x1) {
     PouchAdd::InstallAtOffset(ootrr::ingame::kPouchAdd);
     ArchiveEntry::InstallAtOffset(0x32ade0);
     MenuTabTitle::InstallAtOffset(0xa6ab50);
+    QuerySelectedOptionType::InstallAtOffset(0x32f97a0);
+    TrigMaskChecker::InstallAtOffset(0x7550b0);
     ItemObtained::InstallAtOffset(0x181160);
     InitDrop::InstallAtOffset(kInitDrop);
     ParsePouchRow::InstallAtOffset(0x5a7c60);
