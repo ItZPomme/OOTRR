@@ -11,7 +11,7 @@ Le randomizer existe sous deux formes :
 | Nouvelle seed | À chaque nouvelle partie, sans rien réinstaller | Une installation par seed |
 | Fonctions | Toutes (boutiques, Peste Mojo, départ adulte…) | Pas de boutiques mélangées |
 | Spoiler log | `ootrr.tools.ingame_spoiler` (relit la sauvegarde) | Écrit avec la seed |
-| À installer en plus | devkitPro (pour compiler le module natif) | Rien |
+| À installer en plus | Rien avec une release (module natif fourni) ; devkitPro depuis les sources | Rien |
 
 ---
 
@@ -21,9 +21,28 @@ Le randomizer existe sous deux formes :
    (version 131072, appelée « 2.0.0 » dans le code). Aucun fichier du jeu n'est fourni ici.
 2. Un émulateur dérivé de Yuzu : **Eden** ou **Fritchii**, avec tes propres clés.
 3. **Python 3.10 ou plus récent** (Windows : cocher « Add python.exe to PATH » à l'installation).
-4. Pour le menu dans le jeu : **devkitPro** (devkitA64 + libnx), installé dans `C:\devkitPro`
-   (installateur Windows de devkitPro, composant « Switch development »).
-5. Ce dépôt (bouton « Code » -> « Download ZIP », ou `git clone`).
+4. Le randomizer :
+   - **Recommandé** : la dernière **release** GitHub (onglet *Releases* du dépôt). Télécharge le code
+     source (*Source code (zip)*) **et** le fichier `subsdk9` (module natif déjà compilé) de la **même**
+     release, puis décompresse le code source et mets `subsdk9` dans son dossier.
+   - Ou les sources à jour (bouton « Code » -> « Download ZIP », ou `git clone`) : il faut alors compiler le
+     module natif avec **devkitPro** (devkitA64 + libnx, installé dans `C:\devkitPro`, composant
+     « Switch development » de l'installateur Windows).
+
+Le module `subsdk9` d'une release ne fonctionne qu'avec le code source de **cette** release (il contient la
+logique et les réglages du menu de cette version) : ne mélange pas les versions.
+
+## 1 bis. Récupérer ton jeu
+
+Le randomizer ne contient **aucun fichier du jeu** et n'en distribue aucun : chaque joueur construit le mod à
+partir de **sa propre copie** du jeu. Il te faut, depuis **ta** console et **ton** jeu acheté :
+
+- le jeu et sa **mise à jour** (version 131072 / 2.0.0), copiés avec un outil de sauvegarde (*dump*) pour
+  console ;
+- les **clés** de ta console (`prod.keys`, `title.keys`), placées dans l'émulateur (voir sa documentation).
+
+Installe ensuite le jeu **et** sa mise à jour dans l'émulateur (*Fichier* -> *Installer des fichiers dans la
+NAND*), puis vérifie qu'il démarre normalement avant d'aller plus loin.
 
 ## 2. Extraire la RomFS de la mise à jour
 
@@ -73,19 +92,31 @@ Règles à respecter :
 
 ### Installer
 
-```bash
-python -m ootrr.tools.menutest --romfs "ROMFS" --install
-```
+Émulateur **fermé**, dans un terminal ouvert dans le dossier du randomizer :
 
-La commande prépare les fichiers du jeu modifiés, **compile le module natif** (avec devkitPro) et installe
-le tout sous le nom `OoTRR-menu`. Compte quelques minutes. À refaire seulement quand tu mets à jour le dépôt.
+- avec une **release** (module natif fourni, pas besoin de devkitPro) :
+
+  ```bash
+  python -m ootrr.tools.menutest --romfs "ROMFS" --native subsdk9 --install
+  ```
+
+- depuis les **sources** (compile le module natif avec devkitPro) :
+
+  ```bash
+  python -m ootrr.tools.menutest --romfs "ROMFS" --install
+  ```
+
+La commande prépare les fichiers du jeu modifiés à partir de **ta** RomFS et installe le tout sous le nom
+`OoTRR-menu`. Compte quelques minutes. À refaire seulement quand tu changes de version du randomizer.
+Ensuite, dans l'émulateur : clic droit sur le jeu -> *Propriétés* -> *Add-Ons*, coche `OoTRR-menu`.
 
 ### Jouer
 
 1. Lance le jeu, choisis **Nouvelle partie**.
 2. Le menu du randomizer s'ouvre (3 pages). Change les réglages avec la croix directionnelle.
-3. Passe à la page suivante avec le bouton **Next Page** en bas de la page (ou **B**). Sur la dernière page,
-   **Start the Game** (ou **B**) mène à la confirmation habituelle.
+3. Passe à la page suivante avec le bouton **Next Page** en bas de la page (A). **B** revient à la page
+   précédente (depuis la page 1 : au menu principal). Sur la dernière page, **Start the Game** mène à la
+   confirmation habituelle.
 4. La seed est générée au début de la partie. Elle est enregistrée dans la sauvegarde : recharger la partie
    redonne exactement la même répartition des objets.
 
@@ -190,6 +221,7 @@ commence une nouvelle partie après chaque mise à jour.
   les réglages.
 - **Le menu n'apparaît pas après « Nouvelle partie »** : vérifie que `OoTRR-menu` est le seul mod OoTRR coché
   et qu'il contient bien `exefs\subsdk9` (sinon la compilation a échoué : relance `menutest` et lis l'erreur).
+- **« devkitPro absent »** : tu installes depuis une release : ajoute `--native subsdk9` (fichier `subsdk9` de la même release, dans le dossier du randomizer).
 - **« compilation du module natif impossible »** : devkitPro doit être dans `C:\devkitPro` avec devkitA64.
 - **L'installation ne change rien** : l'émulateur était ouvert pendant l'installation ; ferme-le et relance la
   commande.
