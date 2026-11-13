@@ -86,8 +86,7 @@ Règles à respecter :
 - **L'émulateur doit être fermé** pendant l'installation (sinon des fichiers restent verrouillés et le mod
   est installé à moitié).
 - **Un seul mod OoTRR actif à la fois** : dans l'émulateur, clic droit sur le jeu -> *Propriétés* ->
-  *Add-Ons*, ne cocher que `OoTRR-menu` **ou** `OoTRR` (désactiver `OoTRR-essai`, `OoTRR-options`,
-  `OoTRR-native`… s'ils existent).
+  *Add-Ons*, ne cocher que `OoTRR-menu`.
 
 ---
 
