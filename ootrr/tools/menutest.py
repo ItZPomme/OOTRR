@@ -136,8 +136,9 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         hearts = heart_tokens()
         model_files, model_table = ground_models(mb)
         mb.token_model_files = model_files
-        (EXLAUNCH / "source" / "program" / "rando" / "ground_models.hpp").write_text(
-            ground_models_header(model_table), encoding="utf-8", newline="\n")
+        if compile_native:  # en-tête du module natif (inutile avec un module déjà compilé)
+            (EXLAUNCH / "source" / "program" / "rando" / "ground_models.hpp").write_text(
+                ground_models_header(model_table), encoding="utf-8", newline="\n")
         report.append(f"modèles des objets au sol : {len(model_table)} ({len(model_files)} fichiers par jeton)")
         for h, (t, base) in hearts.items():
             actor_changes[h] = {"Gyaml": t}
