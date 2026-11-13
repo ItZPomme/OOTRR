@@ -1,12 +1,12 @@
-"""Installateur du menu du randomizer pour les joueurs (programme Windows autonome, sans Python à installer).
+"""Randomizer menu installer for players (standalone Windows program, no Python to install).
 
-    OoTRR-installer.exe                 # demande le dossier romfs dans une fenêtre
-    OoTRR-installer.exe "CHEMIN\\romfs"  # ou en argument
+    OoTRR-installer.exe                 # asks for the romfs folder in a window
+    OoTRR-installer.exe "PATH\\romfs"    # or as an argument
 
-Construit le mod `OoTRR-menu` à partir de la RomFS de la mise à jour du joueur (aucun fichier du jeu n'est
-fourni) et l'installe dans l'émulateur (Fritchii ou Eden), avec le module natif embarqué (subsdk9 de la même
-version). Fabriqué par `python -m ootrr.tools.build_installer` (PyInstaller).
-Depuis les sources : `python -m ootrr.tools.installer` utilise native/exlaunch/deploy/subsdk9.
+Builds the `OoTRR-menu` mod from the player's update RomFS (no game files are provided) and installs it into the
+emulator (Fritchii or Eden), with the bundled native module (subsdk9 of the same version). Built by
+`python -m ootrr.tools.build_installer` (PyInstaller).
+From the sources: `python -m ootrr.tools.installer` uses native/exlaunch/deploy/subsdk9.
 """
 
 from __future__ import annotations
@@ -29,9 +29,9 @@ def ask_romfs() -> Path | None:
 
     root = tkinter.Tk()
     root.withdraw()
-    messagebox.showinfo("OoTRR", "Choisis le dossier « romfs » de la MISE À JOUR du jeu (version 131072),\n"
-                                 "celui qui contient Banc, Event, GameData, Pack…")
-    folder = filedialog.askdirectory(title="Dossier romfs de la mise à jour")
+    messagebox.showinfo("OoTRR", "Choose the \"romfs\" folder of the game's UPDATE (version 131072),\n"
+                                 "the one that contains Banc, Event, GameData, Pack…")
+    folder = filedialog.askdirectory(title="Update romfs folder")
     root.destroy()
     return Path(folder) if folder else None
 
@@ -50,25 +50,25 @@ def main(argv=None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     romfs = Path(args[0]) if args else ask_romfs()
     if romfs is None:
-        print("Annulé.")
+        print("Cancelled.")
         return 1
     if not (romfs / "GameData").is_dir() or not (romfs / "Pack").is_dir():
-        print(f"Ce dossier n'est pas une RomFS du jeu (GameData et Pack manquants) : {romfs}")
+        print(f"This folder is not a RomFS of the game (GameData and Pack missing): {romfs}")
         return 1
     emulator = running_emulator()
     if emulator:
-        print(f"L'émulateur est ouvert ({emulator}) : ferme-le, puis relance l'installateur.")
+        print(f"The emulator is open ({emulator}): close it, then run the installer again.")
         return 1
     native = bundled_native()
     if not native.is_file():
-        print(f"Module natif introuvable : {native}")
+        print(f"Native module not found: {native}")
         return 1
-    print("Construction du mod à partir de", romfs, "(quelques minutes)…")
+    print("Building the mod from", romfs, "(a few minutes)…")
     return build(["--romfs", str(romfs), "--native", str(native), "--install"])
 
 
 def run() -> None:
-    """Point d'entrée de l'exe : messages lisibles et pause avant de fermer la fenêtre."""
+    """Entry point of the exe: readable messages and a pause before closing the window."""
     code = 1
     try:
         code = main()
@@ -76,12 +76,12 @@ def run() -> None:
         code = exc.code if isinstance(exc.code, int) else 1
         if not isinstance(exc.code, int) and exc.code:
             print(exc.code)
-    except Exception as exc:  # message lisible pour le joueur
-        print("Erreur :", exc)
+    except Exception as exc:  # readable message for the player
+        print("Error:", exc)
     if code == 0:
-        print("\nInstallé : dans l'émulateur, Propriétés du jeu -> Add-Ons -> coche OoTRR-menu (et seulement lui).")
+        print("\nInstalled: in the emulator, game Properties -> Add-Ons -> tick OoTRR-menu (and only that one).")
     if getattr(sys, "frozen", False):
-        input("\nAppuie sur Entrée pour fermer.")
+        input("\nPress Enter to close.")
     sys.exit(code)
 
 

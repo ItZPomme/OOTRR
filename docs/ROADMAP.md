@@ -1,72 +1,139 @@
-# Travail restant
+# Remaining work
 
-Par ordre de priorité. Chaque point : état actuel -> prochaine étape.
+By priority. Each item: current state -> next step.
 
-## Retours de test en jeu (à corriger au fur et à mesure)
-Liste de bugs et d'améliorations issus d'une session de test. Cocher quand corrigé **et** validé en jeu.
+## In-game test feedback (fix as we go)
+Bugs and improvements found during test sessions. Tick when fixed **and** validated in game.
 
 ### Bugs
-- [x] Médaillon de l'Ombre « non obtenu » en commençant avec : il était bien donné mais invisible (onglet Key Items verrouillé, voir Menu), et un second médaillon s'y ajoutait : PouchAdd prenait l'objet de la poche de Link pour la récompense d'origine de Bongo Bongo et le remplaçait (Forêt en plus de l'Ombre). Remplacement désactivé pendant les objets de départ ; **validé en jeu** (2026-11-12 : seulement le Médaillon de l'Ombre).
-- [x] La logique suppose qu'on commence au Domaine Zora : départ aléatoire désactivé (`RANDOM_SPAWN_ENABLED = False`, Python et natif) ; la ligne « Random Spawn » est retirée du menu. **À valider en jeu**. **Validé en jeu** (2026-11-12 : départ dans la forêt, ligne absente du menu).
-- [x] Boutique infinie : **corrigé et validé en jeu** (2026-11-12, boutique Kokiri). Entier sauvegardé `OoTRR.ShopSold` (un bit par article jeton, remis à 0 à la génération) ; premier achat = objet de la seed ; ensuite l'article coûte 999 rubis (la boutique ne relit le prix qu'au rechargement de la zone) et un rachat entre-temps ne donne rien et rembourse. **Pas de « Coming Soon » / « Sold out »** : 4 essais ont fait planter le chargement de la boutique (pointeur nul en 0x612850, lecteur BYML générique) : `Release` ajouté à un article qui n'en avait pas (Goron), clés « épuisé » ajoutées (Kokiri), puis même avec les seules clés d'origine (`IsCheckReleaseGameData` vrai, `ReleaseGameData` = nouvelle expression) et 32 drapeaux `OoTRR.Sold.<jeton>` ajoutés au GameData. Pistes non départagées : les 32 drapeaux sauvegardés, ou une condition qui désigne une donnée GameData ajoutée par le mod. Essai à faire séparément. **Validé en jeu** (2026-11-12).
-- [x] Cycle jour/nuit : **corrigé et validé en jeu** (2026-11-12, nouvelle partie : le temps s'écoule, le Chant du Soleil change l'heure ; trace native de l'heure). 0x345c020 (« heure figée ? », lu par l'avance de l'heure 0x3cdf70) répond « libre » seulement si la quête `Meet_DekuTree` est à Ready, ou si `HyruleField_ArriveEntrance` est vrai et `HrlField_HasEnteredFirstTime_Adult` faux ; sinon l'heure ne bouge plus et les demandes d'heure (Chant du Soleil) sont effacées sans être appliquées (constaté : 6 h 00 pendant toute la partie, demandes 0 h et 20 h ignorées). `HyruleField_ArriveEntrance` n'est posé que par la scène du hibou à l'entrée de la plaine (`Goto_HyruleCastle_Kaepora_00`, étape 132), jamais jouée avec les scènes passées ou Zelda passée. Correction : drapeau posé au départ, tous réglages (`world.TIME_FLOW_FLAG`). Aussi : l'étape 182 (`HyruleField_ChangeENV`, palette « First » à soleil forcé) reste sautée. Objet « temps » : `*(*0x4c7e898)+0x510` (+0x28 secondes du jour, +0x48 heure demandée, bit 1 de +0x08 = demande) ; 0xeee640 demande une heure ; avance normale aussi conditionnée par `HavePlayedEvent.Dm_HrlField_0020` (sinon ramenée vers 15 h). La trace de diagnostic (crochets sur 0xeee640 et 0x3cdf70) a été retirée ; la refaire au besoin à partir de ces adresses.
-- [ ] Les réceptacles de cœur obtenus par un jeton ne comptent qu'au changement d'âge : le module natif augmente maintenant `PlayerStatus.MaxLife` (+4 quarts) et rend la vie (`AddMaxLife`, compilé, **à valider en jeu** ; boss et réceptacles d'origine non touchés).
-- [x] Épée Kokiri redonnée au retour enfant : `ReplaceEquipmentForEraChange` équipait l'épée Kokiri même sans l'avoir ; garde ajoutée (`_guard_era_sword` : question « épée Kokiri en poche ? », sinon arme vide). La première version était fausse (relu avec `tools.events`) : `Num` écrasé par `set` (entier écrit comme texte : 12304) et réponses inversées ; corrigé (`Num` du modèle = 1, 0 = oui -> équiper). **À valider en jeu**. **Validé en jeu** (2026-11-12 : sans l'épée, le retour enfant ne la donne pas).
-- [x] Chants mélangés : le chant d'origine apparaît aussi dans la liste de l'ocarina (constaté). **Vérifié dans les fichiers** : les 12 dons de `Dm_SY_Ocarina` (étapes 26-31, 32-38) sont tous remplacés ; les autres mentions de `Item_Melody_*` (scènes `Dm_MelodyGet_*`, PNJ, `Dm_SY_Ocarina_SariaSong`) ne sont pas des actions d'inventaire ; dans le code, `Item_Melody_%s` ne sert qu'au son (0x323f420) et à l'icône (0x33bff00). Contre-mesure native : tout ajout direct `Item_Melody_*` est ignoré quand `shuffle_songs` != vanilla, sauf objets de départ et **chant placé dans un coffre** (la version précédente l'aurait bloqué en mode `random`) ; journal « chant d'origine ignore, raison » / « chant d'un coffre accepte ». **À valider en jeu** : si aucune ligne n'apparaît à la leçon, le chant n'est pas ajouté par `PouchAdd` (0x110d570). **Validé en jeu** (2026-11-12 : seul le chant de la seed est donné).
-- [ ] Talon devant le château : présence liée à `DoorOfTime_IsAfter_Step01_Exp` (comme Impa), donc absent avec Zelda passée ou porte ouverte (`TALON_CASTLE`, construit, **à valider en jeu**).
-- [x] Mur invisible au début de la rivière Zora : **comportement du jeu d'origine** (précisé par le testeur) : les rochers à l'entrée (`Obj_BrokenRock_A_01`, carte `ZoraRiver_Child` seulement ; déjà cassés côté adulte) bloquent le passage tant qu'ils ne sont pas détruits à la bombe. La logique le demande déjà (`ZR Front` -> `Zora River` : `is_adult or has_explosives`). Rien à corriger.
-- [ ] Jeton de Skulltula en boutique : modèle d'un bouclier Mojo. **Cause trouvée dans le code** : `TokenModelPath` passait l'objet par `GroundItem` (`Obj_Token_Gold` -> `Item_Token_Gold`, nom pour les textes) avant de chercher dans `kGroundModels`, qui ne connaît que `Obj_Token_Gold` : pas de modèle, donc celui de la base (bouclier). Corrigé (nom tel quel d'abord), compilé, **à valider en jeu** (vaut aussi pour un jeton d'or sur un cœur au sol).
-- [ ] Check de la Flèche de feu (`LH Sun`, Lac Hylia) : absent du spoiler car l'emplacement n'avait aucun mécanisme de don (ni coffre, ni jeton), donc jamais mélangé. **Ajouté dans les fichiers** : la flèche est un objet posé sur l'eau (`Obj_Arrow_Fire`, hash 4598657944866228526, carte `HyruleField_Adult_Static`), créé par le module `HyruleField_LakeHylia_Adult_Prefab_5313` (quête `SubEvent_GetFireArrow`, tir dans le soleil, plage horaire). Nouveau genre de lieu `pickup: "item"` (+ `actor`) : mélangé avec `shuffle_gifts`, l'acteur devient un jeton (copie de `Obj_Arrow_Fire`) comme les cœurs au sol, objets « au sol » seulement. Toujours au spoiler. Générateur natif identique au Python ; **à valider en jeu** (dépend aussi du cycle jour/nuit).
-- [x] Sortie de la grotte de Dampé : le Grappin est requis pour sortir de la salle d'arrivée et il est dans le coffre de la course. `ModBuilder._dampe_exit` : après le coffre (état `OpenedHookShot`), sans Super Grappin ni Grappin, parler à Dampé fait une copie autonome du changement de zone de la chute (étape 70 : `Graveyard_Adult`, point `4`) puis termine le script. Un saut direct vers l'étape 71 (autre point d'entrée, branche parallèle) faisait planter le moteur de scripts. **Validé en jeu** (2026-11-12).
+- [x] Shadow Medallion "not obtained" when starting with it: it was given but invisible (Key Items tab locked, see
+  Menu), and a second medallion was added: PouchAdd took the item from Link's pocket for Bongo Bongo's original
+  reward and replaced it (Forest on top of Shadow). Replacement disabled while giving starting items; **validated in
+  game** (2026-11-12: only the Shadow Medallion).
+- [x] The logic assumed a start in Zora's Domain: random spawn disabled (`RANDOM_SPAWN_ENABLED = False`, Python and
+  native); the "Random Spawn" row is removed from the menu. **Validated in game** (2026-11-12: start in the forest,
+  row absent from the menu).
+- [x] Infinite shop: **fixed and validated in game** (2026-11-12, Kokiri shop). Saved integer `OoTRR.ShopSold` (one
+  bit per token item, reset to 0 at generation); first purchase = seed item; afterwards the item costs 999 rupees
+  (the shop only re-reads the price when the area reloads) and a repurchase in between gives nothing and refunds.
+  **No "Coming Soon" / "Sold out"**: 4 attempts crashed the shop loading (null pointer at 0x612850, generic BYML
+  reader): `Release` added to an item that had none (Goron), "sold out" keys added (Kokiri), then even with only
+  the original keys (`IsCheckReleaseGameData` true, `ReleaseGameData` = new expression) and 32 `OoTRR.Sold.<token>`
+  flags added to GameData. Undecided leads: the 32 saved flags, or a condition referring to GameData added by the
+  mod. To try separately.
+- [x] Day/night cycle: **fixed and validated in game** (2026-11-12, new game: time flows, the Sun's Song changes the
+  time; native time trace). 0x345c020 ("time frozen?", read by the time advance 0x3cdf70) answers "free" only if the
+  `Meet_DekuTree` quest is Ready, or if `HyruleField_ArriveEntrance` is true and `HrlField_HasEnteredFirstTime_Adult`
+  false; otherwise time stops and time requests (Sun's Song) are cleared without being applied (observed: 6:00 for
+  the whole game, 0:00 and 20:00 requests ignored). `HyruleField_ArriveEntrance` is only set by the owl scene at the
+  field entrance (`Goto_HyruleCastle_Kaepora_00`, step 132), never played with skipped scenes or skipped Zelda. Fix:
+  flag set at the start, all settings (`world.TIME_FLOW_FLAG`). Also: step 182 (`HyruleField_ChangeENV`, "First"
+  palette with forced sun) stays skipped. "Time" object: `*(*0x4c7e898)+0x510` (+0x28 seconds of the day, +0x48
+  requested time, bit 1 of +0x08 = request); 0xeee640 requests a time; normal advance also depends on
+  `HavePlayedEvent.Dm_HrlField_0020` (otherwise pulled back towards 15:00). The diagnostic trace (hooks on 0xeee640
+  and 0x3cdf70) was removed; redo it from these addresses if needed.
+- [ ] Heart Containers obtained from a token only count at the next age change: the native module now increases
+  `PlayerStatus.MaxLife` (+4 quarters) and restores health (`AddMaxLife`, compiled, **to validate in game**; bosses
+  and original containers untouched).
+- [x] Kokiri Sword given back when returning to child: `ReplaceEquipmentForEraChange` equipped the Kokiri Sword even
+  without having it; guard added (`_guard_era_sword`: query "Kokiri Sword in pouch?", otherwise empty weapon). The
+  first version was wrong (re-read with `tools.events`): `Num` overwritten by `set` (integer written as text: 12304)
+  and answers inverted; fixed (template `Num` = 1, 0 = yes -> equip). **Validated in game** (2026-11-12: without the
+  sword, returning to child does not give it).
+- [x] Shuffled songs: the original song also appeared in the ocarina list (observed). **Verified in the files**: the
+  12 gifts of `Dm_SY_Ocarina` (steps 26-31, 32-38) are all replaced; the other mentions of `Item_Melody_*` (scenes
+  `Dm_MelodyGet_*`, NPCs, `Dm_SY_Ocarina_SariaSong`) are not inventory actions; in the code, `Item_Melody_%s` is only
+  used for the sound (0x323f420) and the icon (0x33bff00). Native countermeasure: any direct `Item_Melody_*` add is
+  ignored when `shuffle_songs` != vanilla, except starting items and **a song placed in a chest**; log lines
+  "chant d'origine ignore, raison" / "chant d'un coffre accepte". **Validated in game** (2026-11-12: only the seed's
+  song is given).
+- [ ] Talon in front of the castle: presence tied to `DoorOfTime_IsAfter_Step01_Exp` (like Impa), so absent with
+  skipped Zelda or open door (`TALON_CASTLE`, built, **to validate in game**).
+- [x] Invisible wall at the start of Zora's River: **original game behaviour** (clarified by the tester): the rocks at
+  the entrance (`Obj_BrokenRock_A_01`, `ZoraRiver_Child` map only; already broken as adult) block the way until
+  they are blown up. The logic already requires it (`ZR Front` -> `Zora River`: `is_adult or has_explosives`).
+  Nothing to fix.
+- [ ] Skulltula token in a shop: Deku Shield model. **Cause found in the code**: `TokenModelPath` passed the item
+  through `GroundItem` (`Obj_Token_Gold` -> `Item_Token_Gold`, name used for texts) before looking it up in
+  `kGroundModels`, which only knows `Obj_Token_Gold`: no model, so the base one (shield). Fixed (name as is first),
+  compiled, **to validate in game** (also applies to a gold token on a freestanding heart).
+- [ ] Fire Arrow check (`LH Sun`, Lake Hylia): missing from the spoiler because the location had no gift mechanism
+  (neither chest nor token), so it was never shuffled. **Added in the files**: the arrow is an item lying on the
+  water (`Obj_Arrow_Fire`, hash 4598657944866228526, map `HyruleField_Adult_Static`), created by the module
+  `HyruleField_LakeHylia_Adult_Prefab_5313` (quest `SubEvent_GetFireArrow`, shot into the sun, time window). New kind
+  of location `pickup: "item"` (+ `actor`): shuffled with `shuffle_gifts`, the actor becomes a token (copy of
+  `Obj_Arrow_Fire`) like freestanding hearts, "ground" items only. Always in the spoiler. Native generator identical
+  to Python; **to validate in game** (also depends on the day/night cycle).
+- [x] Exit of Dampé's grave: the Hookshot is required to leave the arrival room and it is in the race chest.
+  `ModBuilder._dampe_exit`: after the chest (state `OpenedHookShot`), without Longshot or Hookshot, talking to Dampé
+  runs a standalone copy of the fall's area change (step 70: `Graveyard_Adult`, point `4`) then ends the script. A
+  direct jump to step 71 (other entry point, parallel branch) crashed the script engine. **Validated in game**
+  (2026-11-12).
 
-### Mélange à étendre
-- [ ] Mini-jeux : récompenses mélangées (Lance-pierres, Arc, etc.).
-- [ ] Homme sur le toit (Kakariko) et visite du fossoyeur (Dampé enfant) : ajoutés aux cadeaux (`gifts.json` : `Npc_Hylia_001_Adult` étape 14, `Npc_Hylia_Dampe_001` et `.110` étape 602 ; le quart de cœur qui sort de terre reste visible), **à valider en jeu**.
-- [ ] Checks donnant des bouteilles mélangés : Anju, boutique de potions du marché, 5 Poes, Talon, lettre de Ruto (qui doit aussi être mélangée).
-- [ ] Cinématique de la Flèche de lumière mélangée.
-- [ ] Checks des Grandes Fées (fontaines) mélangés.
-- [ ] Gantelet Goron mélangé.
-- [ ] Checks donnant les écailles, pêche adulte et plongée (mini-jeux) mélangés.
-- [ ] Berceuse de Zelda dans le pool (chant de départ avec Zelda enfant passée et chants aléatoires) : déjà le cas dans le générateur (`Song from Impa` est un lieu de chant mélangé et le départ donne l'objet qui s'y trouve ; vérifié sur 8 seeds Python) ; **à valider en jeu avec le menu**.
+### Shuffle to extend
+- [ ] Minigames: shuffled rewards (Slingshot, Bow, etc.).
+- [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:
+  `Npc_Hylia_001_Adult` step 14, `Npc_Hylia_Dampe_001` and `.110` step 602; the Piece of Heart that comes out of the
+  ground stays visible), **to validate in game**.
+- [ ] Shuffled checks giving bottles: Anju, market potion shop, 5 Poes, Talon, Ruto's letter (which must also be
+  shuffled).
+- [ ] Shuffled Light Arrow cutscene.
+- [ ] Shuffled Great Fairy checks (fountains).
+- [ ] Shuffled Goron Bracelet.
+- [ ] Shuffled checks giving scales, adult fishing and diving (minigames).
+- [ ] Zelda's Lullaby in the pool (starting song with skipped child Zelda and random songs): already the case in the
+  generator (`Song from Impa` is a shuffled song location and the start gives the item found there; verified on 8
+  Python seeds); **to validate in game with the menu**.
 
-### Menu / réglages
-- [x] Onglet Key Items : le jeu ne l'ouvre (onglet 0xa69220 et écran 0x33dd6b0) que si un élément de la liste 4 (pierres spirituelles) est obtenu : fermé « ??? » / « Unavailable right now » avec un médaillon seul au départ. Crochets natifs : titre de l'onglet (0xa6ab50) et test « objet obtenu » (0x181160, seulement pour ces deux appels) ouverts dès qu'une pierre ou un médaillon est obtenu ; **validé en jeu** (2026-11-12). Onglet Threads of Time : `UI_IsFinishChallengeMenuOpenEvent` posé au départ (validé en jeu). Les « MsgNotFound » de Threads of Time (étapes de quête sautées) restent à voir.
-- [x] Menu : bouton de fin de page et navigation, **validés en jeu** (2026-11-12). Titre « Next Page » / « Start the Game » : crochet `MessageInFile` (0xa6b250, textes des volets `Pa_…`) ; état de droite « Press A » (`<préfixe>ZeldaNote_00/01`). Appui : une ligne bouton ne passe pas par TrigA ; l'écran le détecte et le script va à l'aiguillage des boutons, qui lit le type (13 = OcarinaKeyAssign) ; modifier le graphe ne suffisait pas : le module natif note le type 13 (`SeqQueryGetSelectedOptionType`, 0x32f97a0) et injecte B pendant 30 images (`SeqQueryControllerTrigMaskChecker`, 0x7550b0 : TrigA nœud + 0x28, TrigB + 0x30). B du joueur = page précédente (menu principal depuis la page 1) : drapeau `OoTRR.MenuBack` posé par le module, lu par un sélecteur ajouté après chaque page dans `Sequence/NormalTitle` (`title_sequence`) ; la page affichée suit (-1 / +1).
-- [ ] Condition du pont : nombre requis au choix en haut de la page 2 (voir « Pont arc-en-ciel ») ; menu **validé en jeu**, ouverture du pont au nombre choisi à vérifier.
+### Menu / settings
+- [x] Key Items tab: the game only opens it (tab 0xa69220 and screen 0x33dd6b0) if an item of list 4 (spiritual
+  stones) is obtained: closed "???" / "Unavailable right now" with only a medallion at the start. Native hooks: tab
+  title (0xa6ab50) and "item obtained" test (0x181160, only for these two calls) open as soon as a stone or a
+  medallion is obtained; **validated in game** (2026-11-12). Threads of Time tab: `UI_IsFinishChallengeMenuOpenEvent`
+  set at the start (validated in game). The "MsgNotFound" in Threads of Time (skipped quest steps) remain to look at.
+- [x] Menu: end-of-page button and navigation, **validated in game** (2026-11-12). "Next Page" / "Start the Game"
+  title: `MessageInFile` hook (0xa6b250, texts of `Pa_…` panes); right-hand state "Press A"
+  (`<prefix>ZeldaNote_00/01`). Press: a button row does not go through TrigA; the screen detects it and the script
+  goes to the button switch, which reads the type (13 = OcarinaKeyAssign); changing the graph was not enough: the
+  native module records type 13 (`SeqQueryGetSelectedOptionType`, 0x32f97a0) and injects B for 30 frames
+  (`SeqQueryControllerTrigMaskChecker`, 0x7550b0: TrigA node + 0x28, TrigB + 0x30). Player's B = previous page (main
+  menu from page 1): `OoTRR.MenuBack` flag set by the module, read by a selector added after each page in
+  `Sequence/NormalTitle` (`title_sequence`); the displayed page follows (-1 / +1).
+- [ ] Bridge condition: required number chosen at the top of page 2 (see "Rainbow bridge"); menu **validated in
+  game**, bridge opening at the chosen number to check.
 
-## Peste Mojo vendeurs (scrubsanity)
-- Mécanisme validé en jeu (une Peste Mojo vend n'importe quel objet, message dans la langue du jeu).
-- **À faire** : inventaire des ~35 Peste Mojo (`Enemy_Scrub_Business` dans les cartes enfant et
-  adulte, avec leurs hashes), région et règle de chacune dans `ootrr/data/world/`, réglage
-  `shuffle_scrubs`, prix (ceux du jeu ou fixes). Option de test actuelle : `--test-scrub HASH=OBJET:PRIX`.
+## Deku Scrub salesmen (scrubsanity)
+- Mechanism validated in game (a Deku Scrub sells any item, message in the game's language).
+- **To do**: inventory of the ~35 Deku Scrubs (`Enemy_Scrub_Business` in the child and adult maps, with their
+  hashes), region and rule of each in `ootrr/data/world/`, `shuffle_scrubs` setting, prices (the game's or fixed).
+  Current test option: `--test-scrub HASH=ITEM:PRICE`.
 
-## Skulltulas d'or
-- Butin remplaçable validé en jeu.
-- **À faire** : les 100 emplacements dans la logique (zone, âge, outils), réglage `tokensanity`,
-  puis le pont `tokens` (la valeur `PouchData.Item_Token_Gold.StockNum` est connue).
+## Gold Skulltulas
+- Replaceable drop validated in game.
+- **To do**: the 100 locations in the logic (area, age, tools), `tokensanity` setting, then the `tokens` bridge (the
+  value `PouchData.Item_Token_Gold.StockNum` is known).
 
-## Boutiques (shopsanity)
-- Menu natif : 4 articles par boutique (8 boutiques), réglage 0 à 4, prix Origine / Abordable /
-  Aléatoire ; validé en jeu dans la boutique Kokiri.
-- **À faire** : vérifier les autres boutiques, la vente unique après sauvegarde, le modèle des objets
-  qui traverse la tablette, la version Python (mod sans menu), et des bourses dans la logique pour
-  des prix au-delà de 99.
+## Shops (shopsanity)
+- Native menu: 4 items per shop (8 shops), setting 0 to 4, prices Vanilla / Affordable / Random; validated in game
+  in the Kokiri shop.
+- **To do**: check the other shops, the single sale after saving, the item model that goes through the shelf, the
+  Python version (mod without menu), and wallets in the logic for prices above 99.
 
-## Pont arc-en-ciel
-- Conditions implémentées (open, vanilla, stones, medallions, dungeons, hearts) : **à tester en jeu**.
-- Menu natif : nombre requis au choix en page 2 (pierres 1–3, médaillons 1–6, récompenses 1–9, cœurs 3–20),
-  lignes affichées selon la condition : **validé en jeu** (2026-11-12). Reste à vérifier en jeu que le pont
-  s'ouvre au nombre choisi pour chaque condition.
+## Rainbow bridge
+- Conditions implemented (open, vanilla, stones, medallions, dungeons, hearts): **to test in game**.
+- Native menu: required number chosen on page 2 (stones 1–3, medallions 1–6, rewards 1–9, hearts 3–20), rows shown
+  depending on the condition: **validated in game** (2026-11-12). Still to check in game that the bridge opens at
+  the chosen number for each condition.
 
-## Questions en jeu (« menu » au lancement)
-- Prototype : `open_forest=ask` (question oui/non au début de la nouvelle partie) — **à tester**.
-- Étendre aux réglages décidables pendant la partie : cinématiques, porte du temps, condition du
-  pont (expressions qui lisent un drapeau de réponse), objets de départ. Traduire les questions.
+## In-game questions ("menu" at launch)
+- Prototype: `open_forest=ask` (yes/no question at the start of the new game) — **to test**.
+- Extend to settings that can be decided during the game: cutscenes, Door of Time, bridge condition (expressions
+  that read an answer flag), starting items. Translate the questions.
 
-## Divers
-- Animation de première obtention des consommables : non supprimée (décidée par le moteur).
-- Améliorations progressives dans les coffres (mécanisme des coffres A_06 à contenu conditionnel).
-- PNJ et chants mélangés (remplacement du nom de l'objet dans leurs scènes — validé pour un PNJ).
-- Petites clés / clés du boss : actuellement à leur place d'origine.
-- Fenêtre de réglages sur PC (alternative simple au menu en jeu).
-- Menu natif dans le jeu (code injecté, exlaunch) : injection validée en jeu, voir `native/README.md` ; reste la rétro-ingénierie de l'écran « Nouvelle partie ».
+## Miscellaneous
+- First-obtain animation of consumables: not removed (decided by the engine).
+- Progressive upgrades in chests (mechanism of the A_06 chests with conditional content).
+- Shuffled NPCs and songs (replacing the item name in their scenes — validated for one NPC).
+- Small keys / boss keys: currently in their original location.
+- Settings window on PC (simple alternative to the in-game menu).
+- Native in-game menu (injected code, exlaunch): injection validated in game, see `native/README.md`.
