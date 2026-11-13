@@ -1,43 +1,41 @@
-# Formats de fichiers
+# File formats
 
-Tous les lecteurs/écrivains sont dans `ootrr/formats/` et réécrivent les fichiers d'origine
-**à l'identique** quand rien ne change (vérifié pour BYML, RESTBL, RELT des BFEVFL, MSBT).
+All readers/writers are in `ootrr/formats/` and rewrite the original files **byte for byte** when nothing changes
+(verified for BYML, RESTBL, BFEVFL RELT, MSBT).
 
-| Format | Fichiers | Module | Notes |
+| Format | Files | Module | Notes |
 |---|---|---|---|
-| Zstandard + dictionnaires | `*.zs` | `zs.py` | dictionnaires dans `Pack/ZsDic.pack.zs` (zs, bcett.byml, pack, bkprb) |
-| SARC | `Pack/**/*.pack.zs`, `Mals/*.sarc.zs` | `sarc.py` | l'écrivain garde l'alignement de chaque fichier |
-| BYML v7 | cartes `Banc/**`, `GameData`, `RSDB`, paramètres `*.bgyml` | `byml.py` | types U32/I64/U64/F64 conservés ; sous-arbres identiques dédupliqués |
-| RESTBL | `System/Resource/ResourceSizeTable*.rsizetable.zs` | `restbl.py` | taille réservée par fichier ; carte = taille décompressée + 292 |
-| GameData | `GameData/GameDataList*.byml.zs` | `gamedata.py` | MurmurHash3 32 bits du nom ; `#hash` pour un nom inconnu ; expressions |
-| BFEVFL | `Event/EventFlow/*.bfevfl.zs` | `evfl.py` | voir ci-dessous |
-| MSBT | dans `Mals/<langue>.*.sarc.zs` | `msbt.py` | UTF-8 ; LBL1 (hash ×0x492) + TXT2 |
-| AINB | `Logic/*.logic.module.ainb` | `modbuild._write_logic` | non compressé ; seul le remplacement de chaînes de même longueur est géré |
+| Zstandard + dictionaries | `*.zs` | `zs.py` | dictionaries in `Pack/ZsDic.pack.zs` (zs, bcett.byml, pack, bkprb) |
+| SARC | `Pack/**/*.pack.zs`, `Mals/*.sarc.zs` | `sarc.py` | the writer keeps each file's alignment |
+| BYML v7 | maps `Banc/**`, `GameData`, `RSDB`, parameters `*.bgyml` | `byml.py` | U32/I64/U64/F64 types preserved; identical subtrees deduplicated |
+| RESTBL | `System/Resource/ResourceSizeTable*.rsizetable.zs` | `restbl.py` | size reserved per file; map = decompressed size + 292 |
+| GameData | `GameData/GameDataList*.byml.zs` | `gamedata.py` | 32-bit MurmurHash3 of the name; `#hash` for an unknown name; expressions |
+| BFEVFL | `Event/EventFlow/*.bfevfl.zs` | `evfl.py` | see below |
+| MSBT | in `Mals/<language>.*.sarc.zs` | `msbt.py` | UTF-8; LBL1 (hash ×0x492) + TXT2 |
+| AINB | `Logic/*.logic.module.ainb` | `modbuild._write_logic` | uncompressed; only same-length string replacement is supported |
 
-## BFEVFL (scripts d'événements)
+## BFEVFL (event scripts)
 
-- En-tête : `0x18` offset de la table RELT, `0x1C` taille ; pointeurs 64 bits absolus.
-- RELT : liste de tous les emplacements de pointeurs (une section couvrant le fichier). Toute
-  modification qui ajoute des données reconstruit RELT (`evfl.build_relt`).
-- Flowchart (« EVFL ») : `+0x10` nombres (acteurs, actions, questions, événements, entrées),
-  `+0x28` acteurs, `+0x30` événements, `+0x38` dictionnaire des entrées, `+0x40` entrées.
-- Acteur 0x38 : nom, nom secondaire, argument, actions (tableau de pointeurs de texte),
-  questions, paramètres ; `+0x30` nb d'actions, `+0x32` nb de questions.
-- Événement 0x30 : nom, `+8` type (0 action, 1 question, 2 fork, 3 join, 4 sous-séquence),
-  `+0x0A` suivant (ou nb de cas), `+0x0C` acteur, `+0x0E` action/question, `+0x10` paramètres,
-  `+0x18` cas (question) ou script de la sous-séquence, `+0x20` point d'entrée de la sous-séquence.
-- Cas d'une question : 8 octets (`u32` valeur, `u16` événement). 0 = oui.
-- Entrée 0x20 : `+0x1C` premier événement.
-- Paramètres : conteneur (type 1) + dictionnaire « DIC » + valeurs ; textes souvent stockés
-  juste après leur valeur.
-- Pour ajouter des étapes sans décaler le fichier, les tableaux d'acteurs et d'événements sont
-  **recopiés en fin de fichier** avec les nouveaux éléments (les indices existants ne changent pas).
+- Header: `0x18` offset of the RELT table, `0x1C` size; absolute 64-bit pointers.
+- RELT: list of every pointer location (one section covering the file). Any change that adds data rebuilds RELT
+  (`evfl.build_relt`).
+- Flowchart ("EVFL"): `+0x10` counts (actors, actions, queries, events, entry points), `+0x28` actors, `+0x30`
+  events, `+0x38` entry point dictionary, `+0x40` entry points.
+- Actor 0x38: name, secondary name, argument, actions (array of string pointers), queries, parameters; `+0x30`
+  action count, `+0x32` query count.
+- Event 0x30: name, `+8` type (0 action, 1 query, 2 fork, 3 join, 4 sub-flow), `+0x0A` next (or case count),
+  `+0x0C` actor, `+0x0E` action/query, `+0x10` parameters, `+0x18` cases (query) or sub-flow script, `+0x20`
+  sub-flow entry point.
+- A query case: 8 bytes (`u32` value, `u16` event). 0 = yes.
+- Entry point 0x20: `+0x1C` first event.
+- Parameters: container (type 1) + "DIC" dictionary + values; strings often stored right after their value.
+- To add steps without shifting the file, the actor and event arrays are **copied to the end of the file** with the
+  new elements (existing indices do not change).
 
-Outil : `python -m ootrr.tools.events --romfs ROMFS <script> [--entry E | --find TEXTE]`.
+Tool: `python -m ootrr.tools.events --romfs ROMFS <script> [--entry E | --find TEXT]`.
 
-## Cartes (Banc)
+## Maps (Banc)
 
-`Banc/<Zone>/<Zone>_{Child,Adult}_{Dynamic,Static}.bcett.byml.zs` : `Actors` (Gyaml, Hash,
-SRTHash, Translate, Rotate, Dynamic, Presence, Links, Phive), `AiGroups` (modules de logique et
-leurs acteurs), `FarDeleteGroups`, `SimultaneousGroups`, `Rails`. Un même coffre a le même hash
-dans les cartes enfant et adulte.
+`Banc/<Area>/<Area>_{Child,Adult}_{Dynamic,Static}.bcett.byml.zs`: `Actors` (Gyaml, Hash, SRTHash, Translate,
+Rotate, Dynamic, Presence, Links, Phive), `AiGroups` (logic modules and their actors), `FarDeleteGroups`,
+`SimultaneousGroups`, `Rails`. A given chest has the same hash in the child and adult maps.

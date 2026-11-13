@@ -1,309 +1,314 @@
-# Ce qu'on sait du jeu
+# What we know about the game
 
-Connaissances accumulées en développant le randomizer (version de jeu : mise à jour 131072,
-fichiers `*.Product.110/111`). Légende : **[jeu]** validé en jeu, **[fichiers]** constaté dans
-les fichiers mais pas encore testé, **[hypothèse]** à confirmer.
+Knowledge gathered while developing the randomizer (game version: update 131072, files `*.Product.110/111`).
+Legend: **[game]** validated in game, **[files]** observed in the files but not tested yet, **[hypothesis]** to be
+confirmed.
 
-## Généralités
+## General
 
-- Moteur de *Tears of the Kingdom* : cartes BYML, scripts BFEVFL, modules de logique AINB,
-  tables RSDB, sauvegarde GameData (drapeaux identifiés par MurmurHash3 de leur nom).
-- Titre : `0400486024DEC000`. Mods : `<émulateur>\load\0400486024DEC000\<mod>\romfs\...` (`%APPDATA%\fritchii` pour Fritchii récent, `%APPDATA%\eden` pour Eden).
-- Les réponses des **questions de script** valent **0 = oui, 1 = non** (ex. le script des Peste
-  Mojo : « a le sac moyen ? » -> 0 = vend le grand sac). Un cas qui termine le script est **omis**
-  du tableau de cas (jamais de saut vers 0xFFFF) **[jeu]**.
-- Les drapeaux GameData (`DefaultValue`) ne s'appliquent qu'à une **nouvelle partie** **[jeu]**.
+- *Tears of the Kingdom* engine: BYML maps, BFEVFL scripts, AINB logic modules, RSDB tables, GameData save (flags
+  identified by the MurmurHash3 of their name).
+- Title: `0400486024DEC000`. Mods: `<emulator>\load\0400486024DEC000\<mod>\romfs\...` (`%APPDATA%\fritchii` for
+  recent Fritchii, `%APPDATA%\eden` for Eden).
+- Answers of **script queries** are **0 = yes, 1 = no** (e.g. the Deku Scrub script: "has the medium bag?" -> 0 =
+  sells the big bag). A case that ends the script is **omitted** from the case table (never a jump to 0xFFFF)
+  **[game]**.
+- GameData flags (`DefaultValue`) only apply to a **new game** **[game]**.
 
-## Objets
+## Items
 
-- N'importe quel objet dans n'importe quel coffre fonctionne (`Dynamic.Drop__DropActor`) **[jeu]**.
-- Les améliorations ne rétrogradent jamais (grappin après super grappin) **[jeu]**, **sauf
-  l'ocarina** : recevoir l'Ocarina des fées remplace l'Ocarina du Temps **[jeu]** (garde ajoutée
-  dans le script de Saria).
-- Les bombes demandent le sac **et** le bracelet goron **[jeu]** (`has_explosives`).
-- Le « GetEventName » d'un coffre peut appartenir à l'objet (épée Kokiri : l'épée apparaît dans
-  le dos) -> `event: drop` quand l'objet change ; ou au lieu (Dampé, Ruto) -> `keep`.
-- Coffres `Obj_TBox_A_06` : contenu conditionnel (`Drop__CheckActor` / `Drop__DropActor_Substitute`).
-- **Objets au sol sur mesure** : copie de `Obj_Heart_Container` (archive renommée) + lignes RSDB
-  (`ActorInfo.ActorName` = objet donné, `PouchActorInfo` copiée de l'objet). Fonctionne pour les
-  objets simples, les chants, les quarts de cœur **[jeu]**. Modèle et animation copiés de l'objet,
-  paramètres d'inventaire (`PouchContentRef`) aussi.
-- **Un ocarina donné par un objet au sol n'est pas jouable**, même avec ses paramètres
-  d'inventaire **[jeu]**. Seuls les « dons » de script (`PouchSystemActor.EventTriggerAddOrRemovePouchContent`)
-  et les coffres le rendent jouable. Les équipements (arc, bottes) ne s'ajoutent pas non plus au sol (avant la copie des paramètres d'inventaire ; non retesté).
-- Don silencieux au départ : action `EventTriggerAddOrRemovePouchContent` (modèle : `Dm_Kokiri_0155`,
-  `IsGetEvent = 0`) insérée dans `OpeningEvent:Opening_Introduction` **[jeu]**.
-- Les drapeaux `IsGet.<objet>` sont posés quand on obtient l'objet ; les mettre à vrai **ne**
-  supprime **pas** l'animation de première obtention des consommables **[jeu]** (décidée par le moteur).
-- **Cœurs au sol, menu natif [jeu]** (2026-11-11) : l'acteur devient un jeton `OoTRR_Lnnnn` (copie du
-  cœur d'origine, `ActorInfo.ActorName` = le jeton lui-même, `PouchActorInfo` copiée du cœur). Au
-  ramassage, la séquence « objet obtenu » cherche `<objet>_GetMessage` / `_GetCaption` dans
-  `ActorMsg/PouchContent` : **un texte introuvable bloque la partie** (le cœur tourne sans fin) ; les
-  textes du jeton sont redirigés vers ceux de l'objet de la seed, puis l'ajout (`0x110d570`) aussi.
-- **Modèle d'un objet au sol choisi en jeu [jeu]** (2026-11-11) : les composants d'un acteur (`ModelInfoRef`,
-  `AnimationRef`…) sont cherchés par leur chemin dans son archive SARC (`0x32ade0`, chemin -> numéro de
-  fichier), pas par le chargeur de ressources `0xa57350`. Le jeton référence `Component/ModelInfo/<jeton>…` ;
-  la recherche est redirigée vers le `ModelInfo` / `AnimationParam` de l'objet, copiés dans l'archive du
-  jeton sous leur chemin d'origine. Chants : modèle de rubis sans animation, gardent celui du cœur.
-- Les rubis de coffre `TBox_Rupee_*` n'ont pas ces textes (les `Obj_Rupee_*` si). Les rubis ne passent
-  pas par l'inventaire : l'ajout est sans effet, l'argent est l'entier `PlayerStatus.CurrentRupee` **[jeu]**.
-- Inventaire : bloc binaire de la sauvegarde, pas de drapeaux par objet (sauf `PouchData.<objet>.StockNum`).
-- Valeurs utiles : `PlayerStatus.MaxLife` (quarts de cœur, 12 = 3 cœurs), `PlayerStatus.Life`,
-  `PouchData.Item_Token_Gold.StockNum` (jetons de Skulltula d'or).
+- Any item in any chest works (`Dynamic.Drop__DropActor`) **[game]**.
+- Upgrades never downgrade (Hookshot after Longshot) **[game]**, **except the ocarina**: receiving the Fairy Ocarina
+  replaces the Ocarina of Time **[game]** (guard added in Saria's script).
+- Bombs require the bag **and** the Goron Bracelet **[game]** (`has_explosives`).
+- A chest's "GetEventName" may belong to the item (Kokiri Sword: the sword appears on the back) -> `event: drop` when
+  the item changes; or to the location (Dampé, Ruto) -> `keep`.
+- `Obj_TBox_A_06` chests: conditional content (`Drop__CheckActor` / `Drop__DropActor_Substitute`).
+- **Custom ground items**: copy of `Obj_Heart_Container` (renamed archive) + RSDB rows (`ActorInfo.ActorName` = item
+  given, `PouchActorInfo` copied from the item). Works for simple items, songs, Pieces of Heart **[game]**. Model and
+  animation copied from the item, inventory parameters (`PouchContentRef`) too.
+- **An ocarina given by a ground item is not playable**, even with its inventory parameters **[game]**. Only script
+  "gifts" (`PouchSystemActor.EventTriggerAddOrRemovePouchContent`) and chests make it playable. Equipment (bow, boots)
+  is not added from the ground either (before copying the inventory parameters; not retested).
+- Silent gift at the start: action `EventTriggerAddOrRemovePouchContent` (template: `Dm_Kokiri_0155`,
+  `IsGetEvent = 0`) inserted in `OpeningEvent:Opening_Introduction` **[game]**.
+- `IsGet.<item>` flags are set when the item is obtained; setting them to true does **not** remove the first-obtain
+  animation of consumables **[game]** (decided by the engine).
+- **Freestanding hearts, native menu [game]** (2026-11-11): the actor becomes a token `OoTRR_Lnnnn` (copy of the
+  original heart, `ActorInfo.ActorName` = the token itself, `PouchActorInfo` copied from the heart). On pickup, the
+  "item obtained" sequence looks up `<item>_GetMessage` / `_GetCaption` in `ActorMsg/PouchContent`: **a missing text
+  blocks the game** (the heart spins forever); the token's texts are redirected to those of the seed item, then the
+  add (`0x110d570`) too.
+- **Model of a ground item chosen in game [game]** (2026-11-11): an actor's components (`ModelInfoRef`,
+  `AnimationRef`…) are looked up by their path in its SARC archive (`0x32ade0`, path -> file number), not by the
+  resource loader `0xa57350`. The token references `Component/ModelInfo/<token>…`; the lookup is redirected to the
+  item's `ModelInfo` / `AnimationParam`, copied into the token's archive under their original path. Songs: rupee
+  model without animation, they keep the heart's.
+- Chest rupees `TBox_Rupee_*` do not have these texts (`Obj_Rupee_*` do). Rupees do not go through the inventory:
+  adding them has no effect, money is the integer `PlayerStatus.CurrentRupee` **[game]**.
+- Inventory: binary block of the save, no per-item flags (except `PouchData.<item>.StockNum`).
+- Useful values: `PlayerStatus.MaxLife` (quarter hearts, 12 = 3 hearts), `PlayerStatus.Life`,
+  `PouchData.Item_Token_Gold.StockNum` (Gold Skulltula tokens).
 
-- Ajout à l'inventaire (`0x110d570`) : les coffres donnent avec la raison 7 (événement), comme les scènes
-  (constaté dans le journal) : nom + raison ne suffisent pas à savoir d'où vient un objet.
-- Bombes (`Item_BombBundle_*`) obtenues sans sac : le jeu donne le sac de bombes (signalé en jeu). Remplacer le
-  nom à l'ajout à l'inventaire (`0x110d570`) ne suffit pas : le sac arrive quand même (constaté, coffre de
-  l'épée). Menu natif : le coffre reçoit un rubis bleu à la source si aucun `IsGet.Item_BombBag_*`
-  **[fichiers]** (à tester).
-- Coffre de l'épée Kokiri : `GetEventName = Get_StoneOfForest_GetSword` -> `Dm_Kokiri_0063` met une épée
-  dans la main de Link (`EventTriggerPlayerRequestCreateDynamicEquipmentNoRelationPouch`) même si le coffre
-  contenait autre chose ; l'épée disparaît au rechargement (signalé en jeu, menu natif : retirer
-  `GetEventName` à la source ne suffit pas). Garde ajoutée : la scène ne se joue que si
-  `IsGet.Weapon_Sword_Kokiri` **[fichiers]** (à tester).
-- Lecture d'un booléen GameData (non structuré) : `0x3744460` (gestionnaire, bool*, hachage, index >= 0),
-  fonction du nœud `SeqQueryGetNonStructGameDataBool` **[fichiers]**.
+- Inventory add (`0x110d570`): chests give with reason 7 (event), like scenes (seen in the log): name + reason are
+  not enough to know where an item comes from.
+- Bombs (`Item_BombBundle_*`) obtained without a bag: the game gives the bomb bag (reported in game). Replacing the
+  name in the inventory add (`0x110d570`) is not enough: the bag still arrives (observed, sword chest). Native menu:
+  the chest receives a blue rupee at the source if there is no `IsGet.Item_BombBag_*` **[files]** (to test).
+- Kokiri Sword chest: `GetEventName = Get_StoneOfForest_GetSword` -> `Dm_Kokiri_0063` puts a sword in Link's hand
+  (`EventTriggerPlayerRequestCreateDynamicEquipmentNoRelationPouch`) even if the chest contained something else; the
+  sword disappears on reload (reported in game, native menu: removing `GetEventName` at the source is not enough).
+  Guard added: the scene only plays if `IsGet.Weapon_Sword_Kokiri` **[files]** (to test).
+- Reading a GameData boolean (non-struct): `0x3744460` (manager, bool*, hash, index >= 0), function of the
+  `SeqQueryGetNonStructGameDataBool` node **[files]**.
 
 ## Ocarinas
 
-- Saria (`Dm_Kokiri_0155`, appelée par `Goto_HyruleCastle:KokiriForest_ArriveLostWood`) et les douves
-  (`Dm_MelodyGet_Time`, après `DoorOfTime:DoorOfTime_GetOcarinaOfTime`) nomment l'ocarina 4 fois : action
-  d'inventaire, `GetPouchContent:DisplayGetByActorName`, ZeldaNotes et un acteur de la scène.
-- La scène de Saria n'est plus passée (l'Ocarina des fées n'est plus donné au départ). `shuffle_ocarinas` :
-  menu natif = les scènes donnent le jeton du lieu (copie de l'ocarina), le module donne l'objet de la seed ;
-  ocarinas progressifs (le deuxième obtenu est l'Ocarina du Temps) ; double don des douves (don direct +
-  scène) ignoré **[fichiers]** (à tester en jeu).
+- Saria (`Dm_Kokiri_0155`, called by `Goto_HyruleCastle:KokiriForest_ArriveLostWood`) and the moat
+  (`Dm_MelodyGet_Time`, after `DoorOfTime:DoorOfTime_GetOcarinaOfTime`) name the ocarina 4 times: inventory action,
+  `GetPouchContent:DisplayGetByActorName`, ZeldaNotes and an actor of the scene.
+- Saria's scene is no longer skipped (the Fairy Ocarina is no longer given at the start). `shuffle_ocarinas`: native
+  menu = the scenes give the location's token (copy of the ocarina), the module gives the seed item; progressive
+  ocarinas (the second one obtained is the Ocarina of Time); double gift at the moat (direct gift + scene) ignored
+  **[files]** (to test in game).
 
-## Chants
+## Songs
 
-- Les 12 chants sont donnés par le script commun `Dm_SY_Ocarina` (appelé par les scènes `Dm_MelodyGet_*`) :
-  une question `EventQueryMelodyTypeForNormal` (mélodie de la scène) mène à une action d'inventaire par
-  chant. Le nom de la Berceuse y sert aussi à `EventQueryCheckIsGet` (jeu libre de l'ocarina) : seule
-  l'action de don est copiée avec l'autre objet (`ModBuilder.song_gives`), l'originale est sautée **[fichiers]**.
-- `shuffle_songs` : vanilla, shuffle (permutation entre les emplacements de chants, comme les récompenses de
-  boss), random (emplacements de chants dans le pool). Menu natif : chaque don devient le jeton de son
-  emplacement ; le Chant du Temps est aussi donné directement aux douves (doublon ignoré) **[fichiers]**
-  (à tester en jeu : la leçon de la scène joue toujours le chant d'origine, et une scène qui se rejouerait
-  si le chant n'est pas obtenu redonnerait l'objet).
+- The 12 songs are given by the common script `Dm_SY_Ocarina` (called by the `Dm_MelodyGet_*` scenes): a query
+  `EventQueryMelodyTypeForNormal` (melody of the scene) leads to one inventory action per song. The Lullaby's name is
+  also used there for `EventQueryCheckIsGet` (free ocarina play): only the gift action is copied with the other item
+  (`ModBuilder.song_gives`), the original one is skipped **[files]**.
+- `shuffle_songs`: vanilla, shuffle (permutation between song locations, like boss rewards), random (song locations
+  in the pool). Native menu: each gift becomes its location's token; the Song of Time is also given directly at the
+  moat (duplicate ignored). Only the seed's song is given **[game]** (2026-11-12); the scene's lesson still plays the
+  original song.
 
-## Cadeaux (mini-jeux, Grandes Fées…) **[fichiers]**
+## Gifts (minigames, Great Fairies…) **[files]**
 
-- Ces objets **ne passent pas** par `EventTriggerAddOrRemovePouchContent` : les scripts les nomment dans un
-  paramètre texte d'une sous-séquence. Deux mécanismes : `NpcCommon:NpcCommon_HandOver_NpcToPlayer_NoDisplay`
-  (paramètre `ReveiveItem` ; tirs `MiniGame_HitTarget`, bowling, pêche, Anju `Minigame_CatchCucco`) et
-  `Dm_SY_GetInEvent:GetInEvent_*` (paramètre `ActorName` ; Grandes Fées `Dm_FairyFountain_*`, Darunia
-  `Dm_Goron_0030`, carte Gerudo `Dm_Gerudo_0025`, `Dm_LostWood_0040`, tir à cheval, plongée, Flèches de
-  lumière `Dm_TimeTemple_0130`). Le sac / carquois donné dépend de ce que Link possède (condition
-  `EventQueryIsExistInPouch` sur le niveau moyen) : une variante par objet, relevées dans `data/gifts.json`
-  (flux, n° d'événement, paramètre, texte d'origine).
-- `evfl.replace_event_strings` ne change que ces événements précis : la chaîne « Item_BulletBag_Medium » est
-  **partagée** avec la condition `IsExistInPouch` (pointeur unique), `replace_strings` la casserait.
-- Avec le menu natif, chaque lieu donne le jeton `OoTRR_Lnnnn` (copie de l'objet d'origine) et le crochet
-  `PouchAdd` donne l'objet de la seed, comme pour les ocarinas ; réglage `shuffle_gifts`, ligne « Gifts » (page 3).
-  Sans menu, le nom de l'objet placé remplace directement le texte. **Pas encore validé en jeu.**
-- Non faits : lettre de Zelda (`Dm_HrlCastle_0050`, interfère avec `skip_child_zelda`), Talon (la bouteille de lait
-  passe par `GetInEventInBottle` / `HandOver_EmptyBottle`, bouteille avec contenu), lettre de Ruto (nom non trouvé dans
-  les scripts), 5 Poes (`Npc_Hylia_048_BottleShop`, `GetInEvent_Poeshop`) et boutique de potions : absents de la
-  logique actuelle ; bowling 2e prix, tir à cheval 1000 points et autres quarts de cœur : mécanisme non relevé.
+- These items do **not** go through `EventTriggerAddOrRemovePouchContent`: the scripts name them in a text parameter
+  of a sub-flow. Two mechanisms: `NpcCommon:NpcCommon_HandOver_NpcToPlayer_NoDisplay` (parameter `ReveiveItem`;
+  shooting galleries `MiniGame_HitTarget`, bowling, fishing, Anju `Minigame_CatchCucco`) and
+  `Dm_SY_GetInEvent:GetInEvent_*` (parameter `ActorName`; Great Fairies `Dm_FairyFountain_*`, Darunia
+  `Dm_Goron_0030`, Gerudo card `Dm_Gerudo_0025`, `Dm_LostWood_0040`, horseback archery, diving, Light Arrows
+  `Dm_TimeTemple_0130`, man on the roof `Npc_Hylia_001_Adult`, Dampé's tour `Npc_Hylia_Dampe_001`). The bag / quiver
+  given depends on what Link owns (condition `EventQueryIsExistInPouch` on the medium level): one variant per item,
+  listed in `data/gifts.json` (flow, event number, parameter, original text).
+- `evfl.replace_event_strings` only changes these precise events: the string "Item_BulletBag_Medium" is **shared**
+  with the `IsExistInPouch` condition (single pointer), `replace_strings` would break it.
+- With the native menu, each location gives the token `OoTRR_Lnnnn` (copy of the original item) and the `PouchAdd`
+  hook gives the seed item, as for ocarinas; setting `shuffle_gifts`, "Gifts" row (page 3). Without the menu, the
+  placed item's name directly replaces the text. **Not fully validated in game yet.**
+- Not done: Zelda's letter (`Dm_HrlCastle_0050`, interferes with `skip_child_zelda`), Talon (the milk bottle goes
+  through `GetInEventInBottle` / `HandOver_EmptyBottle`, bottle with content), Ruto's letter (name not found in the
+  scripts), 5 Poes (`Npc_Hylia_048_BottleShop`, `GetInEvent_Poeshop`) and potion shop: absent from the current logic;
+  bowling 2nd prize, horseback archery 1000 points and other Pieces of Heart: mechanism not found yet.
 
-- **Flèche de feu** : objet au sol `Obj_Arrow_Fire` (base `Obj_Item_Base`, comme les quarts de cœur) dans
-  `HyruleField_Adult_Static`, créé par `HyruleField_LakeHylia_Adult_Prefab_5313` (quête `SubEvent_GetFireArrow`
-  à Ready, plage horaire, flèche tirée dans le soleil -> scène `Dm_LakeHrl_0030`, Step03). Lieu `pickup: "item"`
-  (avec `actor`), mélangé avec `shuffle_gifts` ; jeton comme les cœurs au sol **[fichiers]**.
-- Rivière Zora (enfant) : rochers `Obj_BrokenRock_A_01` à l'entrée, à détruire à la bombe (pas de version
-  adulte) **[jeu, d'origine]**.
+- **Fire Arrows**: ground item `Obj_Arrow_Fire` (base `Obj_Item_Base`, like Pieces of Heart) in
+  `HyruleField_Adult_Static`, created by `HyruleField_LakeHylia_Adult_Prefab_5313` (quest `SubEvent_GetFireArrow`
+  at Ready, time window, arrow shot into the sun -> scene `Dm_LakeHrl_0030`, Step03). Location `pickup: "item"`
+  (with `actor`), shuffled with `shuffle_gifts`; token like freestanding hearts **[files]**.
+- Zora's River (child): rocks `Obj_BrokenRock_A_01` at the entrance, to blow up with a bomb (no adult version)
+  **[game, original behaviour]**.
+- Dampé's grave (adult race): the exit of the arrival room needs the Hookshot, which is in the race chest; without
+  it, talking to Dampé warps out (standalone copy of event 70 of the flow) **[game]**.
 
-## Boutiques, Peste Mojo, Skulltulas
+## Shops, Deku Scrubs, Skulltulas
 
-- **Liste d'un marchand : ne jamais ajouter `Release` à un article qui n'en a pas** : la lecture de
-  `GoodsList` appelle un pointeur nul (`0x612b24`, champ `Release` lu par `0x3051480`) -> chargement sans
-  fin (Goron City, boutiques à 4 articles, constaté dans le journal d'Eden). Goron, Zora et Missiles n'ont
-  aucun `Release` d'origine ; `shops.py` ne lève plus la condition que là où elle existe **[fichiers]**.
+- **A merchant's list: never add `Release` to an item that has none**: reading `GoodsList` calls a null pointer
+  (`0x612b24`, `Release` field read by `0x3051480`) -> endless loading (Goron City, shops with 4 items, seen in the
+  Eden log). Goron, Zora and Bombchu have no original `Release`; `shops.py` only lifts the condition where it exists
+  **[files]**. Adding new keys or conditions on new GameData to make a "Sold out" sign also crashed at 0x612850
+  **[game]** (see ROADMAP).
 
-- **Boutiques mélangées (menu natif) [jeu]** (2026-11-11) : voir native/README.md (« Boutiques »).
-  Liste des articles d'un marchand : `Component/ShopParam/…` dans son archive, `GoodsList` dans
-  l'ordre de `ShopItemIndex` ; `Release` = condition d'apparition (« Coming Soon » : boutique Kokiri
-  avant l'Arbre Mojo ; « épuisé » : bombes du bazar avant la pierre du feu). Le marchand des Missiles
-  n'apparaît qu'après la pierre du feu (présence retirée). Un article doit être dans la liste ET relié
-  au marchand (liens `ForSale`, `Reference`) pour être choisi. Le prix vient de la ligne RSDB
-  `PouchActorInfo.BuyingPrice`.
+- **Shuffled shops (native menu) [game]** (2026-11-11): see native/README.md ("Shops"). A merchant's item list:
+  `Component/ShopParam/…` in its archive, `GoodsList` in `ShopItemIndex` order; `Release` = appearance condition
+  ("Coming Soon": Kokiri shop before the Deku Tree; "sold out": bazaar bombs before the fire stone). The Bombchu
+  merchant only appears after the fire stone (presence removed). An item must be in the list AND linked to the
+  merchant (`ForSale`, `Reference` links) to be chosen. The price comes from the RSDB row
+  `PouchActorInfo.BuyingPrice`. Single sale: saved integer `OoTRR.ShopSold` (one bit per item), price 999 after
+  purchase, refund of a repurchase **[game]** (2026-11-12).
 
-- Article de boutique = acteur `Shop_*` ; `ActorInfo.ActorName` = objet vendu ; prix dans
-  `PriceParam` de l'archive. Copie d'un article = autre objet vendu **[jeu]** ; `ActorGameDataSetting`
-  = `NoRespawn` pour une vente unique **[jeu]**.
-- Peste Mojo vendeurs (`Enemy_Scrub_Business`) : `Dynamic.ScrubBusiness_ShopItemActorName0..2`,
-  `TalkEventName`. Le script `Enemy_Scrub_Business_Common` compare le nom à une liste fixe.
-  Méthode **[jeu]** : script « sac de bâtons » pour toutes, questions insérées (« objet = X ? »)
-  qui mènent à la vente unique `SimpleShopSub_Scrub_Business_OneTime` (prix entier, message).
-- **Peste Mojo mélangées (menu natif) [jeu]** (2026-11-11) : 5 vendeuses d'objet unique (plaine,
-  cratère, bâtons forêt/Bois Perdus, noix). L'article doit rester un **vrai objet**
-  (`EventScrubBusinessWriteGameDataBancItemName` ignore un nom inconnu) : il sert de marque, une
-  question insérée vend le jeton. La plaine vend directement (entrée `Secret`). Nom dans le message :
-  balise des boutiques `[2:3 Shop_SelectItemName]` (posée avant la vente), résolue par la recherche
-  intérieure `0xa6b060` (pas `0xa6afe0`) où le texte du jeton est redirigé.
-- Un quart de cœur ajouté sous un autre nom (jeton) n'est **pas compté** : le module incrémente
-  `PouchData.Obj_Heart_Piece.StockNum` (passage à 4 quarts -> réceptacle : non vérifié).
-- Skulltula d'or : `Dynamic.Drop__DropActor` remplace le jeton **[jeu]** ; il faut un objet
-  ramassable (copie de `Obj_Token_Gold` ou du réceptacle). Tant que l'objet n'est pas ramassé, la
-  Skulltula réapparaît.
-- Skulltulas d'or mélangées : la Skulltula lâche son jeton `OoTRR_Lnnnn` (copie de `Obj_Token_Gold`),
-  modèle, textes et ajout redirigés vers l'objet de la seed — **validé en jeu** (Arbre Mojo). Le jeton
-  n'est pas remplacé à la source (`KeepsToken`). Jeton d'or placé dans un coffre : **validé en jeu**.
-- Paramètres utiles de `Enemy_Skulltula_Gold` (Dynamic) pour identifier chaque Skulltula :
-  `Enemy_Skulltula_Gold_IsMagicBeanSoil` (terre meuble, présence = drapeau `Gimmick_MagicBeanSoil_<zone>`,
-  posé quand on lâche des insectes), `Enemy_Skulltula_Gold_Nocturnal` (nuit), `AppearPopOut` +
-  `AppearWarpRotOffset` (arbre), une caisse `Obj_BrokenBox_A_*` à la même position, `DefaultDungeonRoomIndex`.
-  Règles dans `skulltulas.json` (9 incertaines gardent `no_progression`) : **vérifié dans les fichiers**,
-  pas encore validées en jeu une par une.
+- Shop item = actor `Shop_*`; `ActorInfo.ActorName` = item sold; price in the archive's `PriceParam`. Copy of an item
+  = another item sold **[game]**; `ActorGameDataSetting` = `NoRespawn` for a single sale **[game]**.
+- Deku Scrub salesmen (`Enemy_Scrub_Business`): `Dynamic.ScrubBusiness_ShopItemActorName0..2`, `TalkEventName`. The
+  script `Enemy_Scrub_Business_Common` compares the name with a fixed list. Method **[game]**: "stick bag" script for
+  all of them, inserted queries ("item = X?") that lead to the single sale `SimpleShopSub_Scrub_Business_OneTime`
+  (integer price, message).
+- **Shuffled Deku Scrubs (native menu) [game]** (2026-11-11): 5 sellers of a unique item (field, crater, sticks
+  forest/Lost Woods, nuts). The item must stay a **real item** (`EventScrubBusinessWriteGameDataBancItemName` ignores
+  an unknown name): it is used as a marker, an inserted query sells the token. The field one sells directly (`Secret`
+  entry). Name in the message: shop tag `[2:3 Shop_SelectItemName]` (set before the sale), resolved by the inner
+  lookup `0xa6b060` (not `0xa6afe0`) where the token's text is redirected.
+- A Piece of Heart added under another name (token) is **not counted**: the module increments
+  `PouchData.Obj_Heart_Piece.StockNum` (going to 4 pieces -> container: not verified).
+- Gold Skulltula: `Dynamic.Drop__DropActor` replaces the token **[game]**; it needs a collectable item (copy of
+  `Obj_Token_Gold` or of the container). As long as the item is not picked up, the Skulltula reappears.
+- Shuffled Gold Skulltulas: the Skulltula drops its token `OoTRR_Lnnnn` (copy of `Obj_Token_Gold`), model, texts and
+  add redirected to the seed item — **validated in game** (Deku Tree). The token is not replaced at the source
+  (`KeepsToken`). Gold token placed in a chest: **validated in game**.
+- Useful `Enemy_Skulltula_Gold` (Dynamic) parameters to identify each Skulltula:
+  `Enemy_Skulltula_Gold_IsMagicBeanSoil` (soft soil, presence = flag `Gimmick_MagicBeanSoil_<area>`, set when bugs
+  are released), `Enemy_Skulltula_Gold_Nocturnal` (night), `AppearPopOut` + `AppearWarpRotOffset` (tree), an
+  `Obj_BrokenBox_A_*` crate at the same position, `DefaultDungeonRoomIndex`. Rules in `skulltulas.json` (9 uncertain
+  ones keep `no_progression`): **verified in the files**, not yet validated in game one by one.
 
 ## Messages (Mals)
 
-- `Mals/<langue>.Product.110.sarc.zs` : 16 langues, MSBT en **UTF-8** (octet 0x0C = 0).
-- Balises : `0x0E` + groupe, type, taille, données. Ex. couleur `[0:3:0000]`…`[0:3:ffff]`,
-  prix `[2:12:…SimpleShop_Price…]` (valeur GameData insérée), pause `[5:0:]`.
-- Les réponses d'un dialogue (`ChoiceLabel1 = N`) sont le message nommé `000N` **du même fichier**.
-- Noms d'objets : `ActorMsg/PouchContent.msbt`, étiquettes `<objet>_Name`.
-- On peut ajouter des messages (`msbt.add_messages`, réécriture identique vérifiée).
+- `Mals/<language>.Product.110.sarc.zs`: 16 languages, MSBT in **UTF-8** (byte 0x0C = 0).
+- Tags: `0x0E` + group, type, size, data. E.g. color `[0:3:0000]`…`[0:3:ffff]`, price `[2:12:…SimpleShop_Price…]`
+  (GameData value inserted), pause `[5:0:]`.
+- A dialogue's answers (`ChoiceLabel1 = N`) are the message named `000N` **of the same file**.
+- Item names: `ActorMsg/PouchContent.msbt`, labels `<item>_Name`.
+- Messages can be added (`msbt.add_messages`, identical rewrite verified).
 
-## Forêt Kokiri
+## Kokiri Forest
 
-- Porte de la maison de Link (`Obj_Kokiri_Door_A_01`, seul acteur de ce type) : elle joue
-  `Dm_Kokiri_0045` (découverte de la forêt) en s'ouvrant, sans tenir compte du drapeau « déjà vue ».
-  Drapeau `KokiriForest_LinkHouseDoor_Open` vrai au départ : porte ouverte, pas de scène **[jeu]**.
-  (Retirer la porte laisse un mur invisible ; vider `OpenEventName` l'empêche de s'ouvrir.)
-- Carte de première découverte d'un lieu : `IsVisitLocation.<lieu>` vrai = déjà découvert **[jeu]**.
+- Door of Link's house (`Obj_Kokiri_Door_A_01`, the only actor of this type): it plays `Dm_Kokiri_0045` (discovery of
+  the forest) when opening, ignoring the "already seen" flag. Flag `KokiriForest_LinkHouseDoor_Open` true at the
+  start: door open, no scene **[game]**. (Removing the door leaves an invisible wall; emptying `OpenEventName` keeps it
+  from opening.)
+- First-discovery map of a location: `IsVisitLocation.<location>` true = already discovered **[game]**.
 
-- Bloqueurs : `Npc_Kokiri_007_Child` (sortie vers le pont), `Npc_Kokiri_Mido_Child` (Arbre Mojo),
-  murs invisibles `FldObj_AirWall_Player_GenerateNavMesh` présents selon
-  `KokiriForest_Npc_Kokiri_007_Child_Blocker_00` / `KokiriForest_Npc_Kokiri_Mido_Child_Blocker`
-  (vrais au départ) **[jeu]**.
-- Interruptions : Kokiri du toit = demande d'événement `KokiriForest_Kokiri_011_StopInFrontOfShop_00`
-  (rendue absente) **[jeu]** ; tutoriel du bouclier = sous-séquence appelée par la vendeuse après
-  l'achat (`Npc_Kokiri_001_Shop_Child` -> `Npc_Kokiri_010_Child:DekuShield_TutorialTalk`) **[jeu]**.
-- Saria au pont (`Dm_Kokiri_0155`) donne l'Ocarina des fées par une action d'inventaire.
+- Blockers: `Npc_Kokiri_007_Child` (exit towards the bridge), `Npc_Kokiri_Mido_Child` (Deku Tree), invisible walls
+  `FldObj_AirWall_Player_GenerateNavMesh` present depending on `KokiriForest_Npc_Kokiri_007_Child_Blocker_00` /
+  `KokiriForest_Npc_Kokiri_Mido_Child_Blocker` (true at the start) **[game]**.
+- Interruptions: Kokiri on the roof = event request `KokiriForest_Kokiri_011_StopInFrontOfShop_00` (made absent)
+  **[game]**; shield tutorial = sub-flow called by the shopkeeper after the purchase (`Npc_Kokiri_001_Shop_Child` ->
+  `Npc_Kokiri_010_Child:DekuShield_TutorialTalk`) **[game]**.
+- Saria at the bridge (`Dm_Kokiri_0155`) gives the Fairy Ocarina through an inventory action.
 
-## Porte du Temps, épée, voyage dans le temps
+## Door of Time, sword, time travel
 
-- Quête `DoorOfTime` = Enum GameData sans nom connu, hash `931730378` (NotReady, Ready, Step01…
-  Step06, Complete). La porte (module `Market_Common_f252`) est ouverte si l'étape est **≥ Step06**.
-  `Market_Child_TimeTempleDoor_Opened` ne sert qu'à sauter l'animation **[jeu]**.
-- Le remake compte **le Rubis Goron et le Saphir Zora** pour la porte (`DoorOfTime_CheckStoneNum`).
-- L'ocarina des douves (`Obj_Ocarina_Time_A_01`, module `HyruleField_Child_Prefab_91f9`) n'existe
-  qu'à l'étape **= Step04** ; son ramassage lance `DoorOfTime:DoorOfTime_GetOcarinaOfTime`
-  (scène `Dm_MelodyGet_Time`). Porte ouverte : module modifié pour Step06 + présence « 3 pierres »
-  + dons directs dans le script **[jeu]**.
-- Menu natif : la porte s'ouvre en posant l'Enum à Step06 au début de la partie (fonction `0x3e0980`) ;
-  un crochet sur le changement d'étape de quête (`0x2cf54a0`) empêche tout recul. Le module des douves
-  crée l'ocarina « après Step03 » au lieu de « = Step04 », pour servir porte fermée comme ouverte.
-  Porte ouverte (On) et porte fermée + douves vides (Off) validés **[jeu]** (2026-11-10) ; ocarina des
-  douves avec les 3 pierres pas encore testé avec le menu natif.
-- Rauru : le premier tirage de l'épée vérifie `HavePlayedEvent.Dm_TimeTemple_0040` ; marqué comme
-  vu -> voyage direct, la récompense de la poche de Link est donnée au départ **[jeu]**.
-- Retour enfant : `Market_Adult_Prefab_89da` exige `SageOfForest_IsCompleted_Exp` (Temple de la
-  Forêt fini). Remplacé par une expression toujours vraie si `free_time_travel` **[jeu]**.
-  Menu natif : le module lit `OoTRR_FreeTimeTravel_Exp` (drapeau sauvegardé `OoTRR.FreeTimeTravel`,
-  posé par le menu, OU `SageOfForest_IsCompleted_Exp`) **[jeu]** (2026-11-10).
+- Quest `DoorOfTime` = GameData Enum without a known name, hash `931730378` (NotReady, Ready, Step01… Step06,
+  Complete). The door (module `Market_Common_f252`) is open if the step is **≥ Step06**.
+  `Market_Child_TimeTempleDoor_Opened` only skips the animation **[game]**.
+- The remake counts **the Goron Ruby and the Zora Sapphire** for the door (`DoorOfTime_CheckStoneNum`).
+- The moat ocarina (`Obj_Ocarina_Time_A_01`, module `HyruleField_Child_Prefab_91f9`) only exists at step **=
+  Step04**; picking it up runs `DoorOfTime:DoorOfTime_GetOcarinaOfTime` (scene `Dm_MelodyGet_Time`). Open door:
+  module changed for Step06 + "3 stones" presence + direct gifts in the script **[game]**.
+- Native menu: the door opens by setting the Enum to Step06 at the start of the game (function `0x3e0980`); a hook on
+  the quest step change (`0x2cf54a0`) prevents any going back. The moat module creates the ocarina "after Step03"
+  instead of "= Step04", to work with the door closed or open. Door open (On) and door closed + empty moat (Off)
+  validated **[game]** (2026-11-10); moat ocarina with the 3 stones not tested yet with the native menu.
+- Rauru: the first sword pull checks `HavePlayedEvent.Dm_TimeTemple_0040`; marked as seen -> direct travel, the
+  reward in Link's pocket is given at the start **[game]**.
+- Returning to child: `Market_Adult_Prefab_89da` requires `SageOfForest_IsCompleted_Exp` (Forest Temple done).
+  Replaced by an always-true expression if `free_time_travel` **[game]**. Native menu: the module reads
+  `OoTRR_FreeTimeTravel_Exp` (saved flag `OoTRR.FreeTimeTravel`, set by the menu, OR
+  `SageOfForest_IsCompleted_Exp`) **[game]** (2026-11-10).
+- `ReplaceEquipmentForEraChange` equips the Kokiri Sword when going back to child even without owning it: guarded
+  by a pouch query (`_guard_era_sword`) **[game]** (2026-11-12).
 
-## Zelda enfant et cycle jour / nuit
+## Child Zelda and day / night cycle
 
-- Rencontrer Zelda (`Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda`) fait passer la quête
-  `Goto_HyruleCastle` à `Complete` (enum hash 3683238313, relevé dans `Goto_HyruleCastle_IsCompleted_Exp`)
-  et `DoorOfTime` à `Step01`. `skip_child_zelda` (et la porte ouverte) posent ces états au départ, pour que
-  le temps passe comme après Zelda **[fichiers]** ; ce n'était pas suffisant : voir `HyruleField_ArriveEntrance` ci-dessous.
-- **Lumière figée de la plaine enfant [fichiers]** : `WorldParam/HyruleField_Child` a une
-  `ConditionEnvTimePalette` (`GameDataCondition: HyruleField_ChangeENV`) vers `MainField_Bluesky_First`
-  (`Pack/EnvPalette.pack`), copie de `MainField_Bluesky` avec `IsForceMainLight: true` (soleil fixe,
-  élévation 18°) : tant que le drapeau est vrai, l'éclairage ne suit plus l'heure. Posé vrai en quittant la
-  forêt (`Goto_HyruleCastle:KokiriForest_ArriveLostWood`, étape 182), remis à faux par le hibou à l'entrée de
-  la plaine (`Goto_HyruleCastle_Kaepora_00`, étape 181, puis `Event_RebuildConditionEnvTimePalette`). Le
-  hibou n'est demandé (module `HyruleField_Child_Prefab_de5f` : joueur dans la zone, `Dm_HrlField_0010` non
-  vue, quête `Goto_HyruleCastle` à Step01) que dans une partie normale : l'étape 182 est sautée
-  (`world.FIELD_FIRST_PALETTE_STEP`, à tester en jeu sur une nouvelle partie).
-- `IsWorldTimeStop` / `IsDisableTimeProgress` sont des réglages d'événement (EventSetting), pas un état global.
-- **Le temps ne s'écoule qu'après `HyruleField_ArriveEntrance` [jeu, trace native]** : 0x345c020 fige l'heure sauf si `Meet_DekuTree` est à Ready, ou `HyruleField_ArriveEntrance` vrai et `HrlField_HasEnteredFirstTime_Adult` faux (posé par `Dm_TimeTemple_0055`, effacé à l'arrivée dans une zone par `Dm_SY_BancChangeArrive`). Heure figée = demandes d'heure ignorées (Chant du Soleil : nuit visuelle seulement). Le drapeau vient du hibou (`Goto_HyruleCastle_Kaepora_00`) : posé au départ, **validé en jeu** (2026-11-12). Vitesse constatée : environ 2 minutes de jeu par seconde.
+- Meeting Zelda (`Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda`) moves the quest `Goto_HyruleCastle` to `Complete`
+  (enum hash 3683238313, found in `Goto_HyruleCastle_IsCompleted_Exp`) and `DoorOfTime` to `Step01`.
+  `skip_child_zelda` (and the open door) set these states at the start, so that time flows as after Zelda
+  **[files]**; this was not enough: see `HyruleField_ArriveEntrance` below.
+- **Frozen light in the child field [files]**: `WorldParam/HyruleField_Child` has a `ConditionEnvTimePalette`
+  (`GameDataCondition: HyruleField_ChangeENV`) towards `MainField_Bluesky_First` (`Pack/EnvPalette.pack`), copy of
+  `MainField_Bluesky` with `IsForceMainLight: true` (fixed sun, elevation 18°): while the flag is true, the lighting
+  no longer follows the time. Set true when leaving the forest (`Goto_HyruleCastle:KokiriForest_ArriveLostWood`,
+  step 182), reset to false by the owl at the field entrance (`Goto_HyruleCastle_Kaepora_00`, step 181, then
+  `Event_RebuildConditionEnvTimePalette`). The owl is only requested (module `HyruleField_Child_Prefab_de5f`: player
+  in the area, `Dm_HrlField_0010` not seen, quest `Goto_HyruleCastle` at Step01) in a normal game: step 182 is
+  skipped (`world.FIELD_FIRST_PALETTE_STEP`).
+- `IsWorldTimeStop` / `IsDisableTimeProgress` are event settings (EventSetting), not a global state.
+- **Time only flows after `HyruleField_ArriveEntrance` [game, native trace]**: 0x345c020 freezes the time unless
+  `Meet_DekuTree` is at Ready, or `HyruleField_ArriveEntrance` is true and `HrlField_HasEnteredFirstTime_Adult` false
+  (set by `Dm_TimeTemple_0055`, cleared on arrival in an area by `Dm_SY_BancChangeArrive`). Frozen time = time
+  requests ignored (Sun's Song: visual night only). The flag comes from the owl (`Goto_HyruleCastle_Kaepora_00`): set
+  at the start, **validated in game** (2026-11-12). Observed speed: about 2 game minutes per second.
 
-## Âge et point de départ
+## Age and starting point
 
-- Changer d'époque (`Market_Child_Field_ChildToAdult` / `Market_Adult_Field_AdultToChild`) =
-  sous-séquence `ReplaceEquipmentForEraChange`, drapeau `Sequence_IsChildhood` (vrai = enfance), puis
-  `EventReserveBancChange` vers la carte de l'autre époque (`Market_Adult` / `Market_Child`) **[fichiers]**.
-- Départ adulte : `Sequence_IsChildhood` faux au départ, téléportation au Temple du Temps
-  (`Market_Adult` / `LightPrelude`), `Weapon_Sword_Master` donnée ; Porte du Temps ouverte et voyage
-  temporel libre imposés (sinon l'enfant n'est atteignable qu'après le Temple de la Forêt, lui-même
-  inaccessible sans le Chant de Saria appris enfant) **[fichiers]** (à tester en jeu).
-- Points d'apparition : acteurs `StartPos` (champ `Name`) des cartes ; liste retenue dans
-  `data/spawns.json` (33, hors donjons). Menu natif : l'introduction lit l'entier `OoTRR.Spawn` (écrit par le
-  module à la génération) et réserve le changement de carte correspondant **[fichiers]** (à tester en jeu).
-- **`EventQueryGameDataIntBranch` : 16 cas au plus (hypothèse forte).** Avec 34 cas, la valeur 22 a mené
-  au cas 15 (constaté en jeu : arrivée devant Jabu-Jabu au lieu du Temple du Temps). Le point d'apparition
-  passe maintenant par deux questions (dizaines `OoTRR.SpawnTens`, unités `OoTRR.SpawnUnits`). Les prix des
-  Peste Mojo (20 valeurs) aussi : `OoTRR.Price.<jeton>` (dizaines) et `OoTRR.PriceUnits.<jeton>` (unités)
-  de prix / 5 **[fichiers]**.
-- Consommables au départ **[jeu]** (2026-11-11) : la quantité maximale vient d'un sac
-  (`ExpansionMaxNumActor` : `Item_StickBag_Small` 10, `Item_NutBag_Small` 20 ; maximum 0 sans sac). Ajouter
-  l'objet ne compte pas sa quantité : petit sac, puis l'objet, puis le stock écrit dans
-  `PouchData.<objet>.StockNum`.
-- La logique suppose que Root (retour au point de départ) reste atteignable, comme pour la maison de Link
-  (non vérifié : le remake reprend peut-être la partie là où elle a été sauvegardée).
+- Changing era (`Market_Child_Field_ChildToAdult` / `Market_Adult_Field_AdultToChild`) = sub-flow
+  `ReplaceEquipmentForEraChange`, flag `Sequence_IsChildhood` (true = childhood), then `EventReserveBancChange`
+  towards the other era's map (`Market_Adult` / `Market_Child`) **[files]**.
+- Adult start: `Sequence_IsChildhood` false at the start, teleport to the Temple of Time (`Market_Adult` /
+  `LightPrelude`), `Weapon_Sword_Master` given; Door of Time open and free time travel forced (otherwise the child
+  is only reachable after the Forest Temple, itself unreachable without Saria's Song learned as child) **[files]**
+  (to test in game).
+- Spawn points: `StartPos` actors (`Name` field) of the maps; selected list in `data/spawns.json` (33, outside
+  dungeons). Native menu: the intro reads the integer `OoTRR.Spawn` (written by the module at generation) and
+  reserves the matching map change **[files]**. Random spawn is currently disabled (the logic assumed a fixed
+  start).
+- **`EventQueryGameDataIntBranch`: 16 cases at most (strong hypothesis).** With 34 cases, value 22 led to case 15
+  (seen in game: arrival in front of Jabu-Jabu instead of the Temple of Time). The spawn point now goes through two
+  queries (tens `OoTRR.SpawnTens`, units `OoTRR.SpawnUnits`). Deku Scrub prices (20 values) too:
+  `OoTRR.Price.<token>` (tens) and `OoTRR.PriceUnits.<token>` (units) of price / 5 **[files]**.
+- Starting consumables **[game]** (2026-11-11): the maximum quantity comes from a bag (`ExpansionMaxNumActor`:
+  `Item_StickBag_Small` 10, `Item_NutBag_Small` 20; maximum 0 without a bag). Adding the item does not count its
+  quantity: small bag, then the item, then the stock written to `PouchData.<item>.StockNum`.
+- The logic assumes that Root (back to the starting point) stays reachable, as for Link's house (not verified: the
+  remake may resume the game where it was saved).
 
-## Récompenses de boss
+## Boss rewards
 
-- Données par des scènes qui nomment l'objet : `Dm_Kokiri_0130` (émeraude), `Dm_DeathMtTrail_0025`
-  (rubis), `Dm_ZoraFountain_0030` + `Dm_InsideJabu_Jabu_0030` (saphir), `Dm_Awake_<X>_Get`
-  (médaillons, aussi en version `.110`). Remplacer le nom dans ces scènes change la récompense
-  (validé pour l'émeraude) **[jeu]**.
-- Menu natif : crochet sur l'ajout à l'inventaire `0x110d570` ; un don d'événement (raison 7) d'une
-  récompense d'origine est remplacé par celle de la seed. Validé pour la poche de Link au départ
-  (médaillon de lumière -> saphir zora) **[jeu]** (2026-11-10) ; scènes de boss : même mécanisme, non
-  testées. Raisons vues : 7 = événement, 8 = équipement de départ (bourse, tuniques).
+- Given by scenes that name the item: `Dm_Kokiri_0130` (emerald), `Dm_DeathMtTrail_0025` (ruby),
+  `Dm_ZoraFountain_0030` + `Dm_InsideJabu_Jabu_0030` (sapphire), `Dm_Awake_<X>_Get` (medallions, also in `.110`
+  version). Replacing the name in these scenes changes the reward (validated for the emerald) **[game]**.
+- Native menu: hook on the inventory add `0x110d570`; an event gift (reason 7) of an original reward is replaced by
+  the seed's one. Validated for Link's pocket at the start (Light Medallion -> Zora Sapphire) **[game]** (2026-11-10);
+  boss scenes: same mechanism, not tested. Disabled while giving starting items (otherwise a starting medallion was
+  replaced as well) **[game]** (2026-11-12). Reasons seen: 7 = event, 8 = starting equipment (wallet, tunics).
+- The Key Items tab and screen only open when an item of list 4 (spiritual stones) is obtained; the native module
+  also opens them for a medallion (hooks 0xa6ab50 and 0x181160) **[game]**.
 
-## Pont arc-en-ciel
+## Rainbow bridge
 
-- Module `GanonCastle_Level_Field_00_Prefab_14ba` : la scène `GanonCastle_Adult_Field_Rainbow`
-  (script `Defeat_Ganon`, fait passer la quête à Step01) se déclenche si `Defeat_Ganon_IsAfter_Ready_Exp`
-  ET NON `Defeat_Ganon_IsAfter_Step01_Exp` ; le pont (`Obj_GanonCastle_Bridge_A_01`) n'existe qu'une
-  fois la scène vue (`HavePlayedEvent`). **Remplacer seulement « Ready »** par la condition du
-  randomizer : remplacer les deux empêche la scène, donc le pont **[jeu]** (menu natif, condition
-  « ouvert », 2026-11-10). Menu natif : drapeaux sauvegardés `OoTRR.Bridge.<condition>` posés au départ.
-- Expressions BoolExp du jeu : 26 éléments au plus ; les longues conditions sont découpées en
-  sous-expressions (précaution, limite non vérifiée).
+- Module `GanonCastle_Level_Field_00_Prefab_14ba`: the scene `GanonCastle_Adult_Field_Rainbow` (script
+  `Defeat_Ganon`, moves the quest to Step01) triggers if `Defeat_Ganon_IsAfter_Ready_Exp` AND NOT
+  `Defeat_Ganon_IsAfter_Step01_Exp`; the bridge (`Obj_GanonCastle_Bridge_A_01`) only exists once the scene is seen
+  (`HavePlayedEvent`). **Only replace "Ready"** with the randomizer's condition: replacing both prevents the scene,
+  hence the bridge **[game]** (native menu, "open" condition, 2026-11-10). Native menu: saved flags
+  `OoTRR.Bridge.<condition>` set at the start.
+- The game's BoolExp expressions: 26 elements at most; long conditions are split into sub-expressions (precaution,
+  limit not verified).
 
-## Expressions booléennes (GameData `BoolExp`)
+## Boolean expressions (GameData `BoolExp`)
 
-Notation postfixe : `0` drapeau Bool, `10` autre expression, `1`/`12` Enum (égal / à partir de)
-suivi de `2` valeur, `15` entier + `16` constante (égalité), `3` ET, `4` OU, `5` NON. On peut en
-ajouter (non sauvegardées, la taille de sauvegarde ne change pas) **[jeu]**.
+Postfix notation: `0` Bool flag, `10` another expression, `1`/`12` Enum (equal / from) followed by `2` value, `15`
+integer + `16` constant (equality), `3` AND, `4` OR, `5` NOT. New ones can be added (not saved, the save size does
+not change) **[game]**.
 
-## Cinématiques
+## Cutscenes
 
-- `HavePlayedEvent.<scène>` vrai au départ -> la scène est considérée vue **[jeu]**.
-- Certaines scènes sont jouées sans vérification (intro : `OpeningEvent` -> `Dm_Kokiri_0000/0030`) :
-  on saute l'étape qui les joue (`skip_event_steps`) **[jeu]**.
-- Liste générée : `ootrr/data/cutscenes.json` (`python -m ootrr.tools.cutscenes`).
+- `HavePlayedEvent.<scene>` true at the start -> the scene is considered seen **[game]**.
+- Some scenes are played without a check (intro: `OpeningEvent` -> `Dm_Kokiri_0000/0030`): the step that plays them
+  is skipped (`skip_event_steps`) **[game]**.
+- Generated list: `ootrr/data/cutscenes.json` (`python -m ootrr.tools.cutscenes`).
 
-## Pièges rencontrés
+## In-game menu (title sequence)
 
-- Changer un acteur de type par `Gyaml` (cœur -> coffre) : rien n'apparaît. Un coffre copié dans
-  une carte statique (`Obj_TBox_A_01_NoBake`) n'a pas pu s'ouvrir.
-- Une copie du réceptacle qui donne des PV (quart de cœur sur mesure) bloque la partie.
-- `insert_flow` : `set` n'écrit que des **textes**. Un paramètre entier (ex. `Num` de
-  `EventQueryIsExistInPouch`) reçoit l'adresse de la chaîne (`Num = 12304`) : garder la valeur du modèle.
-  Réponses des questions : 0 = oui. Toujours relire le script produit avec `tools.events` **[fichiers]**.
-- Textes des volets d'une mise en page (ex. `Pa_AmiiboBtn_00-T_BtnTitle_00`) : lus par 0xa6b250 (fichier de
-  messages déjà chargé), pas par 0xa6afe0 / 0xa6b060 **[fichiers, Ghidra]**.
-- Un acteur dans un groupe de logique (AiGroups) peut ignorer sa condition de présence selon le
-  module ; tester.
-- PowerShell 5 ajoute un BOM UTF-8 avec `Set-Content -Encoding utf8` : casse les JSON.
-- Chemins Windows trop longs : construire dans un dossier temporaire puis copier.
+- Option rows of type 13 (OcarinaKeyAssign) are used as buttons ("Next Page" / "Start the Game"). A button row does
+  not go through TrigA: the native module records type 13 (`SeqQueryGetSelectedOptionType`, 0x32f97a0) and injects B
+  for 30 frames in `SeqQueryControllerTrigMaskChecker` (0x7550b0) **[game]**. The player's B sets
+  `OoTRR.MenuBack`, read by a selector after each page in `Sequence/NormalTitle` **[game]**.
+- `UI_IsFinishChallengeMenuOpenEvent` unlocks the Threads of Time tab **[game]**.
 
-## Pistes non abouties
+## Pitfalls met
 
-- Menu de réglages **dans le jeu** : fait avec du code natif (exlaunch), voir `native/README.md`.
-- **Cartes et boussoles « au départ » : validé en jeu (2026-11-10, menu natif).** La carte restait
-  « ??? » (même celle d'un vrai coffre) parce que les scènes d'arrivée, marquées vues, sont celles qui
-  **découvrent** un lieu (`EventTriggerOpenLocationUI`) quand RSDB `Location`
-  `IsShowLocationUIFirstTimeInDemo` est vrai (33 lieux sur 36) : champ mis à faux avec
-  `skip_cutscenes=safe` (`World.rsdb_changes`), le lieu est découvert à la première entrée.
-  Le menu natif donne aussi la carte et la boussole à l'entrée du donjon (fonctions du nœud
-  `OneShotDungeonGetMap`, `0x3282fe0` / `0x3283060`).
+- Changing an actor's type through `Gyaml` (heart -> chest): nothing appears. A chest copied into a static map
+  (`Obj_TBox_A_01_NoBake`) could not be opened.
+- A copy of the Heart Container that gives HP (custom Piece of Heart) blocks the game.
+- `insert_flow`: `set` only writes **strings**. An integer parameter (e.g. `Num` of `EventQueryIsExistInPouch`)
+  receives the string's address (`Num = 12304`): keep the template's value. Query answers: 0 = yes. Always re-read
+  the produced script with `tools.events` **[files]**.
+- Jumping from a copied step to an event of another entry point (parallel branch) crashes the script engine: copy
+  the needed event instead (`copy_event`) **[game]**.
+- Texts of a layout's panes (e.g. `Pa_AmiiboBtn_00-T_BtnTitle_00`): read by 0xa6b250 (message file already loaded),
+  not by 0xa6afe0 / 0xa6b060 **[files, Ghidra]**.
+- An actor in a logic group (AiGroups) may ignore its presence condition depending on the module; test it.
+- PowerShell 5 adds a UTF-8 BOM with `Set-Content -Encoding utf8`: breaks JSON files.
+- Windows paths too long: build in a temporary folder then copy.
+
+## Leads not followed through
+
+- **In-game** settings menu: done with native code (exlaunch), see `native/README.md`.
+- **Maps and compasses "at the start": validated in game (2026-11-10, native menu).** The map stayed "???" (even the
+  one from a real chest) because the arrival scenes, marked as seen, are the ones that **discover** a location
+  (`EventTriggerOpenLocationUI`) when RSDB `Location` `IsShowLocationUIFirstTimeInDemo` is true (33 locations out of
+  36): field set to false with `skip_cutscenes=safe` (`World.rsdb_changes`), the location is discovered on first
+  entry. The native menu also gives the map and compass on entering the dungeon (functions of the
+  `OneShotDungeonGetMap` node, `0x3282fe0` / `0x3283060`).

@@ -1,248 +1,246 @@
-# Guide d'installation et d'utilisation
+# Installation and usage guide
 
-Ce guide s'adresse à quelqu'un qui veut **jouer** au randomizer, sans connaître le code. Pour contribuer,
-voir [`AGENTS.md`](../AGENTS.md) et [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+This guide is for someone who wants to **play** the randomizer without knowing the code. To contribute, see
+[`AGENTS.md`](../AGENTS.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-Le randomizer existe sous deux formes :
+The randomizer comes in two forms:
 
-| | Menu dans le jeu (recommandé) | Mod généré sur PC |
+| | In-game menu (recommended) | Mod generated on PC |
 |---|---|---|
-| Où choisir les réglages | Dans le jeu, après « Nouvelle partie » | En ligne de commande, avant de générer |
-| Nouvelle seed | À chaque nouvelle partie, sans rien réinstaller | Une installation par seed |
-| Fonctions | Toutes (boutiques, Peste Mojo, départ adulte…) | Pas de boutiques mélangées |
-| Spoiler log | `ootrr.tools.ingame_spoiler` (relit la sauvegarde) | Écrit avec la seed |
-| À installer en plus | Rien avec une release (module natif fourni) ; devkitPro depuis les sources | Rien |
+| Where settings are chosen | In the game, after "New Game" | On the command line, before generating |
+| New seed | Every new game, nothing to reinstall | One installation per seed |
+| Features | All (shops, Deku Scrubs, adult start…) | No shuffled shops |
+| Spoiler log | `ootrr.tools.ingame_spoiler` (reads the save) | Written with the seed |
+| Extra things to install | Nothing with a release (native module provided); devkitPro from source | Nothing |
 
 ---
 
-## 1. Ce qu'il faut
+## 1. What you need
 
-1. **Ta propre copie** du jeu *The Legend of Zelda: Ocarina of Time* (Switch 2) **et de sa mise à jour**
-   (version 131072, appelée « 2.0.0 » dans le code). Aucun fichier du jeu n'est fourni ici.
-2. Un émulateur dérivé de Yuzu : **Eden** ou **Fritchii**, avec tes propres clés.
-3. **Python 3.10 ou plus récent** (Windows : cocher « Add python.exe to PATH » à l'installation).
-4. Le randomizer :
-   - **Le plus simple (Windows, sans Python)** : `OoTRR-installer.exe` de la dernière **release** GitHub
-     (onglet *Releases*). Il contient tout ce qu'il faut : rien d'autre à installer (sauter les étapes 3 et 4
-     de ce guide, voir « Installer » au chapitre 5).
-   - **Avec Python** : la dernière **release** GitHub (onglet *Releases* du dépôt). Télécharge le code
-     source (*Source code (zip)*) **et** le fichier `subsdk9` (module natif déjà compilé) de la **même**
-     release, puis décompresse le code source et mets `subsdk9` dans son dossier.
-   - Ou les sources à jour (bouton « Code » -> « Download ZIP », ou `git clone`) : il faut alors compiler le
-     module natif avec **devkitPro** (devkitA64 + libnx, installé dans `C:\devkitPro`, composant
-     « Switch development » de l'installateur Windows).
+1. **Your own copy** of *The Legend of Zelda: Ocarina of Time* (Switch 2) **and its update** (version 131072,
+   called "2.0.0" in the code). No game files are provided here.
+2. A Yuzu-derived emulator: **Eden** or **Fritchii**, with your own keys.
+3. **Python 3.10 or newer** (Windows: tick "Add python.exe to PATH" during installation).
+4. The randomizer:
+   - **Easiest (Windows, no Python)**: `OoTRR-installer.exe` from the latest GitHub **release** (*Releases* tab).
+     It contains everything needed: nothing else to install (skip steps 3 and 4 of this guide, see "Install" in
+     chapter 5).
+   - **With Python**: the latest GitHub **release** (*Releases* tab of the repository). Download the source code
+     (*Source code (zip)*) **and** the `subsdk9` file (already compiled native module) from the **same** release,
+     then unzip the source code and put `subsdk9` in its folder.
+   - Or the up-to-date sources ("Code" button -> "Download ZIP", or `git clone`): you then need to compile the
+     native module with **devkitPro** (devkitA64 + libnx, installed in `C:\devkitPro`, "Switch development"
+     component of the Windows installer).
 
-Le module `subsdk9` d'une release ne fonctionne qu'avec le code source de **cette** release (il contient la
-logique et les réglages du menu de cette version) : ne mélange pas les versions.
+A release's `subsdk9` module only works with the source code of **that** release (it contains the logic and menu
+settings of that version): do not mix versions.
 
-## 1 bis. Récupérer ton jeu
+## 1b. Getting your game
 
-Le randomizer ne contient **aucun fichier du jeu** et n'en distribue aucun : chaque joueur construit le mod à
-partir de **sa propre copie** du jeu. Il te faut, depuis **ta** console et **ton** jeu acheté :
+The randomizer contains **no game files** and distributes none: every player builds the mod from **their own
+copy** of the game. From **your** console and **your** purchased game, you need:
 
-- le jeu et sa **mise à jour** (version 131072 / 2.0.0), copiés avec un outil de sauvegarde (*dump*) pour
-  console ;
-- les **clés** de ta console (`prod.keys`, `title.keys`), placées dans l'émulateur (voir sa documentation).
+- the game and its **update** (version 131072 / 2.0.0), copied with a console dumping tool;
+- your console's **keys** (`prod.keys`, `title.keys`), placed in the emulator (see its documentation).
 
-Installe ensuite le jeu **et** sa mise à jour dans l'émulateur (*Fichier* -> *Installer des fichiers dans la
-NAND*), puis vérifie qu'il démarre normalement avant d'aller plus loin.
+Then install the game **and** its update in the emulator (*File* -> *Install files to NAND*), and check that it
+starts normally before going further.
 
-## 2. Extraire la RomFS de la mise à jour
+## 2. Extracting the update's RomFS
 
-Le randomizer lit les fichiers du jeu dans la **RomFS de la mise à jour** (pas celle du jeu de base).
-Avec Eden / Fritchii : clic droit sur le jeu -> *Dump RomFS* (ou *Extract*), en choisissant la mise à jour,
-ou un outil d'extraction de ton choix. Tu dois obtenir un dossier qui contient `Banc`, `Event`, `Pack`,
-`GameData`, etc., par exemple :
+The randomizer reads the game files from the **update's RomFS** (not the base game's).
+With Eden / Fritchii: right-click the game -> *Dump RomFS* (or *Extract*), choosing the update, or any extraction
+tool you like. You should get a folder containing `Banc`, `Event`, `Pack`, `GameData`, etc., for example:
 
 ```
 D:\dumpnup\The Legend of Zelda Ocarina of Time\updates\131072\romfs
 ```
 
-C'est ce chemin qu'on appelle **ROMFS** dans la suite (à mettre entre guillemets s'il contient des espaces).
+This path is called **ROMFS** below (put it in quotes if it contains spaces).
 
-## 3. Installer les dépendances Python
+## 3. Installing the Python dependencies
 
-Ouvre un terminal dans le dossier du dépôt, puis :
+Open a terminal in the repository folder, then:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Vérifie que tout est en place :
+Check that everything is in place:
 
 ```bash
 python -m ootrr --check
 ```
 
-## 4. Où le mod est installé
+## 4. Where the mod is installed
 
-`--install` copie le mod dans `<émulateur>\load\0400486024DEC000\<nom du mod>` :
+`--install` copies the mod into `<emulator>\load\0400486024DEC000\<mod name>`:
 
-- `%APPDATA%\fritchii` s'il existe (Fritchii), sinon `%APPDATA%\eden` (Eden) ;
-- pour un autre dossier, définir la variable d'environnement `OOTRR_EMU_DIR` (dossier qui contient `load`).
+- `%APPDATA%\fritchii` if it exists (Fritchii), otherwise `%APPDATA%\eden` (Eden);
+- for another folder, set the `OOTRR_EMU_DIR` environment variable (folder that contains `load`).
 
-Règles à respecter :
+Rules:
 
-- **L'émulateur doit être fermé** pendant l'installation (sinon des fichiers restent verrouillés et le mod
-  est installé à moitié).
-- **Un seul mod OoTRR actif à la fois** : dans l'émulateur, clic droit sur le jeu -> *Propriétés* ->
-  *Add-Ons*, ne cocher que `OoTRR-menu`.
+- **The emulator must be closed** during installation (otherwise files stay locked and the mod is half
+  installed).
+- **Only one OoTRR mod active at a time**: in the emulator, right-click the game -> *Properties* -> *Add-Ons*,
+  tick only `OoTRR-menu`.
 
 ---
 
-## 5. Menu dans le jeu (recommandé)
+## 5. In-game menu (recommended)
 
-### Installer
+### Install
 
-Émulateur **fermé**.
+Emulator **closed**.
 
-- **Le plus simple** : lance `OoTRR-installer.exe`, choisis le dossier `romfs` de la **mise à jour** dans la
-  fenêtre qui s'ouvre, et attends le message « Installé » (une minute environ). Windows peut afficher un
-  avertissement SmartScreen (programme non signé) : *Informations complémentaires* -> *Exécuter quand même*.
+- **Easiest**: run `OoTRR-installer.exe`, choose the **update's** `romfs` folder in the window that opens, and wait
+  for the "Installed" message (about a minute). Windows may show a SmartScreen warning (unsigned program):
+  *More info* -> *Run anyway*.
 
-Ou, dans un terminal ouvert dans le dossier du randomizer :
+Or, in a terminal opened in the randomizer folder:
 
-- avec une **release** (module natif fourni, pas besoin de devkitPro) :
+- with a **release** (native module provided, no devkitPro needed):
 
   ```bash
   python -m ootrr.tools.menutest --romfs "ROMFS" --native subsdk9 --install
   ```
 
-- depuis les **sources** (compile le module natif avec devkitPro) :
+- from the **sources** (compiles the native module with devkitPro):
 
   ```bash
   python -m ootrr.tools.menutest --romfs "ROMFS" --install
   ```
 
-La commande prépare les fichiers du jeu modifiés à partir de **ta** RomFS et installe le tout sous le nom
-`OoTRR-menu`. Compte quelques minutes. À refaire seulement quand tu changes de version du randomizer.
-Ensuite, dans l'émulateur : clic droit sur le jeu -> *Propriétés* -> *Add-Ons*, coche `OoTRR-menu`.
+The command prepares the modified game files from **your** RomFS and installs everything under the name
+`OoTRR-menu`. It takes a few minutes. Only redo it when you change randomizer version.
+Then, in the emulator: right-click the game -> *Properties* -> *Add-Ons*, tick `OoTRR-menu`.
 
-### Jouer
+### Play
 
-1. Lance le jeu, choisis **Nouvelle partie**.
-2. Le menu du randomizer s'ouvre (3 pages). Change les réglages avec la croix directionnelle.
-3. Passe à la page suivante avec le bouton **Next Page** en bas de la page (A). **B** revient à la page
-   précédente (depuis la page 1 : au menu principal). Sur la dernière page, **Start the Game** mène à la
-   confirmation habituelle.
-4. La seed est générée au début de la partie. Elle est enregistrée dans la sauvegarde : recharger la partie
-   redonne exactement la même répartition des objets.
+1. Start the game, choose **New Game**.
+2. The randomizer menu opens (3 pages). Change settings with the D-pad.
+3. Go to the next page with the **Next Page** button at the bottom of the page (A). **B** goes back to the previous
+   page (from page 1: to the main menu). On the last page, **Start the Game** leads to the usual confirmation.
+4. The seed is generated at the start of the game. It is stored in the save: reloading the game gives exactly the
+   same item placement.
 
-La seed affichée dans la description de « Manual Seed » est celle qui sera utilisée. Active **Manual Seed**
-pour taper une seed au clavier au lancement (même seed + mêmes réglages = même partie).
+The seed shown in the "Manual Seed" description is the one that will be used. Enable **Manual Seed** to type a seed
+on the keyboard at launch (same seed + same settings = same game).
 
-### Les réglages du menu
+### Menu settings
 
-**Page 1 — le monde**
+**Page 1 — the world**
 
-| Réglage | Effet |
+| Setting | Effect |
 |---|---|
-| Manual Seed | Désactivé : seed aléatoire (affichée). Activé : un clavier s'ouvre au lancement pour la saisir. |
-| Kokiri Forest | Closed (jeu d'origine), Closed Deku (sortie vers la plaine ouverte), Open (Arbre Mojo ouvert aussi). |
-| Open Door of Time | Porte du Temps ouverte dès le départ. |
-| Free Time Travel | L'Épée de légende renvoie Link enfant à tout moment (le remake exige sinon le Temple de la Forêt). |
-| Skip Child Zelda | Lettre et Berceuse de Zelda au départ ; la quête du château est finie (le cycle jour / nuit démarre). |
-| Rainbow Bridge | Condition du pont vers le château de Ganon : Open, Vanilla, Stones, Medallions, Dungeons, Hearts. Le nombre requis se choisit en haut de la page 2. |
-| Starting Age | Child (maison de Link), Adult (Temple du Temps, Épée de légende donnée, porte ouverte et voyage libre imposés) ou Random. |
-| Start With Consumables | Petits sacs de bâtons et de noix Mojo pleins (10 et 20). |
+| Manual Seed | Off: random seed (shown). On: a keyboard opens at launch to enter it. |
+| Kokiri Forest | Closed (original game), Closed Deku (exit to the field open), Open (Deku Tree open too). |
+| Open Door of Time | Door of Time open from the start. |
+| Free Time Travel | The Master Sword sends Link back to child at any time (otherwise the remake requires the Forest Temple). |
+| Skip Child Zelda | Zelda's Letter and Lullaby at the start; the castle quest is done (the day / night cycle starts). |
+| Rainbow Bridge | Condition of the bridge to Ganon's Castle: Open, Vanilla, Stones, Medallions, Dungeons, Hearts. The required number is chosen at the top of page 2. |
+| Starting Age | Child (Link's house), Adult (Temple of Time, Master Sword given, open door and free time travel forced) or Random. |
+| Start With Consumables | Small Deku Stick and Deku Nut bags full (10 and 20). |
 
-**Page 2 — ce qui est mélangé**
+**Page 2 — what is shuffled**
 
-En haut de la page, selon la condition du pont choisie page 1 : Stones Required (1–3), Medallions Required
-(1–6), Rewards Required (1–9), ou Hearts Required (3 ou 12) + Extra Hearts (+0 à +8).
+At the top of the page, depending on the bridge condition chosen on page 1: Stones Required (1–3), Medallions
+Required (1–6), Rewards Required (1–9), or Hearts Required (3 or 12) + Extra Hearts (+0 to +8).
 
-| Réglage | Effet |
+| Setting | Effect |
 |---|---|
-| Dungeon Rewards | Pierres et médaillons mélangés entre les boss et la poche de Link. |
-| Heart Pieces | Quarts de cœur au sol (Freestanding), et aussi réceptacles des boss (All). |
-| Gold Skulltulas | Les Skulltulas d'or lâchent un objet de la seed (Overworld : hors donjons ; All : toutes). |
-| Maps and Compasses | À leur place, données au départ, ou retirées. |
-| Shuffle Ocarinas | Saria et les douves donnent un objet de la seed ; le 2e ocarina obtenu est l'Ocarina du Temps. |
-| Lens Required | La logique exige le Monocle de Vérité pour les passages invisibles. |
+| Dungeon Rewards | Stones and medallions shuffled between bosses and Link's pocket. |
+| Heart Pieces | Freestanding Pieces of Heart (Freestanding), and boss Heart Containers too (All). |
+| Gold Skulltulas | Gold Skulltulas drop a seed item (Overworld: outside dungeons; All: all of them). |
+| Maps and Compasses | In place, given at the start, or removed. |
+| Shuffle Ocarinas | Saria and the moat give a seed item; the 2nd ocarina obtained is the Ocarina of Time. |
+| Lens Required | The logic requires the Lens of Truth for invisible passages. |
 
-**Page 3 — boutiques, Peste Mojo, chants et cadeaux**
+**Page 3 — shops, Deku Scrubs, songs and gifts**
 
-| Réglage | Effet |
+| Setting | Effect |
 |---|---|
-| Shops | 0 à 4 articles par boutique (8 boutiques) vendent un objet de la seed, une fois. |
-| Shop Prices | Vanilla (prix de l'article remplacé, 99 max), Affordable (10), Random (0 à 95). |
-| Deku Scrubs | Les 5 Peste Mojo qui vendent un objet unique vendent un objet de la seed. |
-| Deku Scrub Prices | Vanilla (40), Affordable (10), Random (0 à 95). |
-| Songs | Vanilla (chants à leur place), Shuffle (mélangés entre les 12 emplacements de chants), Random (les emplacements de chants rejoignent le pool : un chant peut être dans un coffre, et un PNJ peut donner n'importe quel objet). |
-| Gifts | Récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed (nouveau, pas encore validé en jeu). |
+| Shops | 0 to 4 items per shop (8 shops) sell a seed item, once. |
+| Shop Prices | Vanilla (price of the replaced item, 99 max), Affordable (10), Random (0 to 95). |
+| Deku Scrubs | The 5 Deku Scrubs that sell a unique item sell a seed item. |
+| Deku Scrub Prices | Vanilla (40), Affordable (10), Random (0 to 95). |
+| Songs | Vanilla (songs in place), Shuffle (shuffled among the 12 song locations), Random (song locations join the pool: a song can be in a chest, and an NPC can give any item). |
+| Gifts | Minigame rewards (shooting galleries, bowling, horseback archery, diving, fishing), Anju, Darunia, Gerudo card, Light Arrows, Fire Arrows, man on the roof, Dampé's gravedigging tour and Great Fairies give a seed item (new, not fully validated in game yet). |
 
-Toujours actif dans le menu : les cinématiques sans effet sur la partie sont passées.
+Always on in the menu: cutscenes with no effect on the game are skipped.
 
-### Voir le spoiler log de ta partie
+### Seeing your game's spoiler log
 
-Sans rien construire : l'outil relit la seed et les réglages dans la sauvegarde la plus récente.
+Without building anything: the tool reads the seed and settings from the most recent save.
 
 ```bash
 python -m ootrr.tools.ingame_spoiler --romfs "ROMFS"
 ```
 
-- `--slot 2` : un emplacement de sauvegarde précis ;
-- avant de jouer, avec la seed affichée dans le menu et les réglages choisis :
+- `--slot 2`: a specific save slot;
+- before playing, with the seed shown in the menu and the chosen settings:
   `python -m ootrr.tools.ingame_spoiler --seed 727557 --set shuffle_shops=4 --set starting_age=adult`
-  (noms des réglages : `python -m ootrr --list-settings`).
+  (setting names: `python -m ootrr --list-settings`).
 
-Le spoiler est écrit dans `output\OoTRR_menu_<seed>_<hash>_spoiler.txt` : départ, objets requis, parcours par
-sphères et contenu de chaque emplacement.
+The spoiler is written to `output\OoTRR_menu_<seed>_<hash>_spoiler.txt`: start, required items, playthrough by
+spheres and content of each location.
 
 ---
 
-## 6. Mod généré sur PC (sans menu)
+## 6. Mod generated on PC (no menu)
 
-Une seed = un mod. Les réglages se donnent en ligne de commande :
+One seed = one mod. Settings are given on the command line:
 
 ```bash
 python -m ootrr --seed 1234 --romfs "ROMFS" --install --set open_forest=open --set shuffle_hearts=all
 ```
 
-- `--set nom=valeur` (répétable) ou `--settings fichier.json` (modèle : `settings.example.json`) ;
-- `python -m ootrr --list-settings` liste tous les réglages et leurs valeurs ;
-- le mod est installé sous `OoTRR` ; le spoiler et le patch sont dans `output\` ;
-- sans `--romfs`, seule la seed est générée (spoiler + patch), sans mod.
+- `--set name=value` (repeatable) or `--settings file.json` (template: `settings.example.json`);
+- `python -m ootrr --list-settings` lists all settings and their values;
+- the mod is installed as `OoTRR`; the spoiler and patch are in `output\`;
+- without `--romfs`, only the seed is generated (spoiler + patch), no mod.
 
-Les boutiques mélangées ne sont disponibles qu'avec le menu dans le jeu.
+Shuffled shops are only available with the in-game menu.
 
 ---
 
-## 7. Sauvegardes
+## 7. Saves
 
-Les parties sont dans les sauvegardes de l'émulateur. Pour garder une copie (émulateur fermé) :
+Games are in the emulator's saves. To keep a copy (emulator closed):
 
 ```bash
-python -m ootrr.tools.saves backup avant_gohma
+python -m ootrr.tools.saves backup before_gohma
 python -m ootrr.tools.saves list
-python -m ootrr.tools.saves restore avant_gohma
+python -m ootrr.tools.saves restore before_gohma
 ```
 
-Quand le mod change (mise à jour du dépôt), une ancienne partie peut être régénérée autrement au chargement :
-commence une nouvelle partie après chaque mise à jour.
+When the mod changes (repository update), an old game may be regenerated differently on load: start a new game
+after each update.
 
-## 8. En cas de problème
+## 8. Troubleshooting
 
-- **Chargement sans fin ou plantage** : ferme l'émulateur et regarde la fin du journal
-  `%APPDATA%\fritchii\log\eden_log.txt` (ou `%APPDATA%\eden\log\…`). Les lignes `OoTRR:` viennent du module
-  natif (seed, réglages lus, objets donnés). Joins ce fichier quand tu signales un problème, avec la seed et
-  les réglages.
-- **Le menu n'apparaît pas après « Nouvelle partie »** : vérifie que `OoTRR-menu` est le seul mod OoTRR coché
-  et qu'il contient bien `exefs\subsdk9` (sinon la compilation a échoué : relance `menutest` et lis l'erreur).
-- **« devkitPro absent »** : tu installes depuis une release : ajoute `--native subsdk9` (fichier `subsdk9` de la même release, dans le dossier du randomizer).
-- **« compilation du module natif impossible »** : devkitPro doit être dans `C:\devkitPro` avec devkitA64.
-- **L'installation ne change rien** : l'émulateur était ouvert pendant l'installation ; ferme-le et relance la
-  commande.
+- **Endless loading or crash**: close the emulator and look at the end of the log
+  `%APPDATA%\fritchii\log\eden_log.txt` (or `%APPDATA%\eden\log\…`). Lines starting with `OoTRR:` come from the
+  native module (seed, settings read, items given). Attach this file when you report a problem, with the seed and
+  settings.
+- **The menu does not appear after "New Game"**: check that `OoTRR-menu` is the only OoTRR mod ticked and that it
+  contains `exefs\subsdk9` (otherwise compilation failed: run `menutest` again and read the error).
+- **"devkitPro not found"**: you are installing from a release: add `--native subsdk9` (`subsdk9` file from the
+  same release, in the randomizer folder).
+- **"cannot compile the native module"**: devkitPro must be in `C:\devkitPro` with devkitA64.
+- **Installing changes nothing**: the emulator was open during installation; close it and run the command again.
 
-## 9. État et limites
+## 9. Status and limitations
 
-Fonctions **validées en jeu** : coffres mélangés, cœurs au sol, Skulltulas d'or, Peste Mojo, boutiques
-(boutique Kokiri), récompenses des boss (poche de Link), forêt ouverte, Porte du Temps, voyage libre, pont
-(ouvert), cartes et boussoles au départ, objets de Saria mélangés, consommables au départ.
+Features **validated in game**: shuffled chests, freestanding hearts, Gold Skulltulas, Deku Scrubs, shops (one
+purchase per item), boss rewards (Link's pocket), open forest, Door of Time, free time travel, bridge (open), maps
+and compasses at the start, Saria's items shuffled, starting consumables, day / night cycle with "Skip Child
+Zelda", shuffled songs, Master Sword guard, "Next Page" button and B to go back.
 
-Fonctions **pas encore validées en jeu** (retours bienvenus) : départ adulte, cycle
-jour / nuit avec « Skip Child Zelda », bombes d'un coffre sans sac (rubis à la place), garde de l'épée Kokiri,
-Ocarina du Temps mélangé (douves), chants mélangés, prix aléatoires élevés des Peste Mojo, titre du bouton « Next Page ».
+Features **not validated in game yet** (feedback welcome): adult start, bombs from a chest without a bag (rupees
+instead), shuffled Ocarina of Time (moat), high random Deku Scrub prices, some gifts (man on the roof, Dampé's
+tour, Fire Arrows).
 
-Non mélangés : PNJ (sauf Saria et les chants), petites clés, clés du boss, coffres des mini-jeux. Travail restant :
+Not shuffled: NPCs (except Saria, songs and gifts), small keys, boss keys, minigame chests, bottles. Remaining work:
 [`ROADMAP.md`](ROADMAP.md).

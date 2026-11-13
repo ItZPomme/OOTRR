@@ -1,240 +1,237 @@
-# Code natif (menu en jeu, expérimental)
+# Native code (in-game menu)
 
-Module injecté dans le jeu avec [exlaunch](https://github.com/shadowninja108/exlaunch)
-(GPL-2, copié depuis le commit `f9f4b0d`, voir `exlaunch/LICENSE`), chargé comme `subsdk9`.
+Module injected into the game with [exlaunch](https://github.com/shadowninja108/exlaunch) (GPL-2, copied from commit
+`f9f4b0d`, see `exlaunch/LICENSE`), loaded as `subsdk9`.
 
-## État
+## Status
 
-- **Étape 0 — validée en jeu (2026-11-10)** : Eden charge le module (`Module subsdk9 loaded`)
-  et l'exécute (`OutputDebugString: OoTRR: module natif charge`, puis `svcBreak` de
-  notification avec info1 = `0x4F6F545252`). Le jeu continue normalement.
-- Suite : trouver dans `main` les fonctions à accrocher (écran « Nouvelle partie », affichage
-  de texte) pour construire le menu de réglages. Gros travail de rétro-ingénierie.
+- **Step 0 — validated in game (2026-11-10)**: Eden loads the module (`Module subsdk9 loaded`) and runs it
+  (`OutputDebugString: OoTRR: module natif charge`, then a notification `svcBreak` with info1 = `0x4F6F545252`). The
+  game continues normally.
+- Since then: settings menu, seed generator, shuffled locations and many settings in the game (sections below).
 
-## Rétro-ingénierie : point de départ
+## Reverse engineering: starting point
 
-- `main` est compressé en « ZBIC » (format Switch 2, pas du LZ4) : `ootrr.tools.nso` ne le lit
-  pas. On récupère le code décompressé avec l'option d'Eden `dump_nso` (section Debugging de
-  `qt-config.ini`, mettre aussi `dump_nso\default=false`, Eden fermé) : une partie lancée écrit
-  `%APPDATA%\eden\dump\0400486024DEC000\nso\main-<build id>.nso` (en-tête 0x100 + image
-  mémoire, relocations déjà appliquées avec base 0). Ôter l'en-tête -> `output/native/main.bin`.
-- Segments (build id E0F3CCFA…) : `.text` 0 – 0x3c461d0, `.rodata` 0x3c47000 – 0x484c080,
-  `.data` 0x484d000 – 0x4d46b80.
-- Désassembler : `aarch64-none-elf-objdump -D -b binary -m aarch64 --start-address=0x... main.bin`.
-  Références à une chaîne ou adresse : `python -m ootrr.tools.xref output/native/main.bin NOM --data`.
-- L'écran titre est piloté par des modules AINB de la RomFS (`Sequence/`) : `NormalTitle`
-  (boutons `Pa_Button_00/01/02` = nouvelle partie / charger / options), `ConfirmationNewGame`
-  (fenêtre système `TitleSystemWindow_00`, préréglage `NewGame`), `Option` (écran
-  `SystemOption_00`, boutons `PaOptionBtn_00` / `PaOptionBtnLevel_00`). Les nœuds (`SeqQuery…`,
-  `SeqOneShot…`, `SeqExecute…`) sont des classes C++ : chaque classe a une méthode qui renvoie
-  son nom (ex. `SeqQueryGetSelectedOptionType` : nom en 0x32f9880, vtable vers 0x4bc9c68 ;
-  `SeqOneShotOpenSystemWindow` : 0x32d9360, vtable vers 0x4bb4c80).
-- Mises en page : `UI/Layout2Archive/*.blarc.zs` (SARC de fichiers `.buil`, format Layout2 non
-  documenté). Écran options : `Common…blarc` / `SystemOption_00.buil`.
+- `main` is compressed as "ZBIC" (Switch 2 format, not LZ4): `ootrr.tools.nso` cannot read it. The decompressed code
+  is obtained with Eden's `dump_nso` option (Debugging section of `qt-config.ini`, also set `dump_nso\default=false`,
+  Eden closed): a started game writes `%APPDATA%\eden\dump\0400486024DEC000\nso\main-<build id>.nso` (0x100 header +
+  memory image, relocations already applied with base 0). Strip the header -> `output/native/main.bin`.
+- Segments (build id E0F3CCFA…): `.text` 0 – 0x3c461d0, `.rodata` 0x3c47000 – 0x484c080, `.data` 0x484d000 –
+  0x4d46b80.
+- Disassemble: `aarch64-none-elf-objdump -D -b binary -m aarch64 --start-address=0x... main.bin`. References to a
+  string or address: `python -m ootrr.tools.xref output/native/main.bin NAME --data`.
+- The title screen is driven by AINB modules of the RomFS (`Sequence/`): `NormalTitle` (buttons
+  `Pa_Button_00/01/02` = new game / load / options), `ConfirmationNewGame` (system window `TitleSystemWindow_00`,
+  preset `NewGame`), `Option` (screen `SystemOption_00`, buttons `PaOptionBtn_00` / `PaOptionBtnLevel_00`). The nodes
+  (`SeqQuery…`, `SeqOneShot…`, `SeqExecute…`) are C++ classes: each class has a method that returns its name (e.g.
+  `SeqQueryGetSelectedOptionType`: name at 0x32f9880, vtable near 0x4bc9c68; `SeqOneShotOpenSystemWindow`:
+  0x32d9360, vtable near 0x4bb4c80).
+- Layouts: `UI/Layout2Archive/*.blarc.zs` (SARC of `.buil` files, undocumented Layout2 format). Options screen:
+  `Common…blarc` / `SystemOption_00.buil`.
 
-### Écrans et nœuds de séquence (vérifié dans le code)
+### Screens and sequence nodes (verified in the code)
 
-- ~5 700 classes de nœuds AINB. Dans chaque vtable, seules quelques entrées sont propres à la
-  classe (référencées une seule fois) : lecture des paramètres et exécution.
-- Les nœuds trouvent un écran par **MurmurHash3 du nom de mise en page** (même hachage que
-  GameData) : `FUN_033eb1d0(gestionnaire, hash)` ou `FUN_029f9fb0(...)` (adresses Ghidra, base 0x100000).
-  `SystemOption_00` = 0x87ebe934, `TitleSystemWindow_00` = 0xe1932d84, `SystemWindow_00` = 0x6d47deab.
-- `SeqQueryGetSelectedOptionType` : lit `écran(SystemOption_00) + 0x370` (option sélectionnée).
-- `SeqOneShotOpenSystemWindow` (paramètres `Preset`, `IsTitle`) : choisit l'écran titre ou normal,
-  convertit le préréglage en numéro (`NewGame` 0, `ResetOption` 1, `BackToTitle` 2,
-  `BackToTitleFromGameOver` 3, `NewGameMQ` 4, `ReleaseMQ` 5) puis appelle
-  `FUN_03505a00(écran, numéro, IsTitle)` (Ghidra).
-- Écran d'options = classe `UISystemOptionScreen` (code vers 0x33ce000 – 0x3404000, relatif).
-  Liste fixe de 17 options (table de noms en 0x3f13800) : IsCameraUpDownReverse,
-  IsCameraRightLeftReverse, CameraRotateSpeed, IsUseGyro, IsChangeJumpButton, DisplayMode,
-  IsDisplayTextRuby, MessageWindowTransparency, VoiceLanguage, LockOnType,
-  OcarinaSongEstimateMode, OcarinaKeyAssign, VoiceSubtitle, VoiceSubtitleSpeakerName,
-  ZeldaNoteState, ControllerRumble (+ amiibo). Textes : messages `LayoutMsg/SystemOption_00`,
-  étiquettes `%s_Title`, `%s_Caption`, `%s_00`…
-- **Les lignes de l'écran viennent d'un fichier** : `UI/OptionSetTable/OptionSetTable.game__ui__OptionSetTable.bgyml`
-  (dans `Pack/Bootup.Nin_Ounce_NVN2.pack.zs`). `OptionSetArray` = 20 lignes `{OptionType,
-  ButtonType, ChoiceType[], CheckGameData, IsCheckDisplayGameData}` ; les énumérations sont des
-  hachages (ButtonType 1160613079 = séparateur, 3569415379 = choix, 3166595148 = bascule…).
-  En mémoire : gestionnaire d'options (global `+0x500`), entrées de 0x28 octets (+0 type d'option,
-  +4 genre de ligne : 0 bascule, 1 choix, 2 amiibo, 3 séparateur ; +0x24 condition GameData).
-  Accès : `FUN_0349c5a0` (nombre de lignes visibles), `FUN_0349c630` (ligne i), `FUN_0349c790`
-  (ligne par type). Le comportement de chaque type d'option reste dans le code.
-  **Validé en jeu (2026-11-10, expérience retirée depuis)** : table réordonnée / ligne retirée
-  dans le pack Bootup et textes de `LayoutMsg/SystemOption_00` remplacés sont acceptés par le jeu.
-- Objet écran `UISystemOptionScreen` : boutons par genre en `+0x2b8/+0x2c0`, `+0x2c8/+0x2d0`,
-  `+0x2d8/+0x2e0` (type d'option du bouton en +0x54 / +0x58), lignes affichées `+0x338/+0x340`
-  (paires genre, index), option sélectionnée `+0x370`. Construction : `FUN_035011c0` (Ghidra,
-  0x34011c0 relatif) clone les modèles `Pa_ToggleBtn_00`, `Pa_SelectBtn_00`, `Pa_AmiiboBtn_00`,
-  `Pa_Separator_00`.
+- ~5,700 AINB node classes. In each vtable, only a few entries are specific to the class (referenced only once):
+  parameter reading and execution.
+- Nodes find a screen by the **MurmurHash3 of the layout name** (same hash as GameData): `FUN_033eb1d0(manager,
+  hash)` or `FUN_029f9fb0(...)` (Ghidra addresses, base 0x100000). `SystemOption_00` = 0x87ebe934,
+  `TitleSystemWindow_00` = 0xe1932d84, `SystemWindow_00` = 0x6d47deab.
+- `SeqQueryGetSelectedOptionType`: reads `screen(SystemOption_00) + 0x370` (selected option).
+- `SeqOneShotOpenSystemWindow` (parameters `Preset`, `IsTitle`): chooses the title or normal screen, converts the
+  preset to a number (`NewGame` 0, `ResetOption` 1, `BackToTitle` 2, `BackToTitleFromGameOver` 3, `NewGameMQ` 4,
+  `ReleaseMQ` 5) then calls `FUN_03505a00(screen, number, IsTitle)` (Ghidra).
+- Options screen = class `UISystemOptionScreen` (code around 0x33ce000 – 0x3404000, relative). Fixed list of 17
+  options (name table at 0x3f13800): IsCameraUpDownReverse, IsCameraRightLeftReverse, CameraRotateSpeed, IsUseGyro,
+  IsChangeJumpButton, DisplayMode, IsDisplayTextRuby, MessageWindowTransparency, VoiceLanguage, LockOnType,
+  OcarinaSongEstimateMode, OcarinaKeyAssign, VoiceSubtitle, VoiceSubtitleSpeakerName, ZeldaNoteState,
+  ControllerRumble (+ amiibo). Texts: messages `LayoutMsg/SystemOption_00`, labels `%s_Title`, `%s_Caption`,
+  `%s_00`…
+- **The screen's rows come from a file**: `UI/OptionSetTable/OptionSetTable.game__ui__OptionSetTable.bgyml` (in
+  `Pack/Bootup.Nin_Ounce_NVN2.pack.zs`). `OptionSetArray` = 20 rows `{OptionType, ButtonType, ChoiceType[],
+  CheckGameData, IsCheckDisplayGameData}`; enums are hashes (ButtonType 1160613079 = separator, 3569415379 = choice,
+  3166595148 = toggle…). In memory: option manager (global `+0x500`), 0x28-byte entries (+0 option type, +4 row
+  kind: 0 toggle, 1 choice, 2 amiibo, 3 separator; +0x24 GameData condition). Access: `FUN_0349c5a0` (number of
+  visible rows), `FUN_0349c630` (row i), `FUN_0349c790` (row by type). The behaviour of each option type stays in
+  the code. **Validated in game (2026-11-10, experiment removed since)**: a reordered table / removed row in the
+  Bootup pack and replaced `LayoutMsg/SystemOption_00` texts are accepted by the game.
+- `UISystemOptionScreen` screen object: buttons per kind at `+0x2b8/+0x2c0`, `+0x2c8/+0x2d0`, `+0x2d8/+0x2e0`
+  (button's option type at +0x54 / +0x58), displayed rows `+0x338/+0x340` (kind, index pairs), selected option
+  `+0x370`. Construction: `FUN_035011c0` (Ghidra, 0x34011c0 relative) clones the templates `Pa_ToggleBtn_00`,
+  `Pa_SelectBtn_00`, `Pa_AmiiboBtn_00`, `Pa_Separator_00`.
 
-### Ouvrir le menu après « Nouvelle partie » (validé en jeu, 2026-11-10)
+### Opening the menu after "New Game" (validated in game, 2026-11-10)
 
-`Sequence/NormalTitle.module.ainb` (graphe de l'écran titre, lu et réécrit avec la bibliothèque
-`ainb` 0.2.17, GPL-2, `pip install ainb` ; modifier l'objet, pas le dict/JSON qui casse la table des
-chaînes en 0x408) :
-- nœud 1 (`Element_StringSelector`) : `Pa_Button_00` -> 50 -> 49 -> 48 -> 2 `ConfirmationNewGame.module`
-  (« Yes » -> 13 début de partie, « No » -> 53 retour au titre) ; `Pa_Button_02` -> 52 -> 43 -> 9
-  `Option.module` (`IsTitleMenu` = vrai, « End » -> 53). 48 et 43 font la même préparation (cachent l'écran titre).
-- Modification (`ootrr.ingame_menu.title_sequence`) : copie du nœud 9 en nœud 74,
-  48 -> 74, « End » de 74 -> 2 ; `Option.module.ainb` passe à 2 instances. Résultat en jeu :
-  Nouvelle partie -> écran d'options -> B -> confirmation -> Oui = partie, Non = titre.
-- Échecs utiles : remplacer `ConfirmationNewGame.module.ainb` par le module d'options fait juste
-  disparaître le menu (paramètres d'entrée absents) ; insérer l'écran après « Oui » laisse la
-  fenêtre de confirmation affichée par-dessus.
-- Reste : nos propres lignes seulement dans ce menu (l'écran Options normal doit garder les siennes)
-  et nos propres valeurs (aujourd'hui une ligne renommée change toujours l'option du jeu).
+`Sequence/NormalTitle.module.ainb` (title screen graph, read and rewritten with the `ainb` library 0.2.17, GPL-2,
+`pip install ainb`; change the object, not the dict/JSON, which breaks the string table at 0x408):
+- node 1 (`Element_StringSelector`): `Pa_Button_00` -> 50 -> 49 -> 48 -> 2 `ConfirmationNewGame.module` ("Yes" -> 13
+  game start, "No" -> 53 back to title); `Pa_Button_02` -> 52 -> 43 -> 9 `Option.module` (`IsTitleMenu` = true,
+  "End" -> 53). 48 and 43 do the same preparation (hide the title screen).
+- Change (`ootrr.ingame_menu.title_sequence`): copy of node 9 as node 74, 48 -> 74, "End" of 74 -> 2;
+  `Option.module.ainb` goes to 2 instances. Result in game: New Game -> options screen -> B -> confirmation -> Yes =
+  game, No = title.
+- Useful failures: replacing `ConfirmationNewGame.module.ainb` with the options module just makes the menu disappear
+  (input parameters missing); inserting the screen after "Yes" leaves the confirmation window displayed on top.
 
-### Menu du randomizer (validé en jeu, 2026-11-10)
+### Randomizer menu (validated in game, 2026-11-10)
 
-`python -m ootrr.tools.menutest --romfs ROMFS --install` (mod `OoTRR-menu`, RomFS + exefs ; données
-dans `ootrr/ingame_menu.py`, crochets dans `exlaunch/source/program/main.cpp`).
-- Drapeau `OoTRR.IsRandomizerMenu` (entrée GameData non sauvegardée) écrit par trois nœuds ajoutés à
-  `NormalTitle` : vrai avec la préparation de Nouvelle partie (48), faux avec celle d'Options (43) et au
-  début de la partie (13). Le crochet de `0x682b00` / `0x32e6910` (exécution de
-  `SeqOneShotSetNonStructGameDataBool`, arguments nœud + hachage ; valeur en `**(nœud + 0x40)`) le suit.
-- Table : `LoadOptionTable` (`0x339bc40`) charge une deuxième table à nous ; pendant ce chargement, le
-  crochet du chargeur de ressources `0xa57350` remplace le chemin. **Ce chargeur prend (gestionnaire,
-  const char** chemin) et renvoie son résultat par x8** : le crochet renvoie un type non trivial pour
-  garder x8. Les accès `0x339c5a0` / `0x339c630` / `0x339c790` reçoivent notre table pendant le menu.
-- Textes : `0xa6afe0` (sortie, `const char**` fichier, `const char**` étiquette ; 1 = trouvé) : on
-  essaie d'abord `OoTRR_<étiquette>`.
-- Valeurs : `0x9b3eb0` (gestionnaire, poignée, hachage) : `OptionData` -> `OoTRRMenu` (structure
-  GameData copiée, entrées non sauvegardées, valeurs par défaut = `settings.py`). Les options du joueur
-  ne sont pas touchées (vérifié en jeu).
-- Mise en page : `0x43a0e0` (nom de la mise en page en x4, 11 arguments) : `SystemOption_00` ->
-  `OoTRRMenu_00`, copie où le modèle amiibo est invisible (bit 0 des drapeaux d'un élément .buil =
-  visible, vérifié en jeu ; les fiches numérotent les noms depuis le début de la réserve de chaînes,
-  qui commence par le nom de la page, avant `RootPane`). Un modèle sans ligne correspondante reste
-  affiché à sa place : on cache l'amiibo, et la table contient deux séparateurs (le modèle sert).
-- Choix enregistrés dans la partie (validé : relu dans progress.sav) : les membres « réglage » de
-  `OoTRRMenu` ont SaveFileIndex 0 et ResetTypeValue 0 ; MetaData décalé de 8 octets par entrée
-  (`ingame_menu.add_saved_entries`). Le menu repart des valeurs par défaut après un retour au titre.
-- **Limites de l'écran** (constaté en jeu, 2026-11-11) : les types d'option viennent d'une table fixe du
-  code (17 noms, `0x3f13780` : `IsUseAmiibo` … `ControllerRumble`) ; un type absent d'`OptionData`
-  (`MessageWindowTransparency`) n'enregistre rien, et une liste n'enregistre que les valeurs de son
-  type dans le jeu (choix ajoutés affichés mais perdus). Valeurs par type : VoiceLanguage 9,
-  CameraRotateSpeed 5, DisplayMode / OcarinaSongEstimateMode / ControllerRumble 3, LockOnType /
-  OcarinaKeyAssign 2.
-- **Pages (validé en jeu, 2026-11-11)** : `NormalTitle` enchaîne une copie du nœud d'options par page ;
-  chaque page a sa structure (`OoTRRMenu`, `OoTRRMenu2`…), sa table et son préfixe de textes
-  (`OoTRR_`, `OoTRR2_`…). Le module compte les chargements de la mise en page `SystemOption_00`
-  pendant le menu pour savoir quelle page est affichée (`menu_data.hpp` : `kPage*`). Chaque page doit
-  avoir au moins une liste, une bascule et un séparateur : un modèle de ligne sans ligne de son genre
-  reste affiché seul (constaté).
+`python -m ootrr.tools.menutest --romfs ROMFS --install` (mod `OoTRR-menu`, RomFS + exefs; data in
+`ootrr/ingame_menu.py`, hooks in `exlaunch/source/program/main.cpp`).
+- Flag `OoTRR.IsRandomizerMenu` (unsaved GameData entry) written by three nodes added to `NormalTitle`: true with the
+  New Game preparation (48), false with the Options one (43) and at the start of the game (13). The hook of
+  `0x682b00` / `0x32e6910` (execution of `SeqOneShotSetNonStructGameDataBool`, arguments node + hash; value at
+  `**(node + 0x40)`) follows it.
+- Table: `LoadOptionTable` (`0x339bc40`) loads a second table of ours; during this load, the hook of the resource
+  loader `0xa57350` replaces the path. **This loader takes (manager, const char** path) and returns its result
+  through x8**: the hook returns a non-trivial type to keep x8. The accessors `0x339c5a0` / `0x339c630` /
+  `0x339c790` receive our table during the menu.
+- Texts: `0xa6afe0` (output, `const char**` file, `const char**` label; 1 = found): `OoTRR_<label>` is tried first.
+- Values: `0x9b3eb0` (manager, handle, hash): `OptionData` -> `OoTRRMenu` (copied GameData structure, unsaved
+  entries, default values = `settings.py`). The player's options are not touched (verified in game).
+- Layout: `0x43a0e0` (layout name in x4, 11 arguments): `SystemOption_00` -> `OoTRRMenu_00`, a copy where the amiibo
+  template is invisible (bit 0 of the flags of a .buil element = visible, verified in game; the records number names
+  from the start of the string pool, which begins with the page name, before `RootPane`). A template without a
+  matching row stays displayed in place: the amiibo is hidden, and the table contains two separators (the template
+  is used).
+- Choices stored in the game (validated: re-read in progress.sav): the "setting" members of `OoTRRMenu` have
+  SaveFileIndex 0 and ResetTypeValue 0; MetaData shifted by 8 bytes per entry (`ingame_menu.add_saved_entries`). The
+  menu restarts from the default values after going back to the title.
+- **Screen limits** (seen in game, 2026-11-11): option types come from a fixed table in the code (17 names,
+  `0x3f13780`: `IsUseAmiibo` … `ControllerRumble`); a type absent from `OptionData` (`MessageWindowTransparency`)
+  stores nothing, and a list only stores the values of its type in the game (added choices shown but lost). Values
+  per type: VoiceLanguage 9, CameraRotateSpeed 5, DisplayMode / OcarinaSongEstimateMode / ControllerRumble 3,
+  LockOnType / OcarinaKeyAssign 2.
+- **Pages (validated in game, 2026-11-11)**: `NormalTitle` chains a copy of the options node per page; each page has
+  its structure (`OoTRRMenu`, `OoTRRMenu2`…), its table and its text prefix (`OoTRR_`, `OoTRR2_`…). The module counts
+  loads of the `SystemOption_00` layout during the menu to know which page is displayed (`menu_data.hpp`: `kPage*`).
+  Each page must have at least one list, one toggle and one separator: a row template without a row of its kind
+  stays displayed alone (seen).
 
-### Bouton « Page suivante » / « Lancer la partie » (à tester en jeu)
+### "Next Page" / "Start the Game" button (validated in game, 2026-11-12)
 
-- Dans `Sequence/Option.module`, A sur une ligne bouton (genre amiibo / Zelda Notes, `ButtonType` 320412644)
-  mène à un aiguillage `Element_S32Selector` sur `SeqQueryGetSelectedOptionType` : 1 = amiibo
-  (`Amiibo.module`), 16 = Zelda Notes, sinon rien. Types d'option (table du code) : 0 None, 1 IsUseAmiibo,
-  2 IsCameraUpDownReverse, 3 IsCameraRightLeftReverse, 4 CameraRotateSpeed, 5 IsUseGyro, 6 IsChangeJumpButton,
-  7 DisplayMode, 8 IsDisplayTextRuby, 9 MessageWindowTransparency, 10 VoiceLanguage, 11 LockOnType,
-  12 OcarinaSongEstimateMode, 13 OcarinaKeyAssign, 14 VoiceSubtitle, 15 VoiceSubtitleSpeakerName,
-  16 ZeldaNoteState, 17 ControllerRumble.
-- `ingame_menu.option_module` ajoute le cas 13 (OcarinaKeyAssign, inutilisé par nos pages) vers une copie de la
-  fin déclenchée par B : chaque page a une ligne bouton de ce type en bas, titre « Page suivante » (dernière
-  page : « Lancer la partie »). L'écran Options normal n'a pas de bouton de ce type. Le modèle amiibo n'est plus
-  caché dans `OoTRRMenu_00`.
+- In `Sequence/Option.module`, A on a button row (amiibo / Zelda Notes kind, `ButtonType` 320412644) leads to an
+  `Element_S32Selector` switch on `SeqQueryGetSelectedOptionType`: 1 = amiibo (`Amiibo.module`), 16 = Zelda Notes,
+  otherwise nothing. Option types (code table): 0 None, 1 IsUseAmiibo, 2 IsCameraUpDownReverse,
+  3 IsCameraRightLeftReverse, 4 CameraRotateSpeed, 5 IsUseGyro, 6 IsChangeJumpButton, 7 DisplayMode,
+  8 IsDisplayTextRuby, 9 MessageWindowTransparency, 10 VoiceLanguage, 11 LockOnType, 12 OcarinaSongEstimateMode,
+  13 OcarinaKeyAssign, 14 VoiceSubtitle, 15 VoiceSubtitleSpeakerName, 16 ZeldaNoteState, 17 ControllerRumble.
+- `ingame_menu.option_module` adds case 13 (OcarinaKeyAssign, unused by our pages): each page has a button row of
+  this type at the bottom, titled "Next Page" (last page: "Start the Game"). The normal Options screen has no button
+  of this type. Changing the graph alone was not enough: the native module records type 13 (hook on 0x32f97a0) and
+  injects B for 30 frames in `SeqQueryControllerTrigMaskChecker` (0x7550b0: TrigA node + 0x28, TrigB + 0x30).
+- Button title: hook on `MessageInFile` (0xa6b250, texts of the `Pa_…` panes); right-hand state "Press A"
+  (`<prefix>ZeldaNote_00/01`).
+- B from the player = previous page (main menu from page 1): flag `OoTRR.MenuBack` set by the module, read by a
+  selector added after each page in `NormalTitle`; the displayed page follows (-1 / +1).
 
-### Boutiques (validé en jeu, 2026-11-11 : boutique Kokiri, 0 / 2 / 4 articles)
+### Shops (validated in game, 2026-11-11: Kokiri shop, 0 / 2 / 4 items)
 
-- Chaque article mélangeable reste dans la carte (présent si `OoTRR.Shop<rang>` est faux) avec une
-  copie jeton au même endroit (présente s'il est vrai) ; le module pose ces drapeaux au départ. Le
-  marchand désigne ses articles par des liens `ForSale` et `Reference`, et un lien vers un acteur
-  absent bloque le curseur (constaté) : une copie du marchand par nombre n d'articles mélangés,
-  présente si `OoTRR.ShopCount<n>`, reliée aux bons articles ; le marchand d'origine sert pour 0.
-- Liste du marchand (`Component/ShopParam/…`, recherchée par `0x32ade0`) : variante `X_C<n>` choisie
-  par le module selon le nombre d'articles mélangés.
-- Prix : la boutique lit `BuyingPrice` dans la ligne RSDB `PouchActorInfo` de l'acteur, pas dans
-  `PriceParam`. `0x5a7c60` remplit une ligne (ligne, nœud BYML) au démarrage du jeu : +0 nom
-  (`__RowId`), +200 prix (s32). Le module note l'adresse de la ligne de chaque jeton et y écrit le prix
-  des réglages dès que la seed est générée ou rechargée (écrit au chargement de la boutique : trop tard
-  pour une partie des articles, constaté).
-- Peste Mojo : la vente (`SimpleShopSub_Scrub_Business_OneTime`) affiche et encaisse
-  `SimpleShop_Price` mais vérifie la bourse avec la constante du script. Le script inséré se branche
-  (`EventQueryGameDataIntBranch`, modèle `Minigame_CatchCucco`) sur l'entier `OoTRR.Price.<jeton>`
-  (prix / 5, non sauvegardé, écrit par le module) vers 20 copies de la vente (0 à 95 rubis).
-- Pièges : prix de base 0 dans la ligne RSDB, ou décalages `PriceOffset` /
-  `ConditionalPriceOffsetList` ajoutés à la liste du marchand -> blocage au chargement de la forêt.
+- Each shuffleable item stays in the map (present if `OoTRR.Shop<rank>` is false) with a token copy at the same place
+  (present if it is true); the module sets these flags at the start. The merchant designates its items through
+  `ForSale` and `Reference` links, and a link to an absent actor blocks the cursor (seen): one copy of the merchant
+  per number n of shuffled items, present if `OoTRR.ShopCount<n>`, linked to the right items; the original merchant
+  is used for 0.
+- Merchant's list (`Component/ShopParam/…`, looked up by `0x32ade0`): variant `X_C<n>` chosen by the module
+  depending on the number of shuffled items.
+- Prices: the shop reads `BuyingPrice` in the actor's RSDB row `PouchActorInfo`, not in `PriceParam`. `0x5a7c60`
+  fills a row (row, BYML node) at game start: +0 name (`__RowId`), +200 price (s32). The module records the address
+  of each token's row and writes the settings' price there as soon as the seed is generated or reloaded (writing it
+  when the shop loads is too late for some items, seen).
+- Single sale (validated in game, 2026-11-12): saved integer `OoTRR.ShopSold` (one bit per item); after the purchase
+  the price becomes 999 and a repurchase before the area reloads gives nothing and is refunded. "Sold out" signs
+  crashed the shop loading (see ROADMAP).
+- Deku Scrubs: the sale (`SimpleShopSub_Scrub_Business_OneTime`) displays and charges `SimpleShop_Price` but checks
+  the wallet with the script's constant. The inserted script branches (`EventQueryGameDataIntBranch`, template
+  `Minigame_CatchCucco`) on the integer `OoTRR.Price.<token>` (price / 5, unsaved, written by the module) towards 20
+  copies of the sale (0 to 95 rupees).
+- Pitfalls: base price 0 in the RSDB row, or `PriceOffset` / `ConditionalPriceOffsetList` offsets added to the
+  merchant's list -> blocked while loading the forest.
 
-### Placement pendant le jeu (validé en jeu, 2026-11-10 : coffres de Mido)
+### Placement during the game (validated in game, 2026-11-10: Mido's chests)
 
-- Le mod de fichiers met dans chaque emplacement mélangé un **jeton** `OoTRR_Lnnnn` (Drop__DropActor).
-  Un jeton doit être un **vrai acteur** (copie de `TBox_Rupee_Green`, fiches RSDB copiées) : sinon le
-  coffre ne propose pas de l'ouvrir.
-- Le coffre crée son contenu à l'avance (porte-acteur, nom lu dans son tableau noir, lui-même rempli
-  depuis les paramètres de la carte). Remplacer la copie du composant « drop » ne suffit pas (le coffre
-  fait apparaître le jeton -> blocage). Le crochet de `0xbd1c00` remplace **la valeur à la source**,
-  dans les paramètres dynamiques en mémoire, avant l'appel d'origine :
-  `*(*(*(infos+0x40)+0x270))+0x10` -> { u32 nb clés, const char** clés (+8), u32 nb valeurs (+0x10),
-  const char** valeurs (+0x18) }.
-- Les jetons sont posés dans les 134 coffres mélangeables (`native_logic.chest_tokens`, index = rang dans
-  `logic_data.hpp`). Coffre « drop » dont l'objet change : `GetEventName` vidé à la source ; coffre
-  conditionnel : `Drop__CheckActor` et `Drop__DropActor_Substitute` vidés.
+- The file mod puts a **token** `OoTRR_Lnnnn` in each shuffled location (Drop__DropActor). A token must be a **real
+  actor** (copy of `TBox_Rupee_Green`, RSDB records copied): otherwise the chest does not offer to be opened.
+- The chest creates its content in advance (actor holder, name read from its blackboard, itself filled from the map
+  parameters). Replacing the copy of the "drop" component is not enough (the chest spawns the token -> blocked). The
+  hook of `0xbd1c00` replaces **the value at the source**, in the dynamic parameters in memory, before the original
+  call: `*(*(*(info+0x40)+0x270))+0x10` -> { u32 key count, const char** keys (+8), u32 value count (+0x10),
+  const char** values (+0x18) }.
+- Tokens are placed in the 134 shuffleable chests (`native_logic.chest_tokens`, index = rank in `logic_data.hpp`).
+  "Drop" chest whose item changes: `GetEventName` emptied at the source; conditional chest: `Drop__CheckActor` and
+  `Drop__DropActor_Substitute` emptied.
 
-### Générateur de seed dans le jeu (validé en jeu, 2026-11-10)
+### In-game seed generator (validated in game, 2026-11-10)
 
-- `python -m ootrr.native_logic` exporte la logique en tables C++ (`rando/logic_data.hpp`) : règles en
-  code préfixé, réglages symboliques (lus dans le menu). `rando/generator.cpp` est un portage exact de
-  `search.py` / `fill.py`, et `rando/py_random.hpp` de `random.Random` (MT19937, init_by_array,
-  _randbelow, shuffle, choice).
-- `python -m ootrr.tools.native_check` compile le générateur pour le PC (w64devkit) et le compare à
-  Python : 1000 seeds identiques sur 5 préréglages. En jeu : seeds 0x5d0e118b (défaut) et 0x20eed1eb
-  (réglages du menu) identiques à Python sur les coffres de la forêt Kokiri.
-- Au début de la partie, le nœud ajouté `OoTRR.GenerateSeed` déclenche la génération : réglages lus dans
-  la structure `OoTRRMenu` (accesseurs `0x404760` énumération / `0x179f70` booléen, **par hachage du nom
-  du membre**), seed tirée du compteur système, écrite dans `OoTRR.Seed` (entier sauvegardé, via la
-  fonction du nœud `SeqOneShotSetNonStructGameDataInt` `0xc25ce0` avec un faux nœud ; lecture `0x163d20`).
-- Partie chargée : au premier jeton, si la seed enregistrée diffère de celle en mémoire, régénération
-  avec la seed et les réglages de la partie (validé : même placement après rechargement).
-- Reste : appliquer en jeu les autres effets des réglages (forêt, porte, récompenses, cœurs au sol,
-  cartes, objets de départ…) et les emplacements qui ne sont pas des coffres.
+- `python -m ootrr.native_logic` exports the logic as C++ tables (`rando/logic_data.hpp`): rules as prefix code,
+  symbolic settings (read from the menu). `rando/generator.cpp` is an exact port of `search.py` / `fill.py`, and
+  `rando/py_random.hpp` of `random.Random` (MT19937, init_by_array, _randbelow, shuffle, choice).
+- `python -m ootrr.tools.native_check` compiles the generator for the PC (w64devkit) and compares it with Python:
+  1000 identical seeds on 5 presets. In game: seeds 0x5d0e118b (default) and 0x20eed1eb (menu settings) identical to
+  Python on the Kokiri Forest chests.
+- At the start of the game, the added node `OoTRR.GenerateSeed` triggers the generation: settings read from the
+  `OoTRRMenu` structure (accessors `0x404760` enum / `0x179f70` boolean, **by hash of the member name**), seed drawn
+  from the system counter, written to `OoTRR.Seed` (saved integer, through the function of the
+  `SeqOneShotSetNonStructGameDataInt` node `0xc25ce0` with a fake node; read `0x163d20`).
+- Loaded game: at the first token, if the stored seed differs from the one in memory, regeneration with the game's
+  seed and settings (validated: same placement after reloading).
 
+### Manual seed with the virtual keyboard (validated in game, 2026-11-10)
 
-### Seed manuelle au clavier virtuel (validé en jeu, 2026-11-10)
+"Manual Seed" row of the menu (member `VoiceSubtitle` of `OoTRRMenu`, unsaved). When enabled, the module opens the
+console keyboard when the game starts (`rando/keyboard.cpp`): `nn::swkbd` library of the **sdk** module (the game
+does not use it, but sdk exports it; rtld resolves our imports by name). Numeric pad, 9 digits; cancelled or empty ->
+random seed (1-999999). Layout found in sdk: `KeyboardConfig` 0x518 bytes (mode +0x0, max length +0x3ac, min
++0x3b0), `ShowKeyboardArg` = config + work buffer (+0x518, 0x1000 aligned bytes) + size (+0x520), `String` =
+{ char16_t*, size }. **The size of `String` must be exactly `GetRequiredStringBufferSize()`**: larger, reading the
+answer fails and the SDK stops the game (2128-0503).
 
-Ligne « Seed manuelle » du menu (membre `VoiceSubtitle` de `OoTRRMenu`, non sauvegardé). Activée, le
-module ouvre au lancement de la partie le clavier de la console (`rando/keyboard.cpp`) : bibliothèque
-`nn::swkbd` du module **sdk** (le jeu ne s'en sert pas, mais sdk l'exporte ; rtld résout nos imports
-par leur nom). Pavé numérique, 9 chiffres ; annulé ou vide -> seed aléatoire (1-999999).
-Disposition relevée dans sdk : `KeyboardConfig` 0x518 octets (mode +0x0, longueur max +0x3ac, min
-+0x3b0), `ShowKeyboardArg` = config + tampon de travail (+0x518, 0x1000 octets alignés) + taille
-(+0x520), `String` = { char16_t*, taille }. **La taille de `String` doit être exactement
-`GetRequiredStringBufferSize()`** : plus grande, la lecture de la réponse échoue et le SDK arrête le
-jeu (2128-0503).
+Random seed drawn when the menu opens (1-999999) and shown in the row's description (validated in game): the text
+read by `0xa6afe0` (output { const char* UTF-8; s32 length }) is copied with the `######` marker replaced by the
+seed. This seed is used when the manual seed is disabled.
 
-Seed aléatoire tirée à l'ouverture du menu (1-999999) et affichée dans la description de la ligne
-(validé en jeu) : le texte lu par `0xa6afe0` (sortie { const char* UTF-8 ; s32 longueur }) est copié
-avec le repère `######` remplacé par la seed. C'est cette seed qui sert si la seed manuelle est désactivée.
+The generator receives the displayed seed **mixed with the settings** (`MixSettings`, FNV-1a; validated in game): the
+same seed gives another game if the settings change, and the same game with the same settings (including on load).
+The generator (identical to Python) is not modified; a menu seed therefore does not match the same seed passed to
+`python -m ootrr --seed`.
 
-Le générateur reçoit la seed affichée **mélangée aux réglages** (`MixSettings`, FNV-1a ; validé en jeu) : une même
-seed donne une autre partie si les réglages changent, et la même partie avec les mêmes réglages (y
-compris au chargement). Le générateur (identique à Python) n'est pas modifié ; une seed du menu ne
-correspond donc pas à la même seed passée à `python -m ootrr --seed`.
+### Required number for the bridge (menu validated in game, 2026-11-12)
+
+- Rows at the top of page 2 (`ingame_menu.BRIDGE_ROWS`): stones 1–3, medallions 1–6, rewards 1–9, hearts = base
+  (3 / 12) + extra (+0 to +8). Each one is only shown for its condition.
+- **Display condition (validated in game, 2026-11-11)**: `CheckGameData` must be a **Bool** flag
+  (`OoTRR.Menu.Show.<condition>`, unsaved); an expression never shows the row. The game reads the condition when the
+  page opens, not when the mode changes on the same page: the native module sets the flags from the "bridge" row of
+  page 1 (`UpdateBridgeRows`, called when the layout loads). A hidden row leaves no gap.
+- `0x339c790` (row by type) takes the **first row of the type, even hidden** (Ghidra; seen in game: the "Rewards" row
+  capped at 6 = choices of the medallions row). The `TableRowByType` hook returns the first visible row of the type
+  (+0x24 = hash of `CheckGameData`, 0 without condition). Rows of the same type = same GameData member: texts
+  specific to the condition (`<prefix>B<n>_…`, tried first), value brought back into the visible row's choices
+  (`kSetEnum` on the full name, not verified); a value beyond counts as the maximum (native, expressions,
+  `ingame_spoiler`).
+- Enum comparison in an expression: `[12, flag]` then `[2, value]` (`encode_bool_exp`, `EnumEq`).
+- Bridge in game: `bridge_menu_exps`, one expression per combination of choices ("rows equal … AND at least N").
 
 ## Ghidra
 
-Installé hors du dépôt (`C:\Users\<toi>\Tools` : Ghidra 12.2 + JDK 25, le projet d'analyse contient
-du code du jeu). Points à savoir :
-- Paramètres et cache déplacés (`launch.properties` : `-Dapplication.settingsdir`, `-Dapplication.cachedir`) :
-  le cache OSGi dans `%APPDATA%` échouait (« The data file must be inside the data dir »).
-- Ne pas passer `-analysisTimeoutPerFile 0` (= arrêt immédiat).
-- Import : `-import main.elf -processor AARCH64:LE:64:v8A -preScript SetupAnalysis.java`
-  (désactive la détection des fonctions sans retour, fausse ici ; ~22 min). L'ELF est chargé à
-  0x100000 : les scripts `native/ghidra/*.java` prennent et affichent des adresses relatives au module.
-- Décompiler : `-process main.elf -noanalysis -readOnly -postScript Decompile.java sortie.c 0xADRESSE...`.
-- `ootrr.tools.nso` contient `make_elf` (image -> ELF avec segments .text / .rodata / .data).
+Installed outside the repository (`C:\Users\<you>\Tools`: Ghidra 12.2 + JDK 25, the analysis project contains game
+code). Things to know:
+- Settings and cache moved (`launch.properties`: `-Dapplication.settingsdir`, `-Dapplication.cachedir`): the OSGi
+  cache in `%APPDATA%` failed ("The data file must be inside the data dir").
+- Do not pass `-analysisTimeoutPerFile 0` (= immediate stop).
+- Import: `-import main.elf -processor AARCH64:LE:64:v8A -preScript SetupAnalysis.java` (disables non-returning
+  function detection, wrong here; ~22 min). The ELF is loaded at 0x100000: the `native/ghidra/*.java` scripts take
+  and print addresses relative to the module.
+- Decompile: `-process main.elf -noanalysis -readOnly -postScript Decompile.java output.c 0xADDRESS...`.
+- `ootrr.tools.nso` contains `make_elf` (image -> ELF with .text / .rodata / .data segments).
 
-## Modifications d'exlaunch
+## exlaunch changes
 
-- `config.mk` : `PROGRAM_ID := 0400486024DEC000`, `LOAD_KIND := Module`, `PYTHON := py`,
-  `CXX_FLAGS := -Wno-non-c-typedef-for-linkage` (GCC 15 de devkitA64 refuse sinon `hook_impl.cpp`).
-- `source/program/main.cpp` : notre point d'entrée `exl_main`.
+- `config.mk`: `PROGRAM_ID := 0400486024DEC000`, `LOAD_KIND := Module`, `PYTHON := py`,
+  `CXX_FLAGS := -Wno-non-c-typedef-for-linkage` (devkitA64's GCC 15 otherwise rejects `hook_impl.cpp`).
+- `source/program/main.cpp`: our entry point `exl_main`.
 
-## Compiler (Windows)
+## Building (Windows)
 
-Installer devkitPro (devkitA64 + libnx), puis depuis le shell MSYS2 de devkitPro
-(`C:\devkitPro\msys2\usr\bin\bash.exe -l`) :
+Install devkitPro (devkitA64 + libnx), then from devkitPro's MSYS2 shell (`C:\devkitPro\msys2\usr\bin\bash.exe -l`):
 
 ```bash
 export DEVKITPRO=/opt/devkitpro DEVKITA64=/opt/devkitpro/devkitA64
@@ -242,32 +239,14 @@ export PATH=$DEVKITPRO/devkitA64/bin:$DEVKITPRO/tools/bin:$PATH
 cd native/exlaunch && make
 ```
 
-Le make de devkitPro lancé depuis Git Bash ne voit pas `DEVKITPRO` : utiliser le shell MSYS2.
+devkitPro's make started from Git Bash does not see `DEVKITPRO`: use the MSYS2 shell. Normally
+`python -m ootrr.tools.menutest` builds and installs everything.
 
-## Installer (Eden fermé)
+## Installing alone (Eden closed)
 
-Copier seulement `deploy/subsdk9` dans
-`<émulateur>\load\0400486024DEC000\OoTRR-native\exefs\subsdk9` (`%APPDATA%\fritchii` ou `%APPDATA%\eden`). **Ne pas** copier
-`deploy/main.npdm` : celui du jeu doit rester. Ce mod ne touche que l'exefs et peut rester
-actif avec un mod OoTRR (romfs).
+Copy only `deploy/subsdk9` to `<emulator>\load\0400486024DEC000\OoTRR-native\exefs\subsdk9` (`%APPDATA%\fritchii`
+or `%APPDATA%\eden`). Do **not** copy `deploy/main.npdm`: the game's one must stay. This mod only touches the exefs.
+For the full menu, use `menutest` (mod `OoTRR-menu`).
 
-Note : Eden journalise un « Userspace PANIC » (0x1A80A) à la fermeture du jeu, avec ou sans
-ce module ; ce n'est pas un plantage du module.
-
-### Nombre requis pour le pont (menu validé en jeu, 2026-11-12)
-
-- Lignes en tête de la page 2 (`ingame_menu.BRIDGE_ROWS`) : pierres 1–3, médaillons 1–6, récompenses 1–9,
-  cœurs = base (3 / 12) + supplément (+0 à +8). Chacune n'est affichée que pour sa condition.
-- **Condition d'affichage (validé en jeu, 2026-11-11)** : `CheckGameData` doit être un drapeau **Bool**
-  (`OoTRR.Menu.Show.<condition>`, non sauvegardé) ; une expression n'affiche jamais la ligne. Le jeu lit la
-  condition à l'ouverture de la page, pas quand le mode change sur la même page : le module natif pose les
-  drapeaux selon la ligne « bridge » de la page 1 (`UpdateBridgeRows`, appelé au chargement de la mise en
-  page). Une ligne cachée ne laisse pas de trou.
-- `0x339c790` (ligne par type) prend la **première ligne du type, même cachée** (Ghidra ; constaté en jeu : la
-  ligne « Rewards » plafonnait à 6 = choix de la ligne médaillons). Le crochet `TableRowByType` rend la
-  première ligne visible du type (+0x24 = hachage de `CheckGameData`, 0 sans condition). Lignes d'un même
-  type = même membre GameData : textes propres à la condition (`<préfixe>B<n>_…`, essayés d'abord), valeur
-  ramenée dans les choix de la ligne visible (`kSetEnum` sur le nom complet, non vérifié) ; une valeur au-delà
-  vaut le maximum (natif, expressions, `ingame_spoiler`).
-- Comparaison d'énumération dans une expression : `[12, drapeau]` puis `[2, valeur]` (`encode_bool_exp`, `EnumEq`).
-- Pont en jeu : `bridge_menu_exps`, une expression par combinaison de choix (« lignes valent … ET au moins N »).
+Note: Eden logs a "Userspace PANIC" (0x1A80A) when the game closes, with or without this module; it is not a crash of
+the module.
