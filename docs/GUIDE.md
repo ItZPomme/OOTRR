@@ -22,7 +22,10 @@ Le randomizer existe sous deux formes :
 2. Un émulateur dérivé de Yuzu : **Eden** ou **Fritchii**, avec tes propres clés.
 3. **Python 3.10 ou plus récent** (Windows : cocher « Add python.exe to PATH » à l'installation).
 4. Le randomizer :
-   - **Recommandé** : la dernière **release** GitHub (onglet *Releases* du dépôt). Télécharge le code
+   - **Le plus simple (Windows, sans Python)** : `OoTRR-installer.exe` de la dernière **release** GitHub
+     (onglet *Releases*). Il contient tout ce qu'il faut : rien d'autre à installer (sauter les étapes 3 et 4
+     de ce guide, voir « Installer » au chapitre 5).
+   - **Avec Python** : la dernière **release** GitHub (onglet *Releases* du dépôt). Télécharge le code
      source (*Source code (zip)*) **et** le fichier `subsdk9` (module natif déjà compilé) de la **même**
      release, puis décompresse le code source et mets `subsdk9` dans son dossier.
    - Ou les sources à jour (bouton « Code » -> « Download ZIP », ou `git clone`) : il faut alors compiler le
@@ -92,7 +95,13 @@ Règles à respecter :
 
 ### Installer
 
-Émulateur **fermé**, dans un terminal ouvert dans le dossier du randomizer :
+Émulateur **fermé**.
+
+- **Le plus simple** : lance `OoTRR-installer.exe`, choisis le dossier `romfs` de la **mise à jour** dans la
+  fenêtre qui s'ouvre, et attends le message « Installé » (une minute environ). Windows peut afficher un
+  avertissement SmartScreen (programme non signé) : *Informations complémentaires* -> *Exécuter quand même*.
+
+Ou, dans un terminal ouvert dans le dossier du randomizer :
 
 - avec une **release** (module natif fourni, pas besoin de devkitPro) :
 
