@@ -526,7 +526,8 @@ int32_t ShopPrice(int location) {
 }
 
 // articles jetons achetés : un bit par emplacement de boutique (rang parmi les emplacements de boutique,
-// 32 au plus) dans l'entier sauvegardé OoTRR.ShopSold
+// 32 au plus) dans l'entier sauvegardé OoTRR.ShopSold. (Un drapeau sauvegardé par article, pour un « Coming Soon »
+// dans la liste du marchand, a fait planter le chargement de la boutique : constaté en jeu, voir ROADMAP.)
 int ShopSlot(int location) {
     if (location < 0 || location >= logic::kLocationCount || !IsShop(location)) return -1;
     int slot = 0;
@@ -554,10 +555,10 @@ int32_t MarkShopSold(std::uintptr_t main_base, int location) {
     return mask;
 }
 
-// prix d'un article déjà acheté : celui de l'article d'origine (l'objet donné redevient celui d'origine)
+// prix d'un article déjà acheté : impossible à payer (la plus grande bourse contient 500 rubis)
 int32_t SoldShopPrice(int location) {
-    int32_t price = logic::kLocations[location].price;
-    return price > 99 ? 99 : price;
+    (void)location;
+    return 999;
 }
 
 }  // namespace ootrr::ingame

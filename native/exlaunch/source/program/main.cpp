@@ -266,13 +266,13 @@ void WriteTokenPrice(int location);
 const char* GroundItem(const char* item);
 int g_model_logs = 24;
 
-/* Article jeton de boutique déjà acheté (OoTRR.ShopSold) : il redevient l'objet d'origine de l'emplacement
- * (texte, modèle au prochain chargement, prix d'origine, objet donné). Sans cela l'article restait en vente
- * et l'objet de la seed se rachetait à l'infini (constaté en jeu). Un article retiré de la liste ou de la
- * carte bloquerait le curseur du marchand (lien vers un acteur absent) : on garde l'article. */
+/* Article jeton de boutique déjà acheté (OoTRR.ShopSold) : il reste affiché avec l'objet de la seed mais coûte
+ * 999 rubis (ingame::SoldShopPrice) une fois la zone rechargée ; un rachat entre-temps est remboursé (PouchAdd).
+ * Sans cela l'objet de la seed se rachetait à l'infini (constaté en jeu). « Coming Soon » / « Sold out » dans la
+ * liste du marchand : plantage du chargement (pointeur nul en 0x612850, constaté 4 fois), voir ROADMAP. */
 const char* ShopSoldItem(int location, const char* item) {
-    if (!item || !ootrr::ingame::Ready() || !ootrr::ingame::IsShop(location)) return item;
-    return ootrr::ingame::IsShopSold(Main(), location) ? ootrr::ingame::VanillaItem(location) : item;
+    (void)location;
+    return item;
 }
 
 const char* PlacedItem(int location) {
@@ -906,8 +906,16 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 }
                 const char* item = ok && !t[k + 4] ? PlacedItem(location) : nullptr;
                 if (item) item = GroundItem(item);
-                // article jeton de boutique : premier achat = objet de la seed, puis l'article redevient
-                // l'objet d'origine (PlacedItem) à son prix d'origine
+                // article jeton de boutique : premier achat = objet de la seed, puis l'article coûte 999 rubis
+                // (SoldShopPrice), plus que la plus grande bourse : il ne peut plus être racheté. La boutique garde le
+                // prix lu à son chargement (constaté : rachat au prix d'origine) : un rachat avant rechargement de la
+                // zone ne donne rien et le prix payé est rendu
+                if (item && ootrr::ingame::IsShop(location) && ootrr::ingame::IsShopSold(Main(), location)) {
+                    Log(t);
+                    LogValue("OoTRR: article deja vendu, rien donne, rubis rendus, total",
+                             static_cast<u64>(ootrr::ingame::AddRupees(Main(), ootrr::ingame::ShopPrice(location))));
+                    return 1;
+                }
                 if (item && ootrr::ingame::IsShop(location) && !ootrr::ingame::IsShopSold(Main(), location)) {
                     LogValue("OoTRR: article de boutique vendu, masque", static_cast<u64>(ootrr::ingame::MarkShopSold(Main(), location)));
                     WriteTokenPrice(location);
@@ -961,7 +969,10 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 }
             }
         }
-        if (name && name->text && reason == ootrr::ingame::kReasonEvent) {
+        // récompense d'origine donnée par une scène -> celle de la seed. Pas pendant les objets de départ : ils sont
+        // déjà ceux de la seed (poche de Link : Item_Medal_Shadow, pris pour la récompense d'origine de Bongo Bongo,
+        // devenait le médaillon placé chez Bongo Bongo, constaté en jeu : Forêt en plus de l'Ombre)
+        if (name && name->text && reason == ootrr::ingame::kReasonEvent && !g_giving_start) {
             if (const char* reward = ootrr::ingame::RewardFor(name->text)) {
                 static char text[128];
                 size_t n = 0;
@@ -1048,6 +1059,57 @@ HOOK_DEFINE_TRAMPOLINE(ParsePouchRow) {
     }
 };
 
+/* Onglet Key Items (ImportantMenu, onglet 6 du menu : pierres et médaillons). Le jeu ne l'ouvre qu'une fois une
+ * pierre spirituelle obtenue (constaté : ouvert avec la Pierre Kokiri, fermé « ??? » avec un médaillon seul) ; dans
+ * le jeu d'origine, la première récompense est toujours une pierre. 0xa6ab50 (onglet, numéro, ouvert) écrit le
+ * titre de l'onglet (« ??? » si fermé) : ouvert aussi dès qu'un médaillon est obtenu. */
+constexpr u32 kRewardIsGet[] = {
+    0x110b83ec, 0x8908d6ad, 0xeec383f5,                          // IsGet.Item_Stone_Forest / Fire / Water
+    0x9026c187, 0xfcd8d653, 0x103a0dc7, 0xcf64e780, 0x12d63ac6, 0xe269df38,  // IsGet.Item_Medal_*
+};
+int g_tab_logs = 6;
+
+HOOK_DEFINE_TRAMPOLINE(MenuTabTitle) {
+    static void Callback(void* tab, u64 index, u64 open) {
+        if ((index & 0xffffffff) == 6 && !(open & 1)) {
+            bool any = false;
+            for (u32 h : kRewardIsGet) any = any || ootrr::ingame::ReadFlag(Main(), h) == 1;
+            if (any) {
+                open = 1;
+                if (g_tab_logs > 0) {
+                    g_tab_logs--;
+                    Log("OoTRR: onglet Key Items ouvert (recompense obtenue)");
+                }
+            }
+        }
+        Orig(tab, index, open);
+    }
+};
+
+/* Contenu de l'onglet Key Items : l'écran (0x33dd6b0) fait la même boucle que l'onglet (0xa69220) sur la liste 4
+ * (pierres) et n'affiche rien (« Unavailable right now ») si aucune n'est obtenue (constaté avec un médaillon seul).
+ * 0x181160 (« objet obtenu ? ») répond oui pour ces deux appels-là (retours 0xa694dc et 0x33dd82c) dès qu'une
+ * pierre ou un médaillon est obtenu. */
+int g_keyitem_logs = 4;
+
+HOOK_DEFINE_TRAMPOLINE(ItemObtained) {
+    static u64 Callback(void* name) {
+        u64 result = Orig(name);
+        if (result & 1) return result;
+        uintptr_t back = (reinterpret_cast<uintptr_t>(__builtin_return_address(0)) & 0xFFFFFFFFFFFFull) - Main();
+        if (back != 0xa694dc && back != 0x33dd82c) return result;
+        for (u32 h : kRewardIsGet)
+            if (ootrr::ingame::ReadFlag(Main(), h) == 1) {
+                if (g_keyitem_logs > 0) {
+                    g_keyitem_logs--;
+                    LogValue("OoTRR: Key Items ouvert (recompense obtenue), appel", back);
+                }
+                return 1;
+            }
+        return result;
+    }
+};
+
 HOOK_DEFINE_TRAMPOLINE(SetChallengeStep) {
     static u64 Callback(void* manager, u32 challenge, u32 step, u64 a3, u64 a4, u64 a5) {
         if (g_challenge_logs > 0) {
@@ -1084,6 +1146,8 @@ extern "C" void exl_main(void* x0, void* x1) {
     SetChallengeStep::InstallAtOffset(0x2cf54a0);
     PouchAdd::InstallAtOffset(ootrr::ingame::kPouchAdd);
     ArchiveEntry::InstallAtOffset(0x32ade0);
+    MenuTabTitle::InstallAtOffset(0xa6ab50);
+    ItemObtained::InstallAtOffset(0x181160);
     InitDrop::InstallAtOffset(kInitDrop);
     ParsePouchRow::InstallAtOffset(0x5a7c60);
     Log("OoTRR: module natif charge, crochets du menu installes");

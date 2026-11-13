@@ -101,6 +101,10 @@ FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
 # 6 h 00 pendant toute la partie, demandes 0 h et 20 h ignorées). HyruleField_ArriveEntrance n'est posé que par la
 # scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 132), jamais jouée avec les scènes passées ou Zelda passée.
 TIME_FLOW_FLAG = "HyruleField_ArriveEntrance"
+# Onglet des quêtes du menu (tapisserie, ChallengeMenu : pierres et médaillons) : « ??? / Unavailable right now »
+# tant que UI_IsFinishChallengeMenuOpenEvent est faux (lu par 0x3385f50 pour l'onglet et l'écran) ; posé lui aussi
+# par la scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 70), jamais jouée chez nous (constaté en jeu)
+CHALLENGE_MENU_FLAG = "UI_IsFinishChallengeMenuOpenEvent"
 # La scène de Saria au pont (Dm_Kokiri_0155) n'est plus passée : Saria donne son objet au pont (l'Ocarina
 # des fées, ou l'objet de la seed avec shuffle_ocarinas), comme dans le jeu d'origine.
 SARIA_GIFT = "LW Gift from Saria"
@@ -559,6 +563,8 @@ class World:
         flags: dict[str, bool] = {}
         # cycle jour / nuit : voir TIME_FLOW_FLAG (toujours, quels que soient les réglages)
         flags[TIME_FLOW_FLAG] = True
+        # onglet des quêtes du menu (tapisserie : pierres, médaillons) : voir CHALLENGE_MENU_FLAG
+        flags[CHALLENGE_MENU_FLAG] = True
         if self.settings.get("maps_compasses") == "start_with":
             for loc in self.locations.values():
                 if loc.dungeon_item:
