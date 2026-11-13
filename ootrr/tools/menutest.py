@@ -1,13 +1,12 @@
-"""Mod de test du menu du randomizer dans le jeu (voir ootrr/ingame_menu.py et native/README.md).
+"""Builds the in-game randomizer menu mod (see ootrr/ingame_menu.py and native/README.md).
 
-    python -m ootrr.tools.menutest --romfs ROMFS [--install]
+    python -m ootrr.tools.menutest --romfs ROMFS [--install] [--native subsdk9]
 
-Contenu : GameData (structure OoTRRMenu + drapeau), table de lignes dans le pack Bootup, textes
-(LayoutMsg/SystemOption_00, toutes les langues), Sequence/NormalTitle, table RESTBL, et le module
-natif (compilé par l'outil : en-têtes générés + make de devkitPro) dans exefs/. Les coffres
-mélangeables contiennent des jetons ; le module natif génère la seed au début de la partie.
-Installe sous `OoTRR-menu` : désactiver les autres mods OoTRR (OoTRR, OoTRR-essai, OoTRR-options,
-OoTRR-native) pendant le test.
+Content: GameData (OoTRRMenu structure + flag), row table in the Bootup pack, texts
+(LayoutMsg/SystemOption_00, all languages), Sequence/NormalTitle, RESTBL table, and the native module
+(compiled by the tool: generated headers + devkitPro make, or given with --native) in exefs/. Shuffleable
+chests contain tokens; the native module generates the seed at the start of the game.
+Installs as `OoTRR-menu`: disable the other OoTRR mods (OoTRR, OoTRR-essai, OoTRR-options, OoTRR-native).
 """
 
 from __future__ import annotations
@@ -106,8 +105,8 @@ def build_native(root_gamedata: dict) -> None:
     env = dict(os.environ, MSYSTEM="MSYS", CHERE_INVOKING="1")
     done = subprocess.run([str(DEVKITPRO_BASH), "-lc", script], env=env, capture_output=True, text=True)
     if done.returncode != 0:
-        raise SystemExit("compilation du module natif impossible :\n" + done.stdout[-3000:] + done.stderr[-3000:])
-    print("module natif compilé")
+        raise SystemExit("cannot compile the native module:\n" + done.stdout[-3000:] + done.stderr[-3000:])
+    print("native module compiled")
 
 
 def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
@@ -139,18 +138,18 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         if compile_native:  # en-tête du module natif (inutile avec un module déjà compilé)
             (EXLAUNCH / "source" / "program" / "rando" / "ground_models.hpp").write_text(
                 ground_models_header(model_table), encoding="utf-8", newline="\n")
-        report.append(f"modèles des objets au sol : {len(model_table)} ({len(model_files)} fichiers par jeton)")
+        report.append(f"ground item models: {len(model_table)} ({len(model_files)} files per token)")
         for h, (t, base) in hearts.items():
             actor_changes[h] = {"Gyaml": t}
             tokens_actors[t] = f"SELF@{base}"
-        report.append(f"jetons des cœurs au sol : {len(hearts)}")
+        report.append(f"freestanding heart tokens: {len(hearts)}")
         # Skulltulas d'or : elles lâchent leur jeton (copie du jeton d'or), objet donné au ramassage
         from ..native_logic import skulltula_tokens
         gs = skulltula_tokens()
         for h, t in gs.items():
             actor_changes[h] = {"Drop__DropActor": t}
             tokens_actors[t] = "SELF@Obj_Token_Gold"
-        report.append(f"Skulltulas d'or : {len(gs)} acteurs, {len(set(gs.values()))} jetons")
+        report.append(f"Gold Skulltulas: {len(gs)} actors, {len(set(gs.values()))} tokens")
         # boutiques : les articles mélangeables deviennent des jetons (copie de l'article bouclier Mojo, toujours
         # affiché) ; le module natif donne l'objet placé à l'achat
         from .. import shops as shops_mod
@@ -171,7 +170,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             if h in removed:
                 continue
             actor_changes.setdefault(h, {}).update(change)
-        report.append(f"boutiques : {len(dual)} acteurs, {len(set(t for t, _ in shops.values()))} jetons")
+        report.append(f"shops: {len(dual)} actors, {len(set(t for t, _ in shops.values()))} tokens")
         # listes des marchands : tout débloqué ; une variante par nombre d'articles mélangés
         common["pack_changes"] = {**world.pack_changes(), **shops_mod.shopkeeper_changes(romfs, mb.codec, shop_slots())}
         # Peste Mojo vendeuses : elles vendent leur jeton (prix unique) ; au paiement, le module natif
@@ -205,7 +204,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         common["scrub_sales"] = scrub_sales
         from ..native_logic import scrub_price_entries
         mb.scrub_price_entries = scrub_price_entries()  # prix choisi en jeu (réglage scrub_prices)
-        report.append(f"Peste Mojo : {len(scrub_sales)} jetons vendus")
+        report.append(f"Deku Scrubs: {len(scrub_sales)} tokens sold")
         # ocarinas (Saria au pont, douves) : la scène donne le jeton de son lieu, le module natif donne
         # l'objet de la seed (l'ocarina d'origine sans shuffle_ocarinas). La garde de Saria (« pas
         # d'Ocarina des fées si Link a l'Ocarina du Temps ») perdrait l'objet : le module rend les
@@ -234,14 +233,14 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             tokens_actors[t] = f"SELF@{vanilla}"
             for flow, event, param, old in edits:
                 mb.gift_edits.setdefault(flow, []).append((event, param, old, t))
-        report.append(f"cadeaux : {len(gift_tokens())} lieux donnent un jeton")
+        report.append(f"gifts: {len(gift_tokens())} locations give a token")
         # point d'apparition (random_spawn, départ adulte) : l'introduction lit OoTRR.Spawn (écrit par le module)
         from ..starting import spawns
         mb.spawn_branch = [(s["banc"], s["pos"]) for s in spawns()]
         mb.spawn_branch_entry = menu.SPAWN_ENTRIES
         common["event_changes"] = ocarina_events
-        report.append(f"ocarinas : {len(ocarina_events)} scènes donnent un jeton")
-        report.append(f"jetons d'emplacement : {len(chests)} coffres, {len(tokens_actors)} jetons")
+        report.append(f"ocarinas: {len(ocarina_events)} scenes give a token")
+        report.append(f"location tokens: {len(chests)} chests, {len(tokens_actors)} tokens")
     else:
         tokens_actors = None
     # Porte du Temps (fichiers valables porte ouverte comme fermée) : ocarina des douves visible avec les
@@ -292,7 +291,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.BOOTUP[:-3], len(raw), len(new))
     (out / menu.BOOTUP).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.BOOTUP).write_bytes(mb.codec.compress(path.name, new))
-    report.append(f"tables du menu : {len(menu.PAGES)} pages, {len(menu.ROWS)} lignes")
+    report.append(f"menu tables: {len(menu.PAGES)} pages, {len(menu.ROWS)} rows")
 
     # mise en page : copie de l'écran d'options sans les modèles inutilisés
     path = romfs / menu.COMMON_LAYOUTS
@@ -310,7 +309,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     new = write_byml(tree, byml_version(raw))
     mb.restbl.resize_like(menu.LAYOUT_CATEGORIES[:-3], len(raw), len(new))
     (out / menu.LAYOUT_CATEGORIES).write_bytes(mb.codec.compress(path.name, new))
-    report.append(f"mise en page {menu.MENU_LAYOUT} (sans {', '.join(menu.HIDDEN_PANES)})")
+    report.append(f"layout {menu.MENU_LAYOUT} (without {', '.join(menu.HIDDEN_PANES)})")
 
     # textes, toutes les langues
     for path in sorted((romfs / "Mals").glob("*.sarc.zs")):
@@ -326,7 +325,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         mb.restbl.resize_like(rel[:-3], len(raw), len(new))
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
         (out / rel).write_bytes(mb.codec.compress(path.name, new))
-    report.append(f"{menu.MESSAGES}: textes OoTRR_* ajoutés")
+    report.append(f"{menu.MESSAGES}: OoTRR_* texts added")
 
     # module des douves
     raw = (romfs / menu.MOAT_MODULE).read_bytes()
@@ -334,7 +333,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.MOAT_MODULE, len(raw), len(new))
     (out / menu.MOAT_MODULE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.MOAT_MODULE).write_bytes(new)
-    report.append(f"{menu.MOAT_MODULE}: ocarina dès l'étape Step04")
+    report.append(f"{menu.MOAT_MODULE}: ocarina from step Step04")
 
     # module du pont arc-en-ciel
     raw = (romfs / menu.BRIDGE_MODULE_FILE).read_bytes()
@@ -342,7 +341,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.BRIDGE_MODULE_FILE, len(raw), len(new))
     (out / menu.BRIDGE_MODULE_FILE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.BRIDGE_MODULE_FILE).write_bytes(new)
-    report.append(f"{menu.BRIDGE_MODULE_FILE}: pont selon le menu")
+    report.append(f"{menu.BRIDGE_MODULE_FILE}: bridge from the menu")
 
     # module du retour enfant (voyage dans le temps libre)
     raw = (romfs / menu.RETURN_MODULE).read_bytes()
@@ -350,7 +349,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.RETURN_MODULE, len(raw), len(new))
     (out / menu.RETURN_MODULE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.RETURN_MODULE).write_bytes(new)
-    report.append(f"{menu.RETURN_MODULE}: retour enfant si {menu.FREE_TIME_FLAG}")
+    report.append(f"{menu.RETURN_MODULE}: back to child if {menu.FREE_TIME_FLAG}")
 
     # écran d'options : bouton « Page suivante » / « Lancer la partie »
     raw = (romfs / menu.OPTION_MODULE).read_bytes()
@@ -358,7 +357,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.OPTION_MODULE, len(raw), len(new))
     (out / menu.OPTION_MODULE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.OPTION_MODULE).write_bytes(new)
-    report.append(f"{menu.OPTION_MODULE}: bouton de type {menu.NEXT_PAGE_TYPE} -> fermeture (page suivante)")
+    report.append(f"{menu.OPTION_MODULE}: button of type {menu.NEXT_PAGE_TYPE} -> close (next page)")
 
     # écran titre
     raw = (romfs / menu.TITLE).read_bytes()
@@ -366,7 +365,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     mb.restbl.resize_like(menu.TITLE, len(raw), len(new))
     (out / menu.TITLE).parent.mkdir(parents=True, exist_ok=True)
     (out / menu.TITLE).write_bytes(new)
-    report.append(f"{menu.TITLE}: menu après Nouvelle partie + drapeau {menu.MENU_FLAG}")
+    report.append(f"{menu.TITLE}: menu after New Game + flag {menu.MENU_FLAG}")
 
     rel = mb.restbl_path.relative_to(romfs)
     (out / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -378,39 +377,44 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--romfs", required=True, type=Path)
     p.add_argument("--install", action="store_true")
-    p.add_argument("--no-tokens", action="store_true", help="coffres d'origine (pas de jetons)")
-    p.add_argument("--test-start", metavar="BANC=POINT", help="point de départ de test (ex. HyruleField_Child=HyruleField_FrontOfMarket)")
-    p.add_argument("--test-give", action="append", default=[], metavar="OBJET",
-                   help="test : objet donné au début de la partie (répétable, ex. Item_Gauntlet_Goron)")
-    p.add_argument("--test-flag", action="append", default=[], metavar="NOM=VALEUR",
-                   help="test : valeur de départ d'une donnée GameData (ex. PlayerStatus.CurrentRupee=99)")
-    p.add_argument("--native", type=Path, metavar="FICHIER",
-                   help="module natif déjà compilé (subsdk9 d'une release) : pas de compilation, pas besoin de devkitPro")
+    p.add_argument("--no-tokens", action="store_true", help="original chests (no tokens)")
+    p.add_argument("--test-start", metavar="BANC=POINT", help="test starting point (e.g. HyruleField_Child=HyruleField_FrontOfMarket)")
+    p.add_argument("--test-give", action="append", default=[], metavar="ITEM",
+                   help="test: item given at the start of the game (repeatable, e.g. Item_Gauntlet_Goron)")
+    p.add_argument("--test-flag", action="append", default=[], metavar="NAME=VALUE",
+                   help="test: starting value of a GameData entry (e.g. PlayerStatus.CurrentRupee=99)")
+    p.add_argument("--native", type=Path, metavar="FILE",
+                   help="already compiled native module (subsdk9 of a release): no compilation, no devkitPro needed")
+    p.add_argument("--quiet", action="store_true", help="print a short summary instead of every modified file")
     a = p.parse_args(argv)
     native = a.native or NATIVE
     if a.native is None and not DEVKITPRO_BASH.is_file():
-        raise SystemExit("devkitPro absent : donner le module natif d'une release avec --native subsdk9 "
-                         "(voir docs/GUIDE.md)")
+        raise SystemExit("devkitPro not found: give the native module of a release with --native subsdk9 "
+                         "(see docs/GUIDE.md)")
     if a.native is not None and not a.native.is_file():
-        raise SystemExit(f"module natif introuvable : {a.native}")
+        raise SystemExit(f"native module not found: {a.native}")
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         flags = {}
         for entry in a.test_flag:
             name, value = entry.split("=", 1)
             flags[name] = {"true": True, "false": False}.get(value.lower(), int(value) if value.lstrip("-").isdigit() else value)
-        for line in build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give, flags,
-                          compile_native=a.native is None):
-            print(line)
+        report = build(a.romfs, root / "romfs", not a.no_tokens, a.test_start, a.test_give, flags,
+                       compile_native=a.native is None)
+        if a.quiet:
+            print(f"mod built ({len(report)} changes)")
+        else:
+            for line in report:
+                print(line)
         (root / "exefs").mkdir()
         shutil.copy2(native, root / "exefs" / "subsdk9")
         if a.install:
-            print("installé :", install(root, emulator_root(), "OoTRR-menu"))
+            print("installed:", install(root, emulator_root(), "OoTRR-menu"))
         else:
             dest = Path("output") / "OoTRR-menu"
             shutil.rmtree(dest, ignore_errors=True)
             shutil.copytree(root, dest)
-            print("écrit dans", dest)
+            print("written to", dest)
     return 0
 
 

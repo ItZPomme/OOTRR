@@ -977,5 +977,5 @@ def install(mod_dir: Path, eden_root: Path, name: str) -> Path:
             shutil.rmtree(target)
         shutil.copytree(mod_dir, target)
     except PermissionError:
-        raise SystemExit(f"Erreur : fichiers du mod {name} verrouillés. Ferme Eden (ou le jeu) puis relance la commande.")
+        raise SystemExit(f"Error: files of the {name} mod are locked. Close the emulator (or the game) and run the command again.")
     return target

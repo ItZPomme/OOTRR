@@ -64,7 +64,7 @@ def main(argv=None) -> int:
         print(f"Native module not found: {native}")
         return 1
     print("Building the mod from", romfs, "(a few minutes)…")
-    return build(["--romfs", str(romfs), "--native", str(native), "--install"])
+    return build(["--romfs", str(romfs), "--native", str(native), "--install", "--quiet"])
 
 
 def run() -> None:
