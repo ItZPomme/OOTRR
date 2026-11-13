@@ -772,6 +772,23 @@ class World:
         skips.setdefault(FIELD_FIRST_PALETTE_STEP[0], []).append(FIELD_FIRST_PALETTE_STEP[1])
         return skips
 
+    def timeline_skips(self) -> tuple[dict[str, list[str]], list[str]]:
+        """skip_cutscenes=safe: cutscenes the game lets the player skip (+ / X), never played.
+
+        Returns ({parent script: [scenes]}, scenes needing a fade-in). In each parent script the
+        EventTransition step that plays the scene is replaced with HavePlayedEvent.<scene> = true (the flag
+        maps and logic modules read); scenes already marked as seen at the start are left alone."""
+        if self.settings.get("skip_cutscenes") != "safe":
+            return {}, []
+        data = _read_json(DATA_DIR / "cutscenes.json")
+        seen = {k[len("HavePlayedEvent."):] for k, v in self.start_flags().items()
+                if k.startswith("HavePlayedEvent.") and v is True}
+        skips = {flow: [s for s in scenes if s not in seen]
+                 for flow, scenes in data.get("timeline_skips", {}).items()}
+        skips = {flow: scenes for flow, scenes in skips.items() if scenes}
+        played = {s for scenes in skips.values() for s in scenes}
+        return skips, [s for s in data.get("timeline_fade_in", []) if s in played]
+
     def can_place(self, item: str, loc: Location) -> bool:
         """Contraintes d'emplacement : objets au sol limités, emplacements incertains sans progression."""
         if loc.pickup and item not in self.ground and item not in self.ground_native:

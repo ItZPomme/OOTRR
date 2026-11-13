@@ -124,6 +124,25 @@ class WorldTests(unittest.TestCase):
                          self.world.locations["Song from Ocarina of Time"].region)
         self.assertEqual(door.start_flags()["#931730378"], "Step06")
 
+    def test_game_skippable_cutscenes(self):
+        """skip_cutscenes=safe: the timelines the game lets the player skip are replaced, never the others."""
+        import json
+        data = json.loads((Path(__file__).resolve().parent.parent / "ootrr" / "data" / "cutscenes.json").read_text(encoding="utf-8"))
+        self.assertEqual(self.world.timeline_skips(), ({}, []))
+        world = World(settings_mod.build({"skip_cutscenes": "safe"}))
+        skips, fade_in = world.timeline_skips()
+        replaced = {s for scenes in skips.values() for s in scenes}
+        self.assertGreater(len(replaced), 50)
+        self.assertLessEqual(set(fade_in), replaced)
+        self.assertLessEqual(replaced, set(data["game_skippable"]))
+        self.assertFalse(replaced & set(data["game_no_skip"]))
+        self.assertFalse(replaced & set(data["timeline_kept"]))
+        seen = {k for k, v in world.start_flags().items() if k.startswith("HavePlayedEvent.") and v is True}
+        self.assertFalse({f"HavePlayedEvent.{s}" for s in replaced} & seen)
+        # every skippable timeline is either replaced, marked as seen at the start, or deliberately kept
+        covered = replaced | set(data["timeline_kept"]) | {k[len("HavePlayedEvent."):] for k in seen}
+        self.assertEqual(set(data["game_skippable"]) - covered, set(data["timeline_unplayed"]))
+
     def test_closed_forest_child_stays_in_forest_at_start(self):
         """Sans épée ni Arbre Mojo, l'enfant ne doit pas pouvoir sortir de la forêt."""
         fixed_only = {l.name: l.vanilla for l in self.world.fixed_locations()}

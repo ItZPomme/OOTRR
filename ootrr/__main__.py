@@ -146,6 +146,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.gift_edits = {f: [tuple(e) for e in v] for f, v in (patch.get("gift_changes") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
+                                timeline_skips=patch.get("timeline_skips") or None,
+                                timeline_fade_in=patch.get("timeline_fade_in") or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,
                                 start_warp=tuple(test_start.split("=", 1)) if test_start

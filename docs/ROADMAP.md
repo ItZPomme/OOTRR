@@ -70,6 +70,15 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   direct jump to step 71 (other entry point, parallel branch) crashed the script engine. **Validated in game**
   (2026-11-12).
 
+- [ ] Cutscenes the game lets the player skip (+ / X) are never played (`skip_cutscenes=safe`, always on in the
+  menu): extracted from RSDB `EventSetting` (category `TimelineEvent` without `SkipSetting/DisableSkip`), 73
+  timelines replaced with their `HavePlayedEvent` flag in 19 scripts (see GAME_KNOWLEDGE "Cutscenes"). Built and
+  re-read in the files; **to validate in game**: Gohma defeat (`Get_StoneOfForest`), Saria outside Link's house
+  (`Dm_Kokiri_0045`, fade-in), Darunia (`Get_StoneOfFire`, fade-in), a sage awakening after a temple
+  (`Dm_SY_BancChange_EscapeDungeon`, medallion), Epona, Sun's Song at the royal tomb, Door of Time / Master Sword,
+  Ganon's castle barriers. Still played: ending, credits, last Ganondorf / Ganon fights, 5 scenes that set the time
+  (`EventTrigger_SetTime`: to reproduce in the parent script before skipping them).
+
 ### Shuffle to extend
 - [ ] Minigames: shuffled rewards (Slingshot, Bow, etc.).
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:

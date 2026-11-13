@@ -278,6 +278,28 @@ not change) **[game]**.
 - Some scenes are played without a check (intro: `OpeningEvent` -> `Dm_Kokiri_0000/0030`): the step that plays them
   is skipped (`skip_event_steps`) **[game]**.
 - Generated list: `ootrr/data/cutscenes.json` (`python -m ootrr.tools.cutscenes`).
+- **Which cutscenes the player can skip (+ / X)** is decided per event in RSDB `EventSetting` (one row per event,
+  `__RowId` = event name): its `EventSettingComponentList` (`Event/EventSetting/EventSettingComponentList/*.bgyml`,
+  `$parent` lists inherited) must have the category `TimelineEvent`, and must not contain the component
+  `SkipSetting/DisableSkip` (`IsDisableSkip: true`). Flowchart events (`FlowchartEvent`, `NPCTalk`...) are never
+  skippable. Result: 100 skippable timelines; 8 timelines with `DisableSkip` (`Dm_Kokiri_0000` tapestry narration,
+  `Dm_StaffCredit_0005`, `Dm_Title_*`) **[files]**. Lists in `cutscenes.json` (`game_skippable`, `game_no_skip`).
+- A timeline is played by an `EventSystemActor.EventTransition` step of a parent script (`EventName` = the scene,
+  `FadeInTypeEventEnd` 2 = the parent fades back in itself, 0/1 = the timeline does). Timeline files (`Dm_*.bfevfl`
+  without flowchart, plus `_Env` / `_Effect`) only hold presentation (camera, animations, voices, fades, environment
+  `EventWorldManagerController`), except: `EventTrigger_SetTime` (`Dm_HrlField_0005/0060`, `Dm_Kakariko_0030/0040`,
+  `Dm_ZoraFountain_0020`), boss music (`*_BossIn`), heart refill and Navi (`Dm_InsideGanonCastle_BossIn`), credits
+  **[files]**. After a transition, parents often ask `EventQueryIsEventSkipedMostRecent` (camera reset only).
+- `HavePlayedEvent.<timeline>` is read by maps (presence), logic modules (`HoldGameDataHavePlayedEvent` by
+  `EventName`), AI schedules and scripts: e.g. `Dm_Kokiri_0050` (Kokiri Forest), `Dm_LakeHrl_0020` (lake water),
+  `Dm_DodongoCave_BossOut` (Gorons), `Dm_Kakariko_0025` (Death Mountain) **[files]**. So a skipped timeline must still
+  set its flag.
+- `skip_cutscenes=safe` (and the in-game menu): in each parent script, the transition step of a skippable timeline is
+  replaced with `HavePlayedEvent.<scene> = true` (+ a fade-in when `FadeInTypeEventEnd` != 2), see
+  `ModBuilder._skip_timelines`: 73 scenes in 19 scripts (boss defeats, sages' awakenings, Ganon's castle, Epona,
+  Sun's Song, Door of Time...) **[files; to validate in game]**. Still played (`timeline_kept`): ending and credits,
+  the last two Ganondorf / Ganon fights, `Dm_InsideGanonCastle_0110` (AI schedule), and the five scenes that set the
+  time. Scenes already marked as seen at the start (`skippable`, Rauru, Kaepora...) are not touched.
 
 ## In-game menu (title sequence)
 

@@ -44,8 +44,9 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                            "place de leur jeton ; all = aussi celles des donjons (règles prudentes : jamais d'objet "
                            "nécessaire pour finir)"),
     "skip_cutscenes": ("none", ("none", "safe"),
-                       "safe : les cinématiques sans effet sur la partie (liste data/cutscenes.json) "
-                       "sont marquées comme déjà vues dès la nouvelle partie"),
+                       "safe: cutscenes with no effect on the game are marked as already seen from the new "
+                       "game, and the cutscenes the game lets you skip (+ / X) are never played; their effects "
+                       "are kept (list in data/cutscenes.json)"),
     "shuffle_rewards": ("vanilla", ("vanilla", "shuffled"),
                         "Pierres et médaillons : vanilla = à leur place ; shuffled = mélangés entre les 8 boss "
                         "et la poche de Link (donnée au départ, la scène de Rauru est sautée)"),
