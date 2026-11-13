@@ -157,7 +157,7 @@ Required (1–6), Rewards Required (1–9), or Hearts Required (3 or 12) + Extra
 | Shuffle Ocarinas | Saria and the moat give a seed item; the 2nd ocarina obtained is the Ocarina of Time. |
 | Lens Required | The logic requires the Lens of Truth for invisible passages. |
 
-**Page 3 — shops, Deku Scrubs, songs and gifts**
+**Page 3 — shops, Deku Scrubs, songs, gifts and logic**
 
 | Setting | Effect |
 |---|---|
@@ -167,6 +167,7 @@ Required (1–6), Rewards Required (1–9), or Hearts Required (3 or 12) + Extra
 | Deku Scrub Prices | Vanilla (40), Affordable (10), Random (0 to 95). |
 | Songs | Vanilla (songs in place), Shuffle (shuffled among the 12 song locations), Random (song locations join the pool: a song can be in a chest, and an NPC can give any item). |
 | Gifts | Minigame rewards (shooting galleries, bowling, horseback archery, diving, fishing), Anju, Darunia, Gerudo card, Light Arrows, Fire Arrows, man on the roof, Dampé's gravedigging tour and Great Fairies give a seed item (new, not fully validated in game yet). |
+| Logic | Glitchless (default: the seed can always be finished without glitches) or No Logic (items anywhere, only the placement rules are kept: the seed is very likely impossible to finish without glitches, for players who want that). The spoiler log says when a seed is not beatable. |
 
 Always on in the menu: cutscenes with no effect on the game, and the cutscenes the game lets you skip with + / X,
 are not played (what they do is kept: items, quest steps, world changes). The ending, the credits, the last fights

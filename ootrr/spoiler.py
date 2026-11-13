@@ -46,7 +46,9 @@ def required_items(world: World, result: Result, spheres) -> list[tuple[str, str
 
 def build(world: World, result: Result) -> dict[str, Any]:
     spheres = playthrough(world, result)
-    required = required_items(world, result, spheres)
+    # logic = none: the seed may be impossible to finish; then no item is "required"
+    beatable = is_beatable(world, result.placements, result.starting_items)
+    required = required_items(world, result, spheres) if beatable else []
     areas: dict[str, dict[str, str]] = {}
     listed = world.shuffled_locations()
     if world.settings.get("shuffle_songs") == "shuffle":  # chants mélangés entre eux (hors pool)
@@ -59,6 +61,7 @@ def build(world: World, result: Result) -> dict[str, Any]:
         "hash": seed_hash(world, result),
         "settings": world.settings,
         "attempts": result.attempts,
+        "beatable": beatable,
         "required": [{"location": l, "item": i, "shuffled": world.locations[l].shuffle} for l, i in required],
         "playthrough": [[{"location": l, "item": i} for l, i in sphere] for sphere in spheres],
         "locations": areas,
@@ -78,6 +81,8 @@ def to_text(spoiler: dict[str, Any]) -> str:
     sp = spawn(spoiler["settings"])
     age = "adulte" if spoiler["settings"].get("starting_age") == "adult" else "enfant"
     out.append(f"  Départ : Link {age}, " + (f"{sp['region']} ({sp['banc']} / {sp['pos']})" if sp else "maison de Link"))
+    if not spoiler.get("beatable", True):
+        out += ["", "!! Seed not beatable according to the logic (logic = none) !!"]
     out += ["", "== Objets requis dans les coffres mélangés (voie du héros) =="]
     for entry in spoiler["required"]:
         if entry["shuffled"]:

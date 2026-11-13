@@ -56,6 +56,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "skip_child_zelda": (False, bool,
                          "Lettre de Zelda et Berceuse de Zelda dans l'inventaire dès la nouvelle partie "
                          "(plus besoin de passer par la cour du château)"),
+    "logic": ("glitchless", ("glitchless", "none"),
+              "glitchless: every item is placed so that the seed can be finished without glitches (the logic, "
+              "data/rules); none: no logic, items are placed at random (only the placement constraints are "
+              "kept: ground items, maps and compasses in their dungeon) and the seed may be impossible to finish"),
     "logic_lens_required": (True, bool, "La logique exige le Monocle de Vérité pour les passages invisibles"),
     "accessibility": ("all", ("all", "beatable"),
                       "all : tous les lieux atteignables ; beatable : seul Ganon doit être battable"),

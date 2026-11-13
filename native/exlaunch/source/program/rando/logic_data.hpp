@@ -6,7 +6,7 @@ namespace ootrr::logic {
 
 enum Op : int32_t { T_TRUE, T_FALSE, T_IS_CHILD, T_IS_ADULT, T_HAS, T_HELPER, T_SET_BOOL, T_SET_IS, T_NOT, T_AND, T_OR, T_CMP, N_CONST, N_COUNT, N_HEARTS, N_SETTING };
 
-constexpr int kSettingCount = 25;
+constexpr int kSettingCount = 26;
 enum SettingKind : int32_t { S_BOOL, S_ENUM, S_INT };
 struct SettingInfo { const char* name; SettingKind kind; int32_t value_count; const char* const* values; int32_t def; };
 inline constexpr const char* kValues_bridge[] = {"open", "vanilla", "stones", "medallions", "dungeons", "hearts"};
@@ -19,6 +19,7 @@ inline constexpr const char* kValues_scrub_prices[] = {"vanilla", "affordable", 
 inline constexpr const char* kValues_shuffle_skulltulas[] = {"off", "overworld", "all"};
 inline constexpr const char* kValues_skip_cutscenes[] = {"none", "safe"};
 inline constexpr const char* kValues_shuffle_rewards[] = {"vanilla", "shuffled"};
+inline constexpr const char* kValues_logic[] = {"glitchless", "none"};
 inline constexpr const char* kValues_accessibility[] = {"all", "beatable"};
 inline constexpr const char* kValues_starting_age[] = {"child", "adult", "random"};
 inline constexpr const char* kValues_shuffle_songs[] = {"vanilla", "shuffle", "random"};
@@ -39,6 +40,7 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"shuffle_rewards", S_ENUM, 2, kValues_shuffle_rewards, 0},
     {"free_time_travel", S_BOOL, 2, nullptr, 1},
     {"skip_child_zelda", S_BOOL, 2, nullptr, 0},
+    {"logic", S_ENUM, 2, kValues_logic, 0},
     {"logic_lens_required", S_BOOL, 2, nullptr, 1},
     {"accessibility", S_ENUM, 2, kValues_accessibility, 0},
     {"shuffle_ocarinas", S_BOOL, 2, nullptr, 0},
@@ -49,7 +51,7 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"shuffle_songs", S_ENUM, 3, kValues_shuffle_songs, 0},
     {"spawn_point", S_INT, 0, nullptr, 0},
 };
-enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_scrub_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic_lens_required, SET_accessibility, SET_shuffle_ocarinas, SET_shuffle_gifts, SET_start_with_consumables, SET_starting_age, SET_random_spawn, SET_shuffle_songs, SET_spawn_point };
+enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_scrub_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic, SET_logic_lens_required, SET_accessibility, SET_shuffle_ocarinas, SET_shuffle_gifts, SET_start_with_consumables, SET_starting_age, SET_random_spawn, SET_shuffle_songs, SET_spawn_point };
 
 constexpr int32_t kRoot = 14;
 constexpr int32_t kTempleOfTime = 26;
@@ -75,6 +77,7 @@ constexpr int32_t kSkipSafe = 1;
 constexpr int32_t kRewardsVanilla = 0;
 constexpr int32_t kRewardsShuffled = 1;
 constexpr int32_t kAccessibilityAll = 0;
+constexpr int32_t kLogicNone = 1;
 constexpr int32_t kKindReward = 2;
 constexpr int32_t kKindSong = 1;
 constexpr int32_t kSongsShuffle = 1;
@@ -557,12 +560,12 @@ constexpr int kHelperCount = 32;
 inline constexpr int32_t kHelpers[kHelperCount] = {0, 8, 16, 34, 44, 46, 54, 76, 81, 82, 85, 88, 91, 94, 105, 116, 122, 135, 149, 156, 167, 175, 191, 198, 209, 224, 232, 247, 286, 324, 354, 370};
 constexpr int kCodeSize = 3372;
 inline constexpr int32_t kCode[kCodeSize] = {
-    9, 2, 4, 3, 1, 4, 1, 1, 10, 2, 4, 51, 1, 7, 21, 1, 10, 2, 8, 7, 21, 1, 9, 2,
+    9, 2, 4, 3, 1, 4, 1, 1, 10, 2, 4, 51, 1, 7, 22, 1, 10, 2, 8, 7, 22, 1, 9, 2,
     4, 51, 1, 10, 2, 6, 14, 4, 41, 1, 10, 2, 5, 0, 9, 2, 3, 4, 12, 1, 5, 3, 10, 2,
     4, 8, 1, 4, 9, 1, 10, 2, 9, 2, 4, 19, 1, 4, 6, 1, 9, 4, 3, 4, 20, 1, 4, 4,
     1, 4, 6, 1, 10, 2, 5, 6, 2, 2, 4, 2, 1, 4, 2, 2, 4, 1, 2, 4, 1, 3, 9, 2,
     9, 2, 3, 4, 0, 1, 4, 0, 2, 9, 2, 3, 9, 2, 4, 7, 1, 4, 25, 1, 10, 2, 5, 14,
-    5, 13, 10, 2, 8, 6, 16, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9,
+    5, 13, 10, 2, 8, 6, 17, 9, 2, 4, 11, 1, 4, 6, 1, 10, 2, 9, 2, 2, 4, 5, 1, 9,
     2, 2, 4, 10, 1, 10, 2, 5, 0, 4, 1, 1, 9, 3, 4, 38, 1, 4, 39, 1, 4, 40, 1, 9,
     2, 4, 39, 1, 4, 40, 1, 10, 2, 6, 3, 9, 2, 9, 2, 4, 7, 1, 4, 28, 1, 5, 20, 10,
     2, 6, 4, 4, 23, 1, 10, 3, 7, 2, 1, 7, 2, 2, 4, 47, 1, 10, 2, 7, 2, 2, 9, 2,
@@ -578,21 +581,21 @@ inline constexpr int32_t kCode[kCodeSize] = {
     0, 4, 11, 0, 13, 9, 38, 39, 40, 41, 42, 43, 44, 45, 46, 15, 1, 9, 2, 7, 0, 5, 11, 0,
     14, 15, 1, 0, 9, 2, 2, 4, 5, 1, 0, 0, 0, 0, 10, 3, 5, 0, 9, 2, 3, 4, 12, 1,
     9, 2, 3, 4, 0, 1, 0, 0, 5, 5, 0, 0, 0, 0, 0, 2, 9, 2, 3, 5, 11, 0, 0, 10,
-    3, 9, 2, 2, 5, 2, 9, 2, 2, 11, 4, 15, 24, 12, 1, 9, 2, 3, 11, 4, 15, 24, 12, 17,
-    10, 3, 9, 2, 3, 5, 1, 9, 2, 2, 11, 4, 15, 24, 12, 6, 9, 2, 3, 11, 4, 15, 24, 12,
-    22, 10, 2, 9, 2, 2, 5, 2, 5, 1, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 2, 9, 2, 3,
-    11, 4, 15, 24, 12, 18, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 3, 9, 2, 3, 11, 4, 15, 24,
-    12, 19, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 4, 9, 2, 3, 11, 4, 15, 24, 12, 20, 10, 2,
-    9, 2, 2, 11, 4, 15, 24, 12, 5, 9, 2, 3, 11, 4, 15, 24, 12, 21, 9, 2, 2, 11, 4, 15,
-    24, 12, 7, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 8, 9, 2, 3, 11, 4, 15, 24, 12, 23, 10,
-    2, 9, 2, 2, 11, 4, 15, 24, 12, 9, 9, 2, 3, 11, 4, 15, 24, 12, 24, 10, 2, 9, 2, 2,
-    11, 4, 15, 24, 12, 10, 9, 2, 3, 11, 4, 15, 24, 12, 25, 10, 2, 9, 2, 2, 11, 4, 15, 24,
-    12, 11, 9, 2, 3, 11, 4, 15, 24, 12, 26, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 12, 9, 2,
-    3, 11, 4, 15, 24, 12, 27, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 13, 9, 2, 3, 11, 4, 15,
-    24, 12, 28, 10, 2, 9, 2, 2, 11, 4, 15, 24, 12, 14, 9, 2, 3, 11, 4, 15, 24, 12, 29, 10,
-    2, 9, 2, 2, 11, 4, 15, 24, 12, 15, 9, 2, 3, 11, 4, 15, 24, 12, 30, 10, 2, 9, 2, 2,
-    11, 4, 15, 24, 12, 16, 9, 2, 3, 11, 4, 15, 24, 12, 31, 9, 2, 3, 11, 4, 15, 24, 12, 32,
-    9, 2, 3, 11, 4, 15, 24, 12, 33, 9, 2, 4, 7, 1, 4, 30, 1, 9, 2, 4, 7, 1, 4, 31,
+    3, 9, 2, 2, 5, 2, 9, 2, 2, 11, 4, 15, 25, 12, 1, 9, 2, 3, 11, 4, 15, 25, 12, 17,
+    10, 3, 9, 2, 3, 5, 1, 9, 2, 2, 11, 4, 15, 25, 12, 6, 9, 2, 3, 11, 4, 15, 25, 12,
+    22, 10, 2, 9, 2, 2, 5, 2, 5, 1, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 2, 9, 2, 3,
+    11, 4, 15, 25, 12, 18, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 3, 9, 2, 3, 11, 4, 15, 25,
+    12, 19, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 4, 9, 2, 3, 11, 4, 15, 25, 12, 20, 10, 2,
+    9, 2, 2, 11, 4, 15, 25, 12, 5, 9, 2, 3, 11, 4, 15, 25, 12, 21, 9, 2, 2, 11, 4, 15,
+    25, 12, 7, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 8, 9, 2, 3, 11, 4, 15, 25, 12, 23, 10,
+    2, 9, 2, 2, 11, 4, 15, 25, 12, 9, 9, 2, 3, 11, 4, 15, 25, 12, 24, 10, 2, 9, 2, 2,
+    11, 4, 15, 25, 12, 10, 9, 2, 3, 11, 4, 15, 25, 12, 25, 10, 2, 9, 2, 2, 11, 4, 15, 25,
+    12, 11, 9, 2, 3, 11, 4, 15, 25, 12, 26, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 12, 9, 2,
+    3, 11, 4, 15, 25, 12, 27, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 13, 9, 2, 3, 11, 4, 15,
+    25, 12, 28, 10, 2, 9, 2, 2, 11, 4, 15, 25, 12, 14, 9, 2, 3, 11, 4, 15, 25, 12, 29, 10,
+    2, 9, 2, 2, 11, 4, 15, 25, 12, 15, 9, 2, 3, 11, 4, 15, 25, 12, 30, 10, 2, 9, 2, 2,
+    11, 4, 15, 25, 12, 16, 9, 2, 3, 11, 4, 15, 25, 12, 31, 9, 2, 3, 11, 4, 15, 25, 12, 32,
+    9, 2, 3, 11, 4, 15, 25, 12, 33, 9, 2, 4, 7, 1, 4, 30, 1, 9, 2, 4, 7, 1, 4, 31,
     1, 9, 2, 4, 7, 1, 4, 32, 1, 9, 2, 4, 7, 1, 4, 33, 1, 9, 2, 4, 7, 1, 4, 34,
     1, 9, 2, 4, 7, 1, 4, 35, 1, 0, 10, 2, 3, 5, 23, 9, 2, 2, 5, 24, 0, 0, 0, 5,
     3, 5, 9, 10, 2, 2, 9, 2, 4, 7, 1, 4, 26, 1, 0, 0, 9, 2, 2, 4, 53, 1, 0, 9,
