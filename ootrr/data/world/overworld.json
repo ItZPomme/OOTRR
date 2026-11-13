@@ -162,7 +162,7 @@
     "Kakariko Village": {
       "locations": {
         "Kak Anju as Child":             {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true},
-        "Kak Man on Roof":               {"rule": "is_child or can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Piece"},
+        "Kak Man on Roof":               {"rule": "is_child or can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Piece", "gift": true},
         "Kak Windmill Freestanding PoH": {"rule": "is_adult or can_use(Boomerang)", "vanilla": "Obj_Heart_Piece", "hashes": [13389209437182306002], "pickup": "freestanding"},
         "Song from Windmill":            {"kind": "song", "rule": "is_adult and Ocarina", "vanilla": "Item_Melody_StormSong"},
         "Sheik in Kakariko":             {"kind": "song", "rule": "is_adult and Forest_Medallion and Fire_Medallion and Water_Medallion", "vanilla": "Item_Melody_ShadowNocturne"},
@@ -181,7 +181,7 @@
     },
     "Graveyard": {
       "locations": {
-        "Graveyard Dampe Gravedigging Tour": {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
+        "Graveyard Dampe Gravedigging Tour": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
         "Graveyard Freestanding PoH":        {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [2157466067026784951], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu : jamais d'objet nécessaire"},
         "Song from Royal Familys Tomb":      {"kind": "song", "rule": "can_play(Zeldas_Lullaby)", "vanilla": "Item_Melody_SunSong"}
       },

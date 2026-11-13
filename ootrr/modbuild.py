@@ -621,9 +621,9 @@ class ModBuilder:
     # course de Dampé : la sortie de la salle d'arrivée demande le Grappin, qui est dans le coffre de la course
     # (mélangé : on peut l'ouvrir sans recevoir le Grappin). Après ce coffre (état OpenedHookShot), parler à
     # Dampé ne fait que conseiller le Grappin (SuggestExit, étape 260) ; sans Grappin ni Super Grappin, il
-    # ramène Link dehors comme après une chute (étapes 71 -> 70 -> 68 : soin, Graveyard_Adult point 4, fin)
+    # ramène Link dehors : copie du changement de zone de la chute (étape 70 : Graveyard_Adult, point 4)
     DAMPE_FLOW = "MiniGame_DampeRace"
-    DAMPE_SUGGEST_EXIT, DAMPE_FALL_EXIT = 260, 71
+    DAMPE_SUGGEST_EXIT, DAMPE_WARP = 260, 70
 
     def _dampe_exit(self, flow: bytes) -> tuple[bytes, list[str]]:
         from .formats.evfl import find_query, insert_flow
@@ -635,7 +635,11 @@ class ModBuilder:
         nodes = [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
                   "set": {"Actor": "Item_Longshot"}, "cases": {0: "old", 1: 1}},
                  {"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
-                  "set": {"Actor": "Item_Hookshot"}, "cases": {0: "old", 1: {"event": self.DAMPE_FALL_EXIT}}}]
+                  "set": {"Actor": "Item_Hookshot"}, "cases": {0: "old", 1: 2}},
+                 # copie autonome du changement de zone de la chute (Graveyard_Adult, point 4), puis fin du script.
+                 # Un saut direct à l'étape 71 (soin -> changement de zone -> fin de course, dans une branche
+                 # parallèle d'un autre point d'entrée) faisait planter le moteur de scripts (constaté en jeu)
+                 {"copy_event": self.DAMPE_WARP, "next": None}]
         new, report = insert_flow(flow, None, nodes, before=self.DAMPE_SUGGEST_EXIT)
         return new, report + [f"{self.DAMPE_FLOW}: sortie sans Grappin après le coffre de la course"]
 

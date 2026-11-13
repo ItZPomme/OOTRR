@@ -190,13 +190,13 @@ class GenerationTests(unittest.TestCase):
                 self._check(overrides, range(1, N_SEEDS + 1))
 
     def test_gifts(self):
-        """shuffle_gifts : les 17 cadeaux sont mélangés, sans bombes ni rubis ; les modifications de scènes
+        """shuffle_gifts : les 19 cadeaux sont mélangés, sans bombes ni rubis ; les modifications de scènes
         nomment l'objet placé (mod sans menu) et chaque événement visé existe dans gifts.json."""
         off = World(settings_mod.build())
         self.assertFalse([l for l in off.locations.values() if l.gift and l.shuffle])
         world = World(settings_mod.build({"shuffle_gifts": True}))
         gifts = [l for l in world.locations.values() if l.gift]
-        self.assertEqual(len(gifts), 17)
+        self.assertEqual(len(gifts), 19)
         self.assertTrue(all(l.shuffle for l in gifts))
         for seed in range(1, 6):
             result = generate(world, seed)

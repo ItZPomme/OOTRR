@@ -52,7 +52,7 @@ python -m ootrr --seed 1234 --romfs "CHEMIN\VERS\updates\<version>\romfs" --inst
 | `start_with_consumables` | oui / non | 10 bâtons Mojo et 20 noix Mojo au départ |
 | `shuffle_songs` | `vanilla`, `shuffle`, `random` | Chants à leur place, mélangés entre eux, ou dans le pool |
 | `shuffle_ocarinas` | oui / non | Ocarina des fées (Saria) et Ocarina du Temps (douves) mélangés ; non = à leur place |
-| `shuffle_gifts` | oui / non | 18 cadeaux mélangés : Flèche de feu (Lac Hylia), récompenses de tirs, bowling, tir à cheval, plongée, pêche adulte, Anju, Darunia, carte Gerudo, Flèches de lumière, 6 Grandes Fées (vérifié dans les fichiers, **à valider en jeu** ; jetons avec le menu natif) |
+| `shuffle_gifts` | oui / non | 20 cadeaux mélangés : Flèche de feu (Lac Hylia), homme sur le toit (Kakariko), visite du fossoyeur (Dampé), récompenses de tirs, bowling, tir à cheval, plongée, pêche adulte, Anju, Darunia, carte Gerudo, Flèches de lumière, 6 Grandes Fées (vérifié dans les fichiers, **à valider en jeu** ; jetons avec le menu natif) |
 | `free_time_travel` | oui (défaut) / non | L'épée renvoie enfant à tout moment (le remake exige le Temple de la Forêt) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + nombre | Condition du pont arc-en-ciel |
 | `shuffle_rewards` | `vanilla`, `shuffled` | Pierres et médaillons mélangés entre les boss et la poche de Link |
