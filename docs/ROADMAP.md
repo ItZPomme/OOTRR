@@ -10,8 +10,8 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   Menu), and a second medallion was added: PouchAdd took the item from Link's pocket for Bongo Bongo's original
   reward and replaced it (Forest on top of Shadow). Replacement disabled while giving starting items; **validated in
   game** (2026-11-12: only the Shadow Medallion).
-- [x] The logic assumed a start in Zora's Domain: random spawn disabled (`RANDOM_SPAWN_ENABLED = False`, Python and
-  native); the "Random Spawn" row is removed from the menu. **Validated in game** (2026-11-12: start in the forest,
+- [x] The logic assumed a start in Zora's Domain: random spawn disabled, then the `random_spawn` setting removed
+  (Python, native, app; 2026-11-14); the "Random Spawn" row is removed from the menu. **Validated in game** (2026-11-12: start in the forest,
   row absent from the menu).
 - [x] Infinite shop: **fixed and validated in game** (2026-11-12, Kokiri shop). Saved integer `OoTRR.ShopSold` (one
   bit per token item, reset to 0 at generation); first purchase = seed item; afterwards the item costs 999 rupees

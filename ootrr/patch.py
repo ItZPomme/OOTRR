@@ -28,10 +28,12 @@ def _start_warp(world: World) -> list[str] | None:
 
 def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
     chests = []
+    rank = {name: i for i, name in enumerate(world.locations)}  # same order as the native kLocations
     for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
         item = result.placements[loc.name]
         chests.append({
             "location": loc.name,
+            "index": rank[loc.name],
             "hashes": loc.hashes,
             "vanilla": loc.vanilla,
             "item": item,
@@ -70,6 +72,8 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
         "start_warp": _start_warp(world),
         "logic_patches": world.logic_patches(),
+        "logic_ints": {m: [list(e) for e in v] for m, v in world.logic_ints().items()},
+        "event_ints": {f: [list(e) for e in v] for f, v in world.event_ints().items()},
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},
         "actor_changes": {str(h): c for h, c in world.actor_changes().items()},
@@ -110,14 +114,17 @@ SCRUB_FIELDS = ("ScrubBusiness_ShopItemActorName0", "ScrubBusiness_ShopItemActor
 def scrub_changes(patch: dict[str, Any], price: int | None = None) -> tuple[dict[int, dict], dict[str, int]]:
     """Peste Mojo mélangées : ({hash: champs de l'acteur}, {objet vendu: prix}). L'acteur garde son
     script (TalkEventName) ; le premier article devient l'objet placé, les autres disparaissent."""
-    from .world import SCRUB_PRICE
+    from .world import SCRUB_PRICE, shop_price
 
     changes: dict[int, dict] = {}
     sales: dict[str, int] = {}
+    settings = patch.get("settings") or {}
     for loc in patch["chests"]:
         if not loc.get("scrub"):
             continue
-        sales[loc["item"]] = price or SCRUB_PRICE
+        # scrub_prices: same price as the native module would compute for this seed and location
+        sales[loc["item"]] = price or (shop_price(settings, int(patch.get("seed", 0)), loc["index"], SCRUB_PRICE,
+                                                  "scrub_prices") if "index" in loc else SCRUB_PRICE)
         for h in loc["hashes"]:
             changes[int(h)] = {SCRUB_FIELDS[0]: loc["item"], SCRUB_FIELDS[1]: None, SCRUB_FIELDS[2]: None}
     return changes, sales

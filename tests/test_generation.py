@@ -43,7 +43,7 @@ PRESETS = {
     "cadeaux, boutiques": {"shuffle_gifts": True, "shuffle_shops": "3", "skip_child_zelda": True, "accessibility": "beatable"},
     "départ adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 17},
     "adulte, apparition aléatoire": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 30, "free_time_travel": True},
-    "départ aléatoire enfant": {"random_spawn": True, "spawn_point": 12, "start_with_consumables": True},
+    "départ enfant ailleurs": {"spawn_point": 12, "start_with_consumables": True},
 }
 
 

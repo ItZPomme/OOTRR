@@ -1,9 +1,13 @@
-"""Seed installer for Longshot (the PC recompilation of the game), styled after the remake's own Options menu.
+"""Seed installer for Longshot (the PC recompilation of the game) and the Eden emulator, styled after the remake's
+own Options menu.
 
     python -m ootrr.tools.longshot_app
 
-Pick a seed and settings, press "Install Seed": the generator builds the OoTRR mod from Longshot's own RomFS and
-writes it to `<Longshot>/mods/OoTRR/romfs`, which Longshot loads at the next start. Close the game first.
+Pick a target, a seed and settings, press "Install Seed": the generator builds the OoTRR mod on the PC and writes it
+- for Longshot, from Longshot's own RomFS, to `<Longshot>/mods/OoTRR/romfs` (loaded at the next start);
+- for Eden (or a fork), from the extracted update RomFS, to `<emulator data>/load/<TitleID>/OoTRR` (`--install`).
+Close the game first. Settings come from `ootrr.settings_ui` (same texts as the native in-game menu); the
+settings only the native module can apply (shops) are not offered.
 
 Everything is drawn on a single tkinter canvas (no extra dependency): bronze leather rows, amber selectors on dark
 tracks, a white focus halo, ornamental dividers and a paged list with a "Next Page" button, like the in-game menu.
@@ -25,11 +29,17 @@ from pathlib import Path
 from tkinter import font as tkfont
 
 from .. import settings as settings_mod
+from .. import settings_ui
+from ..modbuild import TITLE_ID, emulator_root
 
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "OoTRR"
 CONFIG = APP_DIR / "longshot_app.json"
 SEEDS_DIR = APP_DIR / "seeds"
 MOD_NAME = "OoTRR"
+TARGETS = {"longshot": "Longshot", "eden": "Eden"}
+# exact image names: our own "OoTRR-Longshot.exe" must not count as the game
+GAME_PROCESSES = {"longshot": ("longshot.exe",),
+                  "eden": ("eden.exe", "fritchii.exe", "yuzu.exe", "suyu.exe", "citron.exe", "sudachi.exe")}
 
 # ---- palette: the remake's menu (bronze leather, amber selectors, cream text) ---------------------------------
 BG_TOP, BG_BOTTOM = (36, 38, 29), (17, 16, 12)
@@ -45,24 +55,8 @@ ORNAMENT = "#6e5532"
 
 W, H = 1180, 724
 
-PAGES = [
-    ("World", ["starting_age", "random_spawn", "open_forest", "open_door_of_time", "free_time_travel",
-               "bridge", "bridge_count"]),
-    ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas",
-                 "shuffle_scrubs", "shuffle_skulltulas", "maps_compasses"]),
-    ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "accessibility"]),
-    ("Logic", ["logic"]),
-]
-LABELS = {
-    "logic": "Logic", "starting_age": "Starting Age", "random_spawn": "Random Spawn", "open_forest": "Kokiri Forest",
-    "open_door_of_time": "Open Door of Time", "free_time_travel": "Free Time Travel", "bridge": "Rainbow Bridge",
-    "bridge_count": "Bridge Count", "shuffle_rewards": "Stones & Medallions", "shuffle_songs": "Songs",
-    "shuffle_ocarinas": "Ocarinas",
-    "shuffle_scrubs": "Business Scrubs", "shuffle_skulltulas": "Gold Skulltulas", "maps_compasses": "Maps & Compasses",
-    "skip_cutscenes": "Skip Cutscenes", "skip_child_zelda": "Skip Child Zelda",
-    "start_with_consumables": "Start With Consumables", "accessibility": "Accessibility",
-}
-BRIDGE_MAX = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 20}
+PAGES = settings_ui.PAGES
+BRIDGE_MAX = settings_ui.BRIDGE_MAX
 
 PRESETS = {
     "Standard": {},
@@ -71,7 +65,7 @@ PRESETS = {
     "Chaos": {"shuffle_scrubs": True, "shuffle_skulltulas": "all",
               "shuffle_songs": "random", "shuffle_ocarinas": True,
               "shuffle_rewards": "shuffled", "maps_compasses": "shuffle", "starting_age": "random",
-              "random_spawn": True, "skip_cutscenes": "safe"},
+              "skip_cutscenes": "safe"},
 }
 PRESET_HINTS = {
     "Standard": "The default rules: gifts and Pieces of Heart are always in the item pool.",
@@ -81,12 +75,8 @@ PRESET_HINTS = {
 DEFAULT_HINT = "Left-click a row to change it, right-click to go back. Hover a row to read what it does."
 
 
-def pretty(value) -> str:
-    if value is True:
-        return "On"
-    if value is False:
-        return "Off"
-    return str(value).replace("_", " ").title()
+def pretty(name, value) -> str:
+    return settings_ui.value_label(name, value)
 
 
 def find_longshot() -> Path | None:
@@ -103,14 +93,14 @@ def valid_romfs(path: Path) -> bool:
     return (path / "GameData").is_dir() and (path / "Pack").is_dir()
 
 
-def game_running() -> bool:
+def game_running(target: str = "longshot") -> bool:
     try:
         out = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True,
                              creationflags=0x08000000).stdout.lower()
     except OSError:
         return False
-    # exact image name: our own "OoTRR-Longshot.exe" must not count as the game
-    return any(line.startswith('"longshot.exe"') for line in out.splitlines())
+    names = tuple(f'"{n}"' for n in GAME_PROCESSES[target])
+    return any(line.startswith(names) for line in out.splitlines())
 
 
 def mix(a, b, t):
@@ -154,7 +144,7 @@ class App:
 
         self.cfg = self._load_cfg()
         self.values = settings_mod.defaults()
-        shown = {n for _, names in PAGES for n in names}  # hidden settings always use the generator's defaults
+        shown = set(settings_ui.SHOWN)  # hidden settings always use the generator's defaults
         for k, v in (self.cfg.get("settings") or {}).items():
             if k in shown:
                 with contextlib.suppress(Exception):
@@ -162,6 +152,9 @@ class App:
         self.preset = self.cfg.get("preset", "Standard")
         self.longshot = Path(self.cfg["longshot"]) if self.cfg.get("longshot") else find_longshot()
         self.romfs_override = Path(self.cfg["romfs"]) if self.cfg.get("romfs") else None
+        self.target = self.cfg.get("target") if self.cfg.get("target") in TARGETS else "longshot"
+        self.emu_dir = Path(self.cfg["emu_dir"]) if self.cfg.get("emu_dir") else emulator_root()
+        self.eden_romfs = Path(self.cfg["eden_romfs"]) if self.cfg.get("eden_romfs") else None
 
         self.page = 0
         self.regions: list[dict] = []
@@ -173,7 +166,7 @@ class App:
         self.result: dict = {}
         self.q: queue.Queue = queue.Queue()
         self.t = 0.0
-        self.running = game_running()
+        self.running = game_running(self.target)
         self._poll_running = 0
 
         self.f_title = tkfont.Font(family="Georgia", size=17, weight="bold")
@@ -210,6 +203,8 @@ class App:
             CONFIG.write_text(json.dumps({
                 "longshot": str(self.longshot) if self.longshot else None,
                 "romfs": str(self.romfs_override) if self.romfs_override else None,
+                "target": self.target, "emu_dir": str(self.emu_dir) if self.emu_dir else None,
+                "eden_romfs": str(self.eden_romfs) if self.eden_romfs else None,
                 "preset": self.preset, "seed": self.seed_var.get(),
                 "settings": {k: v for k, v in self.values.items() if k != "spawn_point"}}, indent=2),
                 encoding="utf-8")
@@ -350,7 +345,7 @@ class App:
         self.rect(0, 0, W, 62, outline="")
         self.text(W / 2 + 1, 33, "Ocarina of Time Randomizer", self.f_title, "#2b1c0a", anchor="center")
         self.text(W / 2, 31, "Ocarina of Time Randomizer", self.f_title, "#fff3d6", anchor="center")
-        self.text(28, 31, "Longshot", self.f_small, "#e7cfa0", anchor="w")
+        self.text(28, 31, TARGETS[self.target], self.f_small, "#e7cfa0", anchor="w")
         self.text(W - 28, 31, f"{PAGES[self.page][0]}  ·  {self.page + 1} / {len(PAGES)}", self.f_small, "#e7cfa0",
                   anchor="e")
 
@@ -423,12 +418,12 @@ class App:
                         "Show the next page of options.")
 
     def _rune_row(self, y, name, defaults):
-        label = LABELS[name]
-        disabled = name == "bridge_count" and self.values["bridge"] not in BRIDGE_MAX
+        label = settings_ui.title(name)
+        disabled = not settings_ui.enabled(name, self.values)
         rid = f"rune:{name}"
         hot = self.hover == rid and not disabled
         cell = self._cell_row(y, label, rid)
-        hint = settings_mod.SETTINGS[name][2]
+        hint = settings_ui.caption(name)
         if self.values[name] != defaults[name] and not disabled:  # lit diamond = differs from the default
             self.poly(78, y + 20, 83, y + 15, 88, y + 20, 83, y + 25, fill=AMBER, outline="")
         if disabled:
@@ -449,14 +444,14 @@ class App:
             self.add_region((70, y, x1, y + 40), rid, lambda n=name: self.step(n, 1), lambda n=name: self.step(n, -1), hint)
         else:
             if allowed is int:
-                hi = BRIDGE_MAX.get(self.values["bridge"], 9)
-                first, last = val <= 1, val >= hi
+                lo, hi = settings_ui.int_range(name, self.values)
+                first, last = val <= lo, val >= hi
             else:
                 idx = allowed.index(val)
                 first, last = idx == 0, idx == len(allowed) - 1
             self.rect(x0 + 4, y + 4, x1 - 4, y + 36, fill=AMBER, outline=AMBER_LO)
             self.line(x0 + 5, y + 5, x1 - 5, y + 5, fill=AMBER_HI)
-            self.text((x0 + x1) / 2, y + 20, pretty(val), self.f_row, "#ffffff", anchor="center")
+            self.text((x0 + x1) / 2, y + 20, pretty(name, val), self.f_row, "#ffffff", anchor="center")
             if not last:
                 self.poly(x1 - 18, y + 13, x1 - 18, y + 27, x1 - 11, y + 20, fill="#fff7e2")
             if not first:
@@ -471,27 +466,60 @@ class App:
         self.rect(x0, y0, x1, y1, fill=BOX, outline=BOX_EDGE)
 
     def _right_column(self):
-        # Longshot card
+        # target card: Longshot / Eden selector, game and RomFS folders
         self._box(690, 84, 1140, 202)
-        ok = self.longshot is not None and self.longshot.is_dir()
+        self.text(708, 102, "Target", self.f_small, DIM)
+        seg_x0, seg_x1 = 776, 1124
+        seg = (seg_x1 - seg_x0) / len(TARGETS)
+        for i, (key, name) in enumerate(TARGETS.items()):
+            sx0 = seg_x0 + i * seg
+            on = self.target == key
+            rid = f"target:{key}"
+            self.rect(sx0 + 1, 90, sx0 + seg - 1, 114, fill=AMBER if on else TRACK,
+                      outline=AMBER_LO if on else TRACK_EDGE)
+            self.text(sx0 + seg / 2, 102, name, self.f_small, "#ffffff" if on else DIM, anchor="center")
+            if self.hover == rid:
+                self.focus_ring(sx0 + 1, 90, sx0 + seg - 1, 114)
+            hint = ("Build the mod from Longshot's own RomFS and write it to Longshot's mods folder."
+                    if key == "longshot" else
+                    "Build the mod from the extracted update RomFS and install it in the emulator "
+                    f"(load/{TITLE_ID}/{MOD_NAME}). Disable any other OoTRR mod there (e.g. OoTRR-menu).")
+            self.add_region((sx0, 88, sx0 + seg, 116), rid, lambda k=key: self.set_target(k), None, hint)
+        ok = self._game_ok()
         romfs = self._romfs()
         rom_ok = romfs is not None and valid_romfs(romfs)
-        y = 104
-        for label, path, good in (("Game", self.longshot, ok), ("RomFS", romfs, rom_ok)):
+        game_dir = self.longshot if self.target == "longshot" else self.emu_dir
+        y = 128
+        for label, path, good in (("Game" if self.target == "longshot" else "Emulator", game_dir, ok),
+                                  ("RomFS", romfs, rom_ok)):
             self.text(708, y, label, self.f_small, DIM)
-            self.oval(760, y - 4, 768, y + 4, fill=AMBER if good else RED, outline="")
-            shown = "not found" if path is None else self._short(str(path).replace(str(Path.home()), "~"), 40)
-            self.text(776, y, shown, self.f_small, CREAM if good else RED)
-            y += 22
-        self.text(708, 148, "Version", self.f_small, DIM)
-        self.text(776, 148, self._version() if ok else "—", self.f_small, CREAM)
+            self.oval(770, y - 4, 778, y + 4, fill=AMBER if good else RED, outline="")
+            shown = "not found" if path is None else str(path).replace(str(Path.home()), "~")
+            if label == "Game" and ok:
+                version = self._version()
+                shown = self._short(shown, 36 - len(version)) + f"  ({version})"
+            else:
+                shown = self._short(shown, 38)
+            self.text(786, y, shown, self.f_small, CREAM if good else RED)
+            y += 20
         bw = 134
-        for i, (lab, rid, fn, en, hint) in enumerate((
-                ("Game Folder", "pick_game", self.pick_game, True, "Choose the Longshot version folder (the one with longshot.exe)."),
-                ("RomFS", "pick_romfs", self.pick_romfs, True, "RomFS used to build the mod. Defaults to Longshot's own romfs folder."),
-                ("Mods Folder", "modsdir", self.open_mods, ok, "Open Longshot's mods folder."))):
+        if self.target == "longshot":
+            buttons = (("Game Folder", "pick_game", self.pick_game, True,
+                        "Choose the Longshot version folder (the one with longshot.exe)."),
+                       ("RomFS", "pick_romfs", self.pick_romfs, True,
+                        "RomFS used to build the mod. Defaults to Longshot's own romfs folder."),
+                       ("Mods Folder", "modsdir", self.open_mods, ok, "Open Longshot's mods folder."))
+        else:
+            buttons = (("Emulator Folder", "pick_game", self.pick_game, True,
+                        "Choose the emulator's data folder, the one with load/ (e.g. %APPDATA%\\eden or "
+                        "%APPDATA%\\fritchii)."),
+                       ("RomFS", "pick_romfs", self.pick_romfs, True,
+                        "RomFS of the extracted update (.../updates/<version>/romfs), used to build the mod."),
+                       ("Mods Folder", "modsdir", self.open_mods, ok,
+                        f"Open the emulator's mods folder for the game (load/{TITLE_ID})."))
+        for i, (lab, rid, fn, en, hint) in enumerate(buttons):
             bx = 706 + i * (bw + 8)
-            self._small_button((bx, 164, bx + bw, 192), lab, rid, fn, en, hint)
+            self._small_button((bx, 168, bx + bw, 194), lab, rid, fn, en, hint)
 
         # Hint box
         self._box(690, 214, 1140, 330)
@@ -525,7 +553,7 @@ class App:
             self.focus_ring(690, y, 1140, y + 62)
         if ready:
             self.add_region((690, y, 1140, y + 62), "install", self.install, None,
-                            "Build the mod from Longshot's RomFS and write it to Longshot's mods folder.")
+                            f"Build the mod and install it for {TARGETS[self.target]}.")
 
     def _small_button(self, box, label, rid, fn, enabled, hint):
         x0, y0, x1, y1 = box
@@ -559,9 +587,22 @@ class App:
 
     # ---- state helpers --------------------------------------------------------------------------------------
     def _romfs(self) -> Path | None:
+        if self.target == "eden":
+            return self.eden_romfs
         if self.romfs_override:
             return self.romfs_override
         return self.longshot / "romfs" if self.longshot else None
+
+    def _game_ok(self) -> bool:
+        if self.target == "eden":
+            return self.emu_dir is not None and self.emu_dir.is_dir()
+        return self.longshot is not None and self.longshot.is_dir()
+
+    def _mods_dir(self) -> Path:
+        """Folder the mod folder is written into."""
+        if self.target == "eden":
+            return self.emu_dir / "load" / TITLE_ID
+        return self.longshot / "mods"
 
     def _version(self) -> str:
         try:
@@ -578,7 +619,7 @@ class App:
 
     def _ready(self) -> bool:
         r = self._romfs()
-        return bool(self.longshot and self.longshot.is_dir() and r and valid_romfs(r))
+        return bool(self._game_ok() and r and valid_romfs(r))
 
     # ---- interaction ----------------------------------------------------------------------------------------
     def _hit(self, e):
@@ -614,8 +655,8 @@ class App:
         if allowed is bool:
             self.values[name] = not cur
         elif allowed is int:
-            hi = BRIDGE_MAX.get(self.values["bridge"], 9)
-            self.values[name] = min(hi, max(1, cur + d))
+            lo, hi = settings_ui.int_range(name, self.values)
+            self.values[name] = min(hi, max(lo, cur + d))
         else:  # stops at both ends, like the menu's arrows
             self.values[name] = allowed[min(len(allowed) - 1, max(0, allowed.index(cur) + d))]
         if name == "bridge" and self.values["bridge"] in BRIDGE_MAX:
@@ -633,8 +674,25 @@ class App:
     def roll(self):
         self.seed_var.set(str(secrets.randbelow(10 ** 9)))
 
+    def set_target(self, key):
+        if key != self.target and not self.busy:
+            self.target = key
+            self.running = game_running(key)
+            self.status = ("Ready", CREAM)
+            self.result = {}
+            self._save_cfg()
+
     def pick_game(self):
         from tkinter import filedialog
+        if self.target == "eden":
+            d = filedialog.askdirectory(title="Emulator data folder (the one with load/)",
+                                        initialdir=str(self.emu_dir or Path.home()))
+            if d and (Path(d) / "load").is_dir():
+                self.emu_dir = Path(d)
+                self._save_cfg()
+            elif d:
+                self.status = ("No load folder in that folder", RED)
+            return
         d = filedialog.askdirectory(title="Longshot version folder", initialdir=str(self.longshot or Path.home()))
         if d and (Path(d) / "longshot.exe").is_file():
             self.longshot, self.romfs_override = Path(d), None
@@ -645,34 +703,44 @@ class App:
     def pick_romfs(self):
         from tkinter import filedialog
         d = filedialog.askdirectory(title="RomFS folder", initialdir=str(self._romfs() or Path.home()))
-        if d:
+        if d and self.target == "eden":
+            self.eden_romfs = Path(d)
+            self._save_cfg()
+        elif d:
             self.romfs_override = Path(d)
             self._save_cfg()
+        if d and not valid_romfs(Path(d)):
+            self.status = ("Not a RomFS folder (no GameData / Pack)", RED)
 
     def open_spoiler(self):
         if self.result.get("spoiler"):
             os.startfile(self.result["spoiler"])
 
     def open_mods(self):
-        mods = self.longshot / "mods"
-        mods.mkdir(exist_ok=True)
+        mods = self._mods_dir()
+        mods.mkdir(parents=True, exist_ok=True)
         os.startfile(mods)
 
     # ---- install --------------------------------------------------------------------------------------------
     def install(self):
         if self.busy or not self._ready():
             return
-        if game_running():
-            self.status = ("Close Longshot first", RED)
-            self.log_line("Longshot is running: its mod files are locked. Close the game and try again.\n")
+        name = TARGETS[self.target]
+        if game_running(self.target):
+            self.status = (f"Close {name} first", RED)
+            self.log_line(f"{name} is running: its mod files are locked. Close it and try again.\n")
             self.draw()
             return
         if not self.seed_var.get().strip():
             self.roll()
         seed = self.seed_var.get().strip()
-        mods = self.longshot / "mods"
-        argv = ["--seed", seed, "--romfs", str(self._romfs()), "--out", str(SEEDS_DIR),
-                "--mod-out", str(mods), "--mod-name", MOD_NAME]
+        mods = self._mods_dir()
+        argv = ["--seed", seed, "--romfs", str(self._romfs()), "--out", str(SEEDS_DIR), "--mod-name", MOD_NAME]
+        if self.target == "eden":
+            os.environ["OOTRR_EMU_DIR"] = str(self.emu_dir)  # read by modbuild.emulator_root() for --install
+            argv.append("--install")
+        else:
+            argv += ["--mod-out", str(mods)]
         for k, v in self.values.items():
             if k != "spawn_point" and v != settings_mod.defaults()[k]:
                 argv += ["--set", f"{k}={v}"]
@@ -683,7 +751,7 @@ class App:
         self.log.configure(state="disabled")
         self.log_line(f"Seed {seed}\n")
         self._save_cfg()
-        mods.mkdir(exist_ok=True)
+        mods.mkdir(parents=True, exist_ok=True)
         SEEDS_DIR.mkdir(parents=True, exist_ok=True)
         threading.Thread(target=self._work, args=(argv, seed), daemon=True).start()
 
@@ -716,8 +784,14 @@ class App:
                     if data["err"]:
                         self.log_line(f"\n{data['err']}\n")
                     if data["ok"]:
-                        self.status = ("Installed. Start Longshot to play.", AMBER_HI)
-                        self.log_line("\nDone. The mod is in Longshot's mods folder; start the game to play.\n")
+                        name = TARGETS[self.target]
+                        self.status = (f"Installed. Start {name} to play.", AMBER_HI)
+                        self.log_line(f"\nDone. The mod is in {name}'s mods folder; start the game to play.\n")
+                        others = self._other_ootrr_mods()
+                        if others:
+                            self.log_line(f"Other OoTRR mods are installed ({', '.join(others)}): disable them in "
+                                          "the emulator (right-click the game > Configure > Add-Ons), only one "
+                                          "OoTRR mod may be active.\n")
                     else:
                         self.status = ("Something went wrong", RED)
                     self.draw()
@@ -729,12 +803,21 @@ class App:
             self.draw()
         self._poll_running += 1
         if self._poll_running % 90 == 0 and not self.busy:
-            running = game_running()
+            running = game_running(self.target)
             if running != self.running:
                 self.running = running
-                self.status = ("Longshot is running: close it to install", AMBER_HI) if running else ("Ready", CREAM)
+                self.status = ((f"{TARGETS[self.target]} is running: close it to install", AMBER_HI) if running
+                               else ("Ready", CREAM))
                 self.draw()
         self.root.after(33, self._tick)
+
+    def _other_ootrr_mods(self) -> list[str]:
+        if self.target != "eden":
+            return []
+        with contextlib.suppress(OSError):
+            return sorted(p.name for p in self._mods_dir().iterdir()
+                          if p.is_dir() and p.name.lower().startswith("ootrr") and p.name != MOD_NAME)
+        return []
 
     def run(self):
         self.root.mainloop()

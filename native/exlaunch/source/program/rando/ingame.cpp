@@ -81,18 +81,7 @@ void ResolveStart(Settings& s, uint64_t seed) {
         s.values[logic::SET_open_door_of_time] = 1;
         s.values[logic::SET_free_time_travel] = 1;
     }
-    constexpr bool kRandomSpawnEnabled = false;  // starting.py : RANDOM_SPAWN_ENABLED
-    if (kRandomSpawnEnabled && s.values[logic::SET_random_spawn]) {
-        int count = 0;
-        for (int i = 0; i < logic::kSpawnCount; i++) count += logic::kSpawnAdult[i] == (adult ? 1 : 0);
-        int pick = static_cast<int>(StartHash(seed, 2) % static_cast<uint64_t>(count));
-        for (int i = 0; i < logic::kSpawnCount; i++) {
-            if (logic::kSpawnAdult[i] != (adult ? 1 : 0)) continue;
-            if (pick-- == 0) { s.values[logic::SET_spawn_point] = i + 1; break; }
-        }
-    } else {
-        s.values[logic::SET_spawn_point] = adult ? logic::kAdultDefaultSpawn : 0;
-    }
+    s.values[logic::SET_spawn_point] = adult ? logic::kAdultDefaultSpawn : 0;
 }
 
 bool GenerateFromMenu(std::uintptr_t main_base, uint32_t seed, MenuRead* read) {

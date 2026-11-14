@@ -1,6 +1,6 @@
 """Départ de la partie : âge et point d'apparition tirés par la seed.
 
-Les réglages « random » (starting_age = random, random_spawn) sont résolus **avant** de construire le
+The "random" setting (starting_age = random) is resolved **avant** de construire le
 monde, à partir de la seed (pas du générateur aléatoire du placement) : même calcul dans le module natif
 (ingame.cpp, ResolveStart), pour que la logique, le spoiler et le jeu voient le même départ.
 """
@@ -13,9 +13,6 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parent / "data" / "spawns.json"
 MASK = 0xFFFFFFFFFFFFFFFF
-# Départ aléatoire désactivé (retour de test : la logique et le jeu ne démarraient pas au même endroit) ;
-# même interrupteur dans ingame.cpp (kRandomSpawnEnabled). Le départ adulte reste au Temple du Temps.
-RANDOM_SPAWN_ENABLED = False
 
 
 @lru_cache(maxsize=1)
@@ -26,7 +23,7 @@ def spawns() -> list[dict]:
 
 @lru_cache(maxsize=1)
 def adult_default() -> int:
-    """spawn_point du départ adulte sans random_spawn (Temple du Temps)."""
+    """spawn_point of the adult start (Temple of Time)."""
     with DATA.open(encoding="utf-8") as fh:
         region = json.load(fh)["adult_default"]
     return next(i for i, s in enumerate(spawns()) if s["age"] == "adult" and s["region"] == region) + 1
@@ -55,14 +52,7 @@ def resolve(settings: dict, seed: int) -> dict:
         # appris enfant)
         s["open_door_of_time"] = True
         s["free_time_travel"] = True
-    if RANDOM_SPAWN_ENABLED and s.get("random_spawn"):
-        age = "adult" if adult else "child"
-        options = [i + 1 for i, sp in enumerate(spawns()) if sp["age"] == age]
-        s["spawn_point"] = options[mix(seed, 2) % len(options)]
-    elif adult:
-        s["spawn_point"] = adult_default()
-    else:
-        s["spawn_point"] = 0
+    s["spawn_point"] = adult_default() if adult else 0
     return s
 
 

@@ -230,7 +230,6 @@ TEXTS_EN = {
     "shuffle_ocarinas": ("Shuffle Ocarinas", "The Fairy Ocarina (Saria) and the Ocarina of Time (moat) are shuffled:\nan item of the seed is given in their place. The second ocarina is the Ocarina of Time.", {}),
     "starting_age": ("Starting Age", "Child: Link's house. Adult: Temple of Time, Door of Time open, Master Sword given.\nRandom: chosen by the seed.",
                      {"child": "Child", "adult": "Adult", "random": "Random"}),
-    "random_spawn": ("Random Spawn", "Start the game anywhere outside dungeons (chosen by the seed).", {}),
     "start_with_consumables": ("Start With Consumables", "Start with a full first bag of Deku Sticks (10) and Deku Nuts (20).", {}),
     "seed_manual": ("Manual Seed", f"Off: random seed {SEED_PLACEHOLDER}. On: a keyboard opens when the game\nstarts to type the seed.", {}),
 }
@@ -276,7 +275,6 @@ TEXTS_FR = {
     "shuffle_ocarinas": ("Ocarinas mélangés", "L'Ocarina des fées (Saria) et l'Ocarina du Temps (douves) sont mélangés :\nun objet de la seed est donné à leur place. Le deuxième ocarina est l'Ocarina du Temps.", {}),
     "starting_age": ("Âge de départ", "Enfant : maison de Link. Adulte : Temple du Temps, porte ouverte, Épée de légende donnée.\nAléatoire : tiré par la seed.",
                      {"child": "Enfant", "adult": "Adulte", "random": "Aléatoire"}),
-    "random_spawn": ("Départ aléatoire", "La partie commence n'importe où hors des donjons (tiré par la seed).", {}),
     "start_with_consumables": ("Consommables au départ", "Premier sac de bâtons Mojo (10) et de noix Mojo (20) plein dès le départ.", {}),
     "seed_manual": ("Seed manuelle", f"Désactivé : seed aléatoire {SEED_PLACEHOLDER}. Activé : un clavier s'ouvre\nau lancement de la partie pour saisir la seed.", {}),
 }

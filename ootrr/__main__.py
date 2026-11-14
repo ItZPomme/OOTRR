@@ -132,6 +132,10 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         logic = patch.get("logic_patches") or {}
         if logic:
             print(f"Modules de logique modifiés : {', '.join(sorted(logic))}")
+        for setting, label in (("cucco_count", "Anju's cuccos"), ("big_poe_count", "Big Poes for the Poe buyer")):
+            value = (patch.get("settings") or {}).get(setting)
+            if value is not None and value != settings_mod.SETTINGS[setting][0]:
+                print(f"{label}: {value}")
         if (patch.get("settings") or {}).get("shuffle_gifts"):
             print("Cadeaux mélangés : les objets sont donnés sous leur nom (non validé en jeu hors du menu natif)")
         event_changes = patch.get("event_changes") or {}
@@ -144,12 +148,14 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.ocarina_guard = bool(patch.get("ocarina_guard", True))
         builder.song_gives = patch.get("song_gives") or None
         builder.gift_edits = {f: [tuple(e) for e in v] for f, v in (patch.get("gift_changes") or {}).items()}
+        builder.event_ints = {f: [tuple(e) for e in v] for f, v in (patch.get("event_ints") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
                                 timeline_skips=patch.get("timeline_skips") or None,
                                 timeline_fade_in=patch.get("timeline_fade_in") or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,
+                                logic_ints={m: [tuple(e) for e in v] for m, v in (patch.get("logic_ints") or {}).items()} or None,
                                 start_warp=tuple(test_start.split("=", 1)) if test_start
                                 else (tuple(patch["start_warp"]) if patch.get("start_warp") else None),
                                 scrub_sales=scrub_sales or None,

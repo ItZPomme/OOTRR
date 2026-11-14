@@ -45,8 +45,9 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `open_door_of_time` | yes / no | Door open; letter and lullaby at the start; the Ocarina of Time stays in the moat (visible with the 3 stones) and gives the Song of Time |
 | `skip_child_zelda` | yes / no | Zelda's letter and lullaby at the start, castle quest done (day / night cycle) |
 | `starting_age` | `child`, `adult`, `random` | Starting age; adult = Temple of Time, open door and free time travel forced, Master Sword given |
-| `random_spawn` | yes / no | Start anywhere outside dungeons (`data/spawns.json`), depending on age |
 | `start_with_consumables` | yes / no | 10 Deku Sticks and 20 Deku Nuts at the start |
+| `cucco_count` | 1 to 7 (default 7) | Cuccos Anju needs in her pen before her reward (PC-built mod only; verified in the files, **to validate in game**) |
+| `big_poe_count` | 1 to 5 (default 5) | Big Poes the Poe buyer needs before his reward; the remake gives the bottle at 500 points = 5 Big Poes (PC-built mod only; verified in the files, **to validate in game**) |
 | `shuffle_songs` | `vanilla`, `shuffle`, `random` | Songs in place, shuffled among themselves, or in the pool |
 | `shuffle_ocarinas` | yes / no | Fairy Ocarina (Saria) and Ocarina of Time (moat) shuffled; no = in place |
 | `shuffle_gifts` | yes (default) / no | 20 shuffled gifts: Fire Arrows (Lake Hylia), man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Anju, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |
