@@ -250,7 +250,7 @@
     "Goron City": {
       "locations": {
         "GC Darunias Joy":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
-        "GC Rolling Goron as Child": {"rule": "is_child and (has_explosives or Progressive_Strength)", "vanilla": "Item_BombBag_Medium"},
+        "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium"},
         "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or can_use(Bow) or Progressive_Strength)", "vanilla": "Goron_Tunic"}
       },
       "exits": {
