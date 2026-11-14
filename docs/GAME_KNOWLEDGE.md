@@ -129,6 +129,19 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   no bottle and buys bottled content (`Enemy_Scrub_Business_Common` 444, `_Dream` 291): anti-softlock, left alone.
 - The pickup location can only hold "ground" items (`items.json`), so the letter itself goes to chests and gifts.
 
+- **Minigame counts** **[files]** (settings `cucco_count`, `big_poe_count`; PC-built mod only, not validated in
+  game). `EventQueryIsGameDataInt` answers 0 = less, 1 = equal, 2 = greater (value compared with `Value`).
+  - Anju: the logic module `MiniGame_CatchCucco_c69b` counts the 7 cuccos in the pen (`OperateBoolCount`, node 9,
+    into `MiniGame_CatchCucco_InFenceCount`) and compares 7 with it (`OperateCompareInt` node 17, `Int_A` = 7):
+    Equal sets `Npc_Hylia_049_Child_Cucco06_IsInTheCage` (in fact "all in the pen"), A_Bigger clears it, only when
+    the count changes. The script `Minigame_CatchCucco` checks that flag before `Ready_Npc_Hylia_049_Complete_Talk`
+    and computes the remaining count from the same 7 (events 30 and 17). The generator changes these three 7s;
+    the in-place patch of the module changes 4 bytes (the `ainb` library re-serialises with other flag bytes).
+  - Poe buyer (`Npc_Hylia_048_BottleShop`): 100 points per Big Poe in `GhostShop_CouponNum`; before a sale the
+    points are compared with 400 (events 242, 243, 244 for the sale paths, 246, 248, 250, 252 for texts): equal ->
+    the sale that reaches 500 gives the bottle (event 319). **The remake's bottle needs 5 Big Poes**, not 10; at
+    1000 points (compare with 900) he gives a Gold Rupee and completes `SubEvent_GhostShop`. The generator moves
+    the 400s to (count - 1) x 100. Texts that say "7 cuccos" / "500 points" are not changed.
 - **Fire Arrows**: ground item `Obj_Arrow_Fire` (base `Obj_Item_Base`, like Pieces of Heart) in
   `HyruleField_Adult_Static`, created by `HyruleField_LakeHylia_Adult_Prefab_5313` (quest `SubEvent_GetFireArrow`
   at Ready, time window, arrow shot into the sun -> scene `Dm_LakeHrl_0030`, Step03). Location `pickup: "item"`
@@ -257,8 +270,8 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   (to test in game).
 - Spawn points: `StartPos` actors (`Name` field) of the maps; selected list in `data/spawns.json` (33, outside
   dungeons). Native menu: the intro reads the integer `OoTRR.Spawn` (written by the module at generation) and
-  reserves the matching map change **[files]**. Random spawn is currently disabled (the logic assumed a fixed
-  start).
+  reserves the matching map change **[files]**. The `random_spawn` setting was removed (the logic
+  assumed a fixed start); the list still serves the adult start.
 - **`EventQueryGameDataIntBranch`: 16 cases at most (strong hypothesis).** With 34 cases, value 22 led to case 15
   (seen in game: arrival in front of Jabu-Jabu instead of the Temple of Time). The spawn point now goes through two
   queries (tens `OoTRR.SpawnTens`, units `OoTRR.SpawnUnits`). Deku Scrub prices (20 values) too:

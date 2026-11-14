@@ -46,7 +46,7 @@ python -m ootrr.tools.lookup --romfs ROMFS msg EventFlowMsg/Enemy_Event 0001    
 python -m ootrr.tools.lookup --romfs ROMFS actor Banc/KokiriForest Npc_Kokiri   # actors of an area
 python -m ootrr.tools.saves backup NAME                  # emulator saves (emulator closed)
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
-python -m ootrr.tools.longshot_app                       # seed installer window for Longshot (or Longshot-Installer.bat)
+python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
 python -m ootrr.tools.build_longshot_app                 # output/OoTRR-Longshot.exe (PyInstaller, windowed, with the logo)
 python -m ootrr.tools.make_icon                          # redraws the logo: ootrr/assets/longshot.png + .ico
 ```
@@ -59,6 +59,7 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 |---|---|
 | `ootrr/__main__.py` | Command line, test options, `build_mod` (JSON patch -> ModBuilder) |
 | `ootrr/settings.py` | Settings: values, validation, description |
+| `ootrr/settings_ui.py` | Settings as the Longshot app shows them (pages, texts from the in-game menu, native-only list) |
 | `ootrr/world.py` | Data loading, settings -> locations, start flags, removed actors, expressions, etc. |
 | `ootrr/rules.py` | Rule compiler (vocabulary at the top of the file) |
 | `ootrr/search.py` | Child / adult reachability, spheres (the child only uses adult items after going back) |

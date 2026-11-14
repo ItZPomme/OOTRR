@@ -93,7 +93,7 @@ class ModBuilder:
         start_items   : objets ajoutés à l'inventaire au début de l'introduction
         timeline_skips: {script: [scenes]} skippable timelines replaced with their "already seen" flag"""
         from .formats.evfl import (add_actions, find_action, insert_flow, replace_event_strings, replace_strings,
-                                   skip_event_steps)
+                                   set_event_ints, skip_event_steps)
 
         report = []
         event_skips = event_skips or {}
@@ -101,7 +101,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -128,6 +128,12 @@ class ModBuilder:
                 if gift_report:
                     raise KeyError(f"{flow} : cadeau différent du relevé ({'; '.join(gift_report)})")
                 report.append(f"{flow}: {len(self.gift_edits[flow])} cadeaux")
+            if flow in self.event_ints:
+                # minigame counts (cucco_count, big_poe_count): integer parameters of precise events
+                new, int_report = set_event_ints(new, self.event_ints[flow])
+                if int_report:
+                    raise KeyError(f"{flow}: {'; '.join(int_report)}")
+                report += [f"{flow}: event {e} {p} {a} -> {b}" for e, p, a, b in self.event_ints[flow]]
             if start_items and flow == self.START_FLOW:
                 # action « ajouter à l'inventaire » copiée de la scène où Saria donne l'ocarina (sans animation)
                 template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
@@ -280,6 +286,7 @@ class ModBuilder:
     ocarina_guard = True
     # cadeaux : {flux: [(événement, paramètre, texte d'origine, nouveau texte)]} (World.gift_event_changes ou jetons)
     gift_edits: dict = {}
+    event_ints: dict = {}  # {flow: [(event, parameter, vanilla value, new value)]}
     moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
     # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
     # (flux, acteur, action, paramètre, valeur, drapeau). Coffre de l'épée Kokiri : son événement
@@ -737,6 +744,40 @@ class ModBuilder:
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(bytes(data))
         return report
+
+    def _write_logic_ints(self, patches: dict[str, list], out_romfs: Path) -> list[str]:
+        """Changes integer inputs (default values) of logic module nodes: {module: [(node, input, old, new)]}.
+
+        The ainb library re-serialises a module with a few bytes in another order, so it only locates the value:
+        the 4 bytes that change in its output are patched in the original file, which keeps everything else."""
+        import ainb
+
+        report = []
+        for module, edits in sorted(patches.items()):
+            rel = f"Logic/{module}.logic.module.ainb"
+            raw = (self.romfs / rel).read_bytes()
+            data = bytearray(raw)
+            for node, name, old, new in edits:
+                script = ainb.AINB.from_binary(raw)
+                plug = next((p for p in script.nodes[node].params.int_inputs or [] if p.name == name), None)
+                if plug is None or plug.default_value != old:
+                    raise KeyError(f"{module}: node {node} {name} = {getattr(plug, 'default_value', None)}, "
+                                   f"expected {old}")
+                before = script.to_binary()
+                plug.default_value = new
+                after = script.to_binary()
+                changed = [i for i in range(len(before)) if before[i] != after[i]] if len(before) == len(after) else []
+                if not changed or changed[-1] - changed[0] > 3:
+                    raise ValueError(f"{module}: node {node} {name}: value not located")
+                at = changed[0] - changed[0] % 4
+                if int.from_bytes(raw[at:at + 4], "little", signed=True) != old:
+                    raise ValueError(f"{module}: node {node} {name}: value {old} not at 0x{at:x} in the original")
+                data[at:at + 4] = new.to_bytes(4, "little", signed=True)
+                report.append(f"{rel}: node {node} {name} {old} -> {new}")
+            dest = out_romfs / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(bytes(data))
+        return report
     POUCH_TEMPLATE = "Dm_Kokiri_0155"
     POUCH_ACTION = ("PouchSystemActor", "EventTriggerAddOrRemovePouchContent")
     PICKUP_BASE = "Obj_Heart_Container"
@@ -867,6 +908,7 @@ class ModBuilder:
               start_items: list[str] | None = None,
               moat_gate: bool = False,
               logic_patches: dict[str, dict[str, str]] | None = None,
+              logic_ints: dict[str, list] | None = None,
               bool_exps: dict[str, list] | None = None,
               start_warp: tuple[str, str] | None = None,
               scrub_sales: dict[str, int] | None = None,
@@ -980,6 +1022,10 @@ class ModBuilder:
                                          start_warp, scrub_sales, questions, timeline_skips, timeline_fade_in)
         if logic_patches:
             report += self._write_logic(logic_patches, out_romfs)
+        if logic_ints:
+            if set(logic_ints) & set(logic_patches or {}):
+                raise ValueError(f"modules edited twice: {sorted(set(logic_ints) & set(logic_patches))}")
+            report += self._write_logic_ints(logic_ints, out_romfs)
         if scrub_sales or questions:
             items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items))
             report += self._write_messages(items, out_romfs, questions or [])

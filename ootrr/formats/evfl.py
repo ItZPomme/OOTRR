@@ -700,6 +700,52 @@ def event_param_slot(d: bytes, event: int, param: str) -> tuple[int, str | None]
     return None
 
 
+def _event_param_values(d: bytes) -> list[tuple[int, str, int]]:
+    """(event number, parameter name, value node offset) for every parameter of every event."""
+    fc = _flowchart_full(d)
+    out = []
+    for event in range(fc["n_events"]):
+        o = fc["events"] + event * EVENT_SIZE
+        if d[o + 8] not in (EV_ACTION, EV_SWITCH, EV_SUBFLOW):
+            continue
+        p = _q(d, o + 0x10)
+        if not p:
+            continue
+        n = struct.unpack_from("<H", d, p + 2)[0]
+        names = _dic_names(d, _q(d, p + 8))
+        out += [(event, names[i], _q(d, p + 0x10 + 8 * i)) for i in range(n)]
+    return out
+
+
+def set_event_ints(d: bytes, edits: list[tuple[int, str, int, int]]) -> tuple[bytes, list[str]]:
+    """Changes integer parameters of given events: [(event, parameter, expected value, new value)].
+
+    The value is stored inline in the parameter's value node, so the file keeps its size. A node shared with
+    another event's parameter is refused (the edit would leak into it). An event whose current value differs
+    from the expected one is skipped and reported (other game version)."""
+    out = bytearray(d)
+    values = _event_param_values(d)
+    users: dict[int, int] = {}
+    for _, _, pv in values:
+        users[pv] = users.get(pv, 0) + 1
+    where = {(event, name): pv for event, name, pv in values}
+    report = []
+    for event, param, old, new in edits:
+        pv = where.get((event, param))
+        if pv is None or d[pv] != 2:  # 2 = int
+            report.append(f"event {event}: no integer parameter {param}")
+            continue
+        current = struct.unpack_from("<i", d, pv + 0x10)[0]
+        if current != old:
+            report.append(f"event {event}: {param} = {current}, expected {old}")
+            continue
+        if users[pv] > 1:
+            report.append(f"event {event}: {param} shares its value with another parameter")
+            continue
+        struct.pack_into("<i", out, pv + 0x10, new)
+    return bytes(out), report
+
+
 def replace_event_strings(d: bytes, edits: list[tuple[int, str, str, str]]) -> tuple[bytes, list[str]]:
     """Modifie des paramètres texte d'événements précis : [(événement, paramètre, texte attendu, nouveau texte)].
 

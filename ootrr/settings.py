@@ -75,16 +75,19 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "starting_age": ("child", ("child", "adult", "random"),
                      "Âge de départ : child (jeu d'origine), adult (au Temple du Temps, Porte du Temps ouverte et voyage "
                      "temporel libre imposés, épée de légende donnée ; Link redevient enfant par l'épée) ou random (tiré par la seed)"),
-    "random_spawn": (False, bool,
-                     "Point d'apparition au début de la partie tiré par la seed parmi les zones hors donjons "
-                     "(data/spawns.json), selon l'âge de départ"),
     "shuffle_songs": ("vanilla", ("vanilla", "shuffle", "random"),
                       "Chants : vanilla = à leur place ; shuffle = mélangés entre les 12 emplacements de chants ; "
                       "random = les emplacements de chants rejoignent le pool (un chant peut être n'importe où, "
                       "n'importe quel objet peut être donné à la place d'un chant)"),
     "spawn_point": (0, int,
-                    "Interne : point d'apparition (rang dans data/spawns.json + 1, 0 = maison de Link), fixé par "
-                    "random_spawn ou le départ adulte ; à laisser à 0"),
+                    "Internal: spawn point (rank in data/spawns.json + 1, 0 = Link's house), set by the adult "
+                    "start; leave at 0"),
+    "cucco_count": (7, int,
+                    "Number of cuccos Anju (Kakariko, child) needs in her pen before she gives her reward "
+                    "(1 to 7; original game: 7)"),
+    "big_poe_count": (5, int,
+                      "Number of Big Poes the Poe buyer (Ghost Shop, adult market) needs before he gives his "
+                      "reward (1 to 5; the remake gives it at 500 points = 5 Big Poes)"),
 }
 
 
@@ -130,7 +133,14 @@ def build(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     if settings["bridge"] in limits and not 0 <= settings["bridge_count"] <= limits[settings["bridge"]]:
         raise SettingsError(
             f"bridge_count doit être entre 0 et {limits[settings['bridge']]} pour bridge={settings['bridge']}")
+    for name, (lo, hi) in INT_RANGES.items():
+        if not lo <= settings[name] <= hi:
+            raise SettingsError(f"{name} must be between {lo} and {hi}")
     return settings
+
+
+# fixed ranges of integer settings (bridge_count depends on bridge, see build)
+INT_RANGES = {"cucco_count": (1, 7), "big_poe_count": (1, 5)}
 
 
 def unsupported_by_patcher(settings: dict[str, Any]) -> list[str]:

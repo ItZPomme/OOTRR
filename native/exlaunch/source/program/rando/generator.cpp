@@ -16,6 +16,7 @@ constexpr int kAdult = 1;
 struct World {
     const Settings* settings;
     int32_t item_logic[kItemCount];      // capacité donnée, -1 si aucune (cœurs hors pont « hearts »)
+    bool item_repeated[kItemCount];      // vanilla content of several locations (world.repeated_items)
     bool loc_shuffle[kLocationCount];
     int32_t loc_region[kLocationCount];
     int32_t loc_rule[kLocationCount];    // -1 = toujours vrai (objet donné au départ)
@@ -29,6 +30,10 @@ struct World {
         bool hearts_bridge = s[SET_bridge] == kBridgeHearts;
         for (int i = 0; i < kItemCount; i++)
             item_logic[i] = (kItems[i].heart && !hearts_bridge) ? -1 : kItems[i].logic;
+        int16_t vanilla_count[kItemCount] = {};
+        for (int l = 0; l < kLocationCount; l++)
+            if (kLocations[l].vanilla >= 0) vanilla_count[kLocations[l].vanilla]++;
+        for (int i = 0; i < kItemCount; i++) item_repeated[i] = vanilla_count[i] > 1;
         bool start[kLocationCount] = {};
         if (s[SET_open_door_of_time]) {
             for (int32_t l : kOpenDoorStart) start[l] = true;
@@ -82,7 +87,8 @@ struct World {
         if (info.pickup && !kItems[item].ground) return false;
         if (info.skulltula && !kItems[item].ground) return false;  // lâché par la Skulltula : ramassable
         // Peste Mojo : objets « au sol », sauf les rubis (un rubis vendu n'irait pas dans la bourse)
-        if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name))) return false;
+        // one copy only (world.repeated_items): the 5 scrubs sell 5 different items
+        if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name) || item_repeated[item])) return false;
         if (info.shop && !kItems[item].ground) return false;  // vendu par le jeton (rubis ajoutés par le module)
         if (info.ocarina) {  // pas de bombes données par Saria / les douves (world.OCARINA_FORBIDDEN_PREFIX)
             const char* name = kItems[item].name;

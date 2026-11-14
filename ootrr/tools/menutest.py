@@ -236,7 +236,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             for flow, event, param, old in edits:
                 mb.gift_edits.setdefault(flow, []).append((event, param, old, t))
         report.append(f"gifts: {len(gift_tokens())} locations give a token")
-        # point d'apparition (random_spawn, départ adulte) : l'introduction lit OoTRR.Spawn (écrit par le module)
+        # spawn point (adult start) : l'introduction lit OoTRR.Spawn (écrit par le module)
         from ..starting import spawns
         mb.spawn_branch = [(s["banc"], s["pos"]) for s in spawns()]
         mb.spawn_branch_entry = menu.SPAWN_ENTRIES

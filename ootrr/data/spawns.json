@@ -1,5 +1,5 @@
 {
- "_doc": "Points d'apparition au début de la partie (random_spawn, et départ adulte au Temple du Temps), hors donjons. spawn_point = rang dans cette liste + 1 (0 = introduction normale, maison de Link). banc / pos = NextBanc / NextStartPos de l'action EventReserveBancChange (acteur StartPos de ce nom, vérifié dans les cartes). Exclus : la forteresse Gerudo enfant (pas de carte), le Colosse enfant (sortie par le désert impossible), le château adulte (région Ganon). La logique ajoute une sortie de Root vers la région (world.spawn_exits).",
+ "_doc": "Start points outside dungeons (the adult start uses the Temple of Time; the random spawn setting was removed). spawn_point = rang dans cette liste + 1 (0 = introduction normale, maison de Link). banc / pos = NextBanc / NextStartPos de l'action EventReserveBancChange (acteur StartPos de ce nom, vérifié dans les cartes). Exclus : la forteresse Gerudo enfant (pas de carte), le Colosse enfant (sortie par le désert impossible), le château adulte (région Ganon). La logique ajoute une sortie de Root vers la région (world.spawn_exits).",
  "adult_default": "Temple of Time",
  "spawns": [
   {

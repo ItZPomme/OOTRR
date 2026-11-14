@@ -171,6 +171,26 @@ CONSUMABLES = (
 # constaté en jeu avec le menu natif, 2026-11-10).
 BRIDGE_EXP = {"Defeat_Ganon_IsAfter_Ready_Exp": "OoTRR_Bridge_Condition_Exp_A00"}
 BRIDGE_MODULE = {"GanonCastle_Level_Field_00_Prefab_14ba": dict(BRIDGE_EXP)}
+
+# Anju's cuccos (cucco_count). Module MiniGame_CatchCucco_c69b counts the 7 cuccos inside the pen
+# (OperateBoolCount, node 9) and compares 7 with that count (OperateCompareInt, node 17, Int_A): Equal sets
+# Npc_Hylia_049_Child_Cucco06_IsInTheCage (= "all in the pen", checked by the script before the reward),
+# A_Bigger clears it. The script Minigame_CatchCucco computes the remaining count with the same 7 (event 30:
+# HowManyCuccos = 7, then minus InFenceCount; event 17 compares it with 7) [files].
+CUCCO_MODULE = "MiniGame_CatchCucco_c69b"
+CUCCO_COMPARE_NODE = 17
+CUCCO_FLOW = "Minigame_CatchCucco"
+CUCCO_FLOW_EVENTS = (30, 17)  # "Value" = 7
+CUCCOS_VANILLA = 7
+# Big Poes (big_poe_count). The Ghost Shop (Npc_Hylia_048_BottleShop) adds 100 points per Big Poe sold
+# (GhostShop_CouponNum); before a sale, the script compares the points with 400: equal -> the sale that reaches
+# 500 gives the bottle (event 319, GetInEvent_Poeshop). So the remake's bottle needs 5 Big Poes, not 10 as in
+# the original game; 1000 points give a Gold Rupee (compare with 900, left as is). The 7 compares with 400 are
+# the sale paths (242, 243, 244) and the texts that depend on it (246, 248, 250, 252) [files].
+POE_FLOW = "Npc_Hylia_048_BottleShop"
+POE_FLOW_EVENTS = (242, 243, 244, 246, 248, 250, 252)  # "Value" = 400
+POE_POINTS = 100
+BIG_POES_VANILLA = 5
 STONE_FLAGS = [f"IsGet.Item_Stone_{x}" for x in ("Forest", "Fire", "Water")]
 MEDAL_FLAGS = [f"IsGet.Item_Medal_{x}" for x in ("Forest", "Fire", "Water", "Spirit", "Shadow", "Light")]
 MAX_LIFE = "PlayerStatus.MaxLife"  # en quarts de cœur (12 = 3 cœurs)
@@ -255,9 +275,10 @@ SHOP_AFFORDABLE = 10
 SHOP_MAX_PRICE = 99  # sans bourse dans la logique : jamais plus que la bourse d'enfant
 
 
-def shop_price(settings, seed: int, location_index: int, vanilla_price: int) -> int:
-    """Prix d'un article mélangé (même calcul que le module natif, ShopPrice)."""
-    mode = settings.get("shop_prices", "vanilla")
+def shop_price(settings, seed: int, location_index: int, vanilla_price: int, setting: str = "shop_prices") -> int:
+    """Price of a shuffled shop item or Deku Scrub (same computation as the native module, ShopPrice);
+    `setting` is shop_prices or scrub_prices, `location_index` the rank in World.locations (= native kLocations)."""
+    mode = settings.get(setting, "vanilla")
     if mode == "affordable":
         return SHOP_AFFORDABLE
     if mode == "random":
@@ -498,6 +519,11 @@ class World:
                 self._add_location(lname, rname, lbody)
         for lname, lbody in extra_locations.items():
             self._add_location(lname, lbody.get("region", ""), lbody)
+        # items that are the vanilla content of several locations (Pieces of Heart, seeds, Gold tokens…): never
+        # sold by a shuffled Deku Scrub, so the 5 scrubs always sell 5 different items (the PC-built mod
+        # recognises a sale by its item name in the shared scrub script). Same rule in the native generator.
+        counts = Counter(loc.vanilla for loc in self.locations.values())
+        self.repeated_items = {name for name, n in counts.items() if n > 1}
 
     def _validate(self) -> None:
         if self.ROOT not in self.regions:
@@ -694,6 +720,26 @@ class World:
             out.update(BRIDGE_MODULE)
         return out
 
+    def logic_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
+        """Integer inputs to change in logic modules: {module: [(node, input, vanilla value, new value)]}."""
+        n = self.settings.get("cucco_count", CUCCOS_VANILLA)
+        if n == CUCCOS_VANILLA:
+            return {}
+        return {CUCCO_MODULE: [(CUCCO_COMPARE_NODE, "Int_A", CUCCOS_VANILLA, n)]}
+
+    def event_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
+        """Integer parameters to change in scripts: {flow: [(event, parameter, vanilla value, new value)]}."""
+        out: dict[str, list[tuple[int, str, int, int]]] = {}
+        n = self.settings.get("cucco_count", CUCCOS_VANILLA)
+        if n != CUCCOS_VANILLA:
+            out[CUCCO_FLOW] = [(e, "Value", CUCCOS_VANILLA, n) for e in CUCCO_FLOW_EVENTS]
+        n = self.settings.get("big_poe_count", BIG_POES_VANILLA)
+        if n != BIG_POES_VANILLA:
+            # points before the sale that completes the count
+            old, new = (BIG_POES_VANILLA - 1) * POE_POINTS, (n - 1) * POE_POINTS
+            out[POE_FLOW] = [(e, "Value", old, new) for e in POE_FLOW_EVENTS]
+        return out
+
     def ingame_questions(self) -> list[str]:
         """Réglages décidés par une question au début de la nouvelle partie."""
         return ["open_forest"] if self.settings.get("open_forest") == "ask" else []
@@ -798,8 +844,9 @@ class World:
         if loc.shop and item not in self.ground and item not in self.ground_native:
             return False  # article de boutique : objet donné par le jeton (le module natif ajoute les rubis)
         if loc.scrub and (item not in self.ground and item not in self.ground_native
-                          or item.startswith("TBox_Rupee_")):
-            return False  # vendu par une Peste Mojo : objets « au sol » (un rubis vendu n'irait pas dans la bourse)
+                          or item.startswith("TBox_Rupee_") or item in self.repeated_items):
+            # sold by a Deku Scrub: ground items (a rupee sold would not go to the wallet), one copy only
+            return False
         if loc.ocarina and item.startswith(OCARINA_FORBIDDEN_PREFIX):
             return False  # bombes données par la scène de Saria / des douves : le jeu pourrait donner le sac
         if loc.gift and (item.startswith(OCARINA_FORBIDDEN_PREFIX) or item.startswith("TBox_Rupee_")):
