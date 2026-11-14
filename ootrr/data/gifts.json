@@ -24,6 +24,9 @@
     "Kak Anju as Child": [
       ["Minigame_CatchCucco", 124, "ReveiveItem", "Item_Bottle"]
     ],
+    "Kak Anju as Adult": [
+      ["Npc_Hylia_049_Adult", 223, "ReveiveItem", "Item_PocketEgg"]
+    ],
     "LLR Talons Chickens": [
       ["Minigame_FindOutCucco", 262, "ReveiveItem", "Item_Bottle_Milk"]
     ],

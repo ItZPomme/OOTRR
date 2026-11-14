@@ -104,6 +104,9 @@ confirmed.
 - With the native menu, each location gives the token `OoTRR_Lnnnn` (copy of the original item) and the `PouchAdd`
   hook gives the seed item, as for ocarinas; setting `shuffle_gifts`, "Gifts" row (page 3). Without the menu, the
   placed item's name directly replaces the text. **Not fully validated in game yet.**
+- Adult Anju (`Npc_Hylia_049_Adult`, event 223, `ReveiveItem` = `Item_PocketEgg`): location "Kak Anju as Adult". After
+  the gift the script moves the quest `SubEvent_GetSwordBigGoron` to `StartSubEvent` whatever item was given; the
+  rest of the Biggoron trade quest (Cojiro at event 194, etc.) stays vanilla and out of the logic.
 - Not done: Zelda's letter (`Dm_HrlCastle_0050`, interferes with `skip_child_zelda`), the Ghost Shop's 1000-point
   "golden reward", bowling 2nd prize, horseback archery 1000 points and other Pieces of Heart: mechanism not found
   yet.

@@ -50,7 +50,7 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `big_poe_count` | 1 to 5 (default 5) | Big Poes the Poe buyer needs before his reward; the remake gives the bottle at 500 points = 5 Big Poes (PC-built mod only; verified in the files, **to validate in game**) |
 | `shuffle_songs` | `vanilla`, `shuffle`, `random` | Songs in place, shuffled among themselves, or in the pool |
 | `shuffle_ocarinas` | yes / no | Fairy Ocarina (Saria) and Ocarina of Time (moat) shuffled; no = in place |
-| `shuffle_gifts` | yes (default) / no | 24 shuffled gifts: Fire Arrows (Lake Hylia), the 5 bottles (Anju, Talon, market potion shop, 5 Big Poes, Ruto's letter), man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |
+| `shuffle_gifts` | yes (default) / no | 25 shuffled gifts: Fire Arrows (Lake Hylia), the 5 bottles (Anju, Talon, market potion shop, 5 Big Poes, Ruto's letter), adult Anju's Pocket Egg, man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |
 | `free_time_travel` | yes (default) / no | The sword sends you back to child at any time (the remake requires the Forest Temple) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + number | Rainbow bridge condition |
 | `shuffle_rewards` | `vanilla`, `shuffled` | Stones and medallions shuffled between bosses and Link's pocket |

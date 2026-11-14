@@ -164,6 +164,7 @@
     "Kakariko Village": {
       "locations": {
         "Kak Anju as Child":             {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true},
+        "Kak Anju as Adult":             {"rule": "is_adult", "vanilla": "Item_PocketEgg", "gift": true, "_note": "Pocket Egg (Npc_Hylia_049_Adult, event 223), start of the Biggoron trade quest; the script moves SubEvent_GetSwordBigGoron to StartSubEvent whatever item is given. The trade quest itself is not in the logic"},
         "Kak Man on Roof":               {"rule": "is_child or can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Piece", "gift": true},
         "Kak Windmill Freestanding PoH": {"rule": "is_adult or can_use(Boomerang)", "vanilla": "Obj_Heart_Piece", "hashes": [13389209437182306002], "pickup": "freestanding"},
         "Song from Windmill":            {"kind": "song", "rule": "is_adult and Ocarina", "vanilla": "Item_Melody_StormSong"},
