@@ -222,16 +222,23 @@ class GenerationTests(unittest.TestCase):
                 self._check(overrides, range(1, N_SEEDS + 1))
 
     def test_gifts(self):
-        """shuffle_gifts : les 19 cadeaux sont mélangés, sans bombes ni rubis ; les modifications de scènes
-        nomment l'objet placé (mod sans menu) et chaque événement visé existe dans gifts.json."""
+        """shuffle_gifts: the 22 gifts are shuffled, without bombs or rupees; the scene edits name the
+        placed item (mod without the menu) and every targeted event exists in gifts.json. The 5 vanilla
+        bottles (4 gifts + Ruto's letter on the ground) are shuffled too."""
         off = World(settings_mod.build({"shuffle_gifts": False}))
         self.assertFalse([l for l in off.locations.values() if l.gift and l.shuffle])
         world = World(settings_mod.build())  # shuffled by default
         self.assertTrue(settings_mod.defaults()["shuffle_gifts"])
         self.assertEqual(settings_mod.defaults()["shuffle_hearts"], "all")
         gifts = [l for l in world.locations.values() if l.gift]
-        self.assertEqual(len(gifts), 19)
+        self.assertEqual(len(gifts), 22)
         self.assertTrue(all(l.shuffle for l in gifts))
+        bottles = [l for l in world.locations.values() if l.vanilla.startswith("Item_Bottle")]
+        self.assertEqual(sorted(l.name for l in bottles),
+                         ["Kak Anju as Child", "LH Underwater Item", "LLR Talons Chickens",
+                          "Market 5 Big Poes", "Market Potion Shop Bottle"])
+        self.assertTrue(all(l.shuffle for l in bottles))
+        self.assertFalse([l for l in off.locations.values() if l.vanilla.startswith("Item_Bottle") and l.shuffle])
         for seed in range(1, 6):
             result = generate(world, seed)
             changes = world.gift_event_changes(result.placements)

@@ -88,8 +88,9 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:
   `Npc_Hylia_001_Adult` step 14, `Npc_Hylia_Dampe_001` and `.110` step 602; the Piece of Heart that comes out of the
   ground stays visible), **to validate in game**.
-- [ ] Shuffled checks giving bottles: Anju, market potion shop, 5 Poes, Talon, Ruto's letter (which must also be
-  shuffled).
+- [ ] Shuffled checks giving bottles: Anju, market potion shop, 5 Big Poes, Talon and Ruto's letter (on the lake
+  floor) are locations shuffled with `shuffle_gifts` (see GAME_KNOWLEDGE, "Bottles"), **to validate in game**
+  (especially the letter given from elsewhere and the King Zora quest).
 - [ ] Shuffled Light Arrow cutscene.
 - [ ] Shuffled Great Fairy checks (fountains).
 - [ ] Shuffled Goron Bracelet.

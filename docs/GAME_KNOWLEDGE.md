@@ -104,10 +104,30 @@ confirmed.
 - With the native menu, each location gives the token `OoTRR_Lnnnn` (copy of the original item) and the `PouchAdd`
   hook gives the seed item, as for ocarinas; setting `shuffle_gifts`, "Gifts" row (page 3). Without the menu, the
   placed item's name directly replaces the text. **Not fully validated in game yet.**
-- Not done: Zelda's letter (`Dm_HrlCastle_0050`, interferes with `skip_child_zelda`), Talon (the milk bottle goes
-  through `GetInEventInBottle` / `HandOver_EmptyBottle`, bottle with content), Ruto's letter (name not found in the
-  scripts), 5 Poes (`Npc_Hylia_048_BottleShop`, `GetInEvent_Poeshop`) and potion shop: absent from the current logic;
-  bowling 2nd prize, horseback archery 1000 points and other Pieces of Heart: mechanism not found yet.
+- Not done: Zelda's letter (`Dm_HrlCastle_0050`, interferes with `skip_child_zelda`), the Ghost Shop's 1000-point
+  "golden reward", bowling 2nd prize, horseback archery 1000 points and other Pieces of Heart: mechanism not found
+  yet.
+
+### Bottles **[files]** (2026-11-14, not validated in game)
+
+The five bottles that exist in the game files (scan of every `Event/EventFlow` script for `Bottle` / `Letter` /
+`Poe`) are all locations shuffled with `shuffle_gifts`:
+
+| Location | Giver | Mechanism |
+|---|---|---|
+| `Kak Anju as Child` | Anju, cuccos (`Minigame_CatchCucco` 124) | `HandOver_NpcToPlayer_NoDisplay`, `ReveiveItem` = `Item_Bottle` |
+| `LLR Talons Chickens` | Talon, child (`Minigame_FindOutCucco` 262) | same, `Item_Bottle_Milk`. First win only (`IsClear_Minigame_FindOutCucco` false); later wins refill an empty bottle (event 190, `NpcCommon_HandOver_NpcToPlayer_EmptyBottle`), left alone |
+| `Market Potion Shop Bottle` | child potion shop keeper (`Npc_Hylia_020_Shop_Child` 162), remake addition: "bottle tutorial" on first talk (`Market_Item_Bottle_TutorialEvent`, then catch a bug) | `GetInEvent_NotTurn_FixedCamera_WarpLink`, `ActorName` = `Item_Bottle` |
+| `Market 5 Big Poes` | Ghost Shop (`Npc_Hylia_048_BottleShop` 319, adult market) | `GetInEvent_Poeshop`, `ActorName` = `Item_Bottle`. 100 points (`GhostShop_CouponNum`) per Big Poe, the bottle comes with the sale that reaches 500 (10 `Enemy_Poe_Big` in `HyruleField_Adult_Static`). Rule copied from OoT (Epona, bow, bottle), not checked in game |
+| `LH Underwater Item` | Ruto's letter on the lake floor: ground actor `Obj_Bottle_Letter` (hash 474136620438465634, `HyruleField_Child_Static`) | `pickup: "item"` like the Fire Arrows (the actor's type is changed) |
+
+- Ruto's letter quest step: `Dm_SY_Get` (generic "get item" flow) calls `Get_StoneOfWater:StoneOfWater_GetRutoletter`
+  (sets `Get_StoneOfWater_GetRutoLetter`, Step05_01) when the obtained actor has the tag `LetterBottle`, which both
+  `Obj_Bottle_Letter` and `Item_Bottle_Letter` carry (RSDB `Tag`). So the letter given from elsewhere should still
+  advance the quest, *if* that gift goes through `Dm_SY_Get` (unknown for chests and NPC gifts).
+- Not locations: the Business Scrubs give a free `Item_Bottle` (`GetInEvent_NotTurn_2DShop`, price 0) when Link has
+  no bottle and buys bottled content (`Enemy_Scrub_Business_Common` 444, `_Dream` 291): anti-softlock, left alone.
+- The pickup location can only hold "ground" items (`items.json`), so the letter itself goes to chests and gifts.
 
 - **Fire Arrows**: ground item `Obj_Arrow_Fire` (base `Obj_Item_Base`, like Pieces of Heart) in
   `HyruleField_Adult_Static`, created by `HyruleField_LakeHylia_Adult_Prefab_5313` (quest `SubEvent_GetFireArrow`

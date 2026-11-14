@@ -24,6 +24,15 @@
     "Kak Anju as Child": [
       ["Minigame_CatchCucco", 124, "ReveiveItem", "Item_Bottle"]
     ],
+    "LLR Talons Chickens": [
+      ["Minigame_FindOutCucco", 262, "ReveiveItem", "Item_Bottle_Milk"]
+    ],
+    "Market Potion Shop Bottle": [
+      ["Npc_Hylia_020_Shop_Child", 162, "ActorName", "Item_Bottle"]
+    ],
+    "Market 5 Big Poes": [
+      ["Npc_Hylia_048_BottleShop", 319, "ActorName", "Item_Bottle"]
+    ],
     "ZD Diving Minigame": [
       ["MiniGame_Diving", 316, "ActorName", "Item_Scale_Silver"]
     ],

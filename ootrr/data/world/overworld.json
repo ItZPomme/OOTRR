@@ -100,7 +100,9 @@
         "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large", "gift": true},
         "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece"},
         "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large", "gift": true},
-        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"}
+        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
+        "Market Potion Shop Bottle":           {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true, "_note": "child potion shop keeper (Npc_Hylia_020_Shop_Child), bottle tutorial on first talk"},
+        "Market 5 Big Poes":                   {"rule": "is_adult and can_ride_epona and can_use(Bow) and has_bottle", "vanilla": "Item_Bottle", "gift": true, "_note": "Ghost Shop (Npc_Hylia_048_BottleShop, adult market): bottle at 500 points = 5 Big Poes; rule taken from OoT (Epona, bow), not checked in game"}
       },
       "exits": {
         "Hyrule Field": "True",
@@ -310,7 +312,7 @@
 
     "Lake Hylia": {
       "locations": {
-        "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter"},
+        "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter", "hashes": [474136620438465634], "pickup": "item", "actor": "Obj_Bottle_Letter", "_note": "Ruto's letter on the lake floor (Obj_Bottle_Letter, child Hyrule Field map); shuffled with shuffle_gifts"},
         "LH Child Fishing":    {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
         "LH Adult Fishing":    {"rule": "is_adult", "vanilla": "Item_Scale_Gold", "gift": true},
         "LH Lab Dive":         {"rule": "has_gold_scale or (can_use(Iron_Boots) and can_use(Progressive_Hookshot))", "vanilla": "Obj_Heart_Piece"},
@@ -326,7 +328,7 @@
     "Lon Lon Ranch": {
       "locations": {
         "Song from Malon":      {"kind": "song", "rule": "is_child and Zeldas_Letter and Ocarina", "vanilla": "Item_Melody_EponaSong"},
-        "LLR Talons Chickens":  {"rule": "is_child and Zeldas_Letter", "vanilla": "Item_Bottle_Milk"},
+        "LLR Talons Chickens":  {"rule": "is_child and Zeldas_Letter", "vanilla": "Item_Bottle_Milk", "gift": true},
         "LLR Freestanding PoH": {"rule": "is_child", "vanilla": "Obj_Heart_Piece"}
       },
       "exits": {
