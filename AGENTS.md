@@ -46,6 +46,9 @@ python -m ootrr.tools.lookup --romfs ROMFS msg EventFlowMsg/Enemy_Event 0001    
 python -m ootrr.tools.lookup --romfs ROMFS actor Banc/KokiriForest Npc_Kokiri   # actors of an area
 python -m ootrr.tools.saves backup NAME                  # emulator saves (emulator closed)
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
+python -m ootrr.tools.longshot_app                       # seed installer window for Longshot (or Longshot-Installer.bat)
+python -m ootrr.tools.build_longshot_app                 # output/OoTRR-Longshot.exe (PyInstaller, windowed, with the logo)
+python -m ootrr.tools.make_icon                          # redraws the logo: ootrr/assets/longshot.png + .ico
 ```
 
 `ROMFS` = the `romfs` folder of the extracted **update** (e.g. `.../updates/<version>/romfs`).
