@@ -24,7 +24,7 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "maps_compasses": ("vanilla", ("vanilla", "start_with", "shuffle", "removed"),
                        "Cartes et boussoles : à leur place, possédées dès le départ, mélangées dans leur "
                        "propre donjon, ou retirées (remplacées par des rubis)"),
-    "shuffle_hearts": ("none", ("none", "freestanding", "all"),
+    "shuffle_hearts": ("all", ("none", "freestanding", "all"),
                        "Cœurs posés au sol : freestanding = les 13 quarts de cœur libres deviennent des "
                        "emplacements mélangés ; all = aussi les 8 réceptacles des boss (vérifié en jeu avec Gohma)"),
     "shuffle_scrubs": (False, bool,
@@ -67,7 +67,7 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                          "Ocarinas mélangés : l'Ocarina des fées (Saria, au pont) et l'Ocarina du Temps (douves) "
                          "rejoignent le pool, un objet de la seed est donné à leur place ; désactivé : à leur place "
                          "d'origine. Dans le jeu, le deuxième ocarina obtenu est toujours l'Ocarina du Temps"),
-    "shuffle_gifts": (False, bool,
+    "shuffle_gifts": (True, bool,
                       "Cadeaux mélangés : récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), "
                       "Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed"),
     "start_with_consumables": (False, bool,

@@ -49,11 +49,11 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `start_with_consumables` | yes / no | 10 Deku Sticks and 20 Deku Nuts at the start |
 | `shuffle_songs` | `vanilla`, `shuffle`, `random` | Songs in place, shuffled among themselves, or in the pool |
 | `shuffle_ocarinas` | yes / no | Fairy Ocarina (Saria) and Ocarina of Time (moat) shuffled; no = in place |
-| `shuffle_gifts` | yes / no | 20 shuffled gifts: Fire Arrows (Lake Hylia), man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Anju, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |
+| `shuffle_gifts` | yes (default) / no | 20 shuffled gifts: Fire Arrows (Lake Hylia), man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Anju, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |
 | `free_time_travel` | yes (default) / no | The sword sends you back to child at any time (the remake requires the Forest Temple) |
 | `bridge`, `bridge_count` | `open`, `vanilla`, `stones`, `medallions`, `dungeons`, `hearts` + number | Rainbow bridge condition |
 | `shuffle_rewards` | `vanilla`, `shuffled` | Stones and medallions shuffled between bosses and Link's pocket |
-| `shuffle_hearts` | `none`, `freestanding`, `all` | Freestanding Pieces of Heart (and boss Heart Containers) shuffled |
+| `shuffle_hearts` | `none`, `freestanding`, `all` (default) | Freestanding Pieces of Heart (and boss Heart Containers) shuffled |
 | `maps_compasses` | `vanilla`, `start_with`, `shuffle`, `removed` | Maps and compasses |
 | `skip_cutscenes` | `none`, `safe` | Cutscenes without effect marked as seen, cutscenes the game lets you skip (+ / X) never played (their effects kept), Rauru and Saria skipped, interrupting Kokiri disabled |
 | `logic` | `glitchless`, `none` | `glitchless`: the seed can always be finished without glitches; `none`: no logic, items placed at random (placement constraints kept), the seed is very likely impossible to finish without glitches |

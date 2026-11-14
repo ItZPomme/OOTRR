@@ -46,17 +46,18 @@ ORNAMENT = "#6e5532"
 W, H = 1180, 724
 
 PAGES = [
-    ("World", ["logic", "starting_age", "random_spawn", "open_forest", "open_door_of_time", "free_time_travel",
+    ("World", ["starting_age", "random_spawn", "open_forest", "open_door_of_time", "free_time_travel",
                "bridge", "bridge_count"]),
-    ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_gifts", "shuffle_hearts",
+    ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas",
                  "shuffle_scrubs", "shuffle_skulltulas", "maps_compasses"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "accessibility"]),
+    ("Logic", ["logic"]),
 ]
 LABELS = {
     "logic": "Logic", "starting_age": "Starting Age", "random_spawn": "Random Spawn", "open_forest": "Kokiri Forest",
     "open_door_of_time": "Open Door of Time", "free_time_travel": "Free Time Travel", "bridge": "Rainbow Bridge",
     "bridge_count": "Bridge Count", "shuffle_rewards": "Stones & Medallions", "shuffle_songs": "Songs",
-    "shuffle_ocarinas": "Ocarinas", "shuffle_gifts": "Gifts", "shuffle_hearts": "Hearts",
+    "shuffle_ocarinas": "Ocarinas",
     "shuffle_scrubs": "Business Scrubs", "shuffle_skulltulas": "Gold Skulltulas", "maps_compasses": "Maps & Compasses",
     "skip_cutscenes": "Skip Cutscenes", "skip_child_zelda": "Skip Child Zelda",
     "start_with_consumables": "Start With Consumables", "accessibility": "Accessibility",
@@ -67,15 +68,15 @@ PRESETS = {
     "Standard": {},
     "Quick": {"open_forest": "open", "open_door_of_time": True, "skip_cutscenes": "safe",
               "skip_child_zelda": True, "start_with_consumables": True},
-    "Chaos": {"shuffle_hearts": "all", "shuffle_scrubs": True, "shuffle_skulltulas": "all",
-              "shuffle_songs": "random", "shuffle_gifts": True, "shuffle_ocarinas": True,
+    "Chaos": {"shuffle_scrubs": True, "shuffle_skulltulas": "all",
+              "shuffle_songs": "random", "shuffle_ocarinas": True,
               "shuffle_rewards": "shuffled", "maps_compasses": "shuffle", "starting_age": "random",
               "random_spawn": True, "skip_cutscenes": "safe"},
 }
 PRESET_HINTS = {
-    "Standard": "The default rules.",
+    "Standard": "The default rules: gifts and Pieces of Heart are always in the item pool.",
     "Quick": "Forest and Door of Time open, cutscenes skipped, Zelda's items and consumables at the start.",
-    "Chaos": "Almost everything shuffled: songs, hearts, gifts, scrubs, skulltulas, rewards and ocarinas.",
+    "Chaos": "Almost everything shuffled: songs, scrubs, skulltulas, rewards, ocarinas, maps and compasses.",
 }
 DEFAULT_HINT = "Left-click a row to change it, right-click to go back. Hover a row to read what it does."
 
@@ -153,8 +154,9 @@ class App:
 
         self.cfg = self._load_cfg()
         self.values = settings_mod.defaults()
+        shown = {n for _, names in PAGES for n in names}  # hidden settings always use the generator's defaults
         for k, v in (self.cfg.get("settings") or {}).items():
-            if k in self.values and k != "spawn_point":
+            if k in shown:
                 with contextlib.suppress(Exception):
                     self.values[k] = settings_mod._coerce(k, v)
         self.preset = self.cfg.get("preset", "Standard")

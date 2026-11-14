@@ -224,9 +224,11 @@ class GenerationTests(unittest.TestCase):
     def test_gifts(self):
         """shuffle_gifts : les 19 cadeaux sont mélangés, sans bombes ni rubis ; les modifications de scènes
         nomment l'objet placé (mod sans menu) et chaque événement visé existe dans gifts.json."""
-        off = World(settings_mod.build())
+        off = World(settings_mod.build({"shuffle_gifts": False}))
         self.assertFalse([l for l in off.locations.values() if l.gift and l.shuffle])
-        world = World(settings_mod.build({"shuffle_gifts": True}))
+        world = World(settings_mod.build())  # shuffled by default
+        self.assertTrue(settings_mod.defaults()["shuffle_gifts"])
+        self.assertEqual(settings_mod.defaults()["shuffle_hearts"], "all")
         gifts = [l for l in world.locations.values() if l.gift]
         self.assertEqual(len(gifts), 19)
         self.assertTrue(all(l.shuffle for l in gifts))
