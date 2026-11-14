@@ -59,6 +59,12 @@ confirmed.
   (`EventTriggerPlayerRequestCreateDynamicEquipmentNoRelationPouch`) even if the chest contained something else; the
   sword disappears on reload (reported in game, native menu: removing `GetEventName` at the source is not enough).
   Guard added: the scene only plays if `IsGet.Weapon_Sword_Kokiri` **[files]** (to test).
+- **Ice Arrows lost as child [game]** (2026-11-13): Ice Arrows from a chest (Graveyard shield grave, no bow) as
+  child, with nothing else to put on the item buttons: the game equips the bow with Ice Arrows by itself, then the
+  arrows are missing from the Items tab, child and adult, although `IsGet.Item_Arrow_Ice` is set in the save. Same
+  chest with Deku Sticks and Nuts from the start (`start_with_consumables`): the arrows are in the inventory. Fire
+  Arrows obtained as adult were fine. Not yet known: whether Fire / Light Arrows or the Bow are lost the same way as
+  child, and why Mido's chests (test 13) did not lose them. Tools: `testmod --test 13|14`.
 - Reading a GameData boolean (non-struct): `0x3744460` (manager, bool*, hash, index >= 0), function of the
   `SeqQueryGetNonStructGameDataBool` node **[files]**.
 
