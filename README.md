@@ -43,9 +43,8 @@ installs a seed for Longshot or Eden with the settings on pages. **Copy Settings
 versioned settings string on the clipboard (`R2-<settings><check>[-<seed>[-H<seed hash>]]`, `ootrr/race.py`; format 2 since the key settings), **Paste Settings**
 applies one: the same string with the same seed and OoTRR version builds exactly the same seed. After an install the
 app draws the seed's 5 **hash symbols** (32 items of the game, drawn by the app, no game file); the spoiler log and
-the command line name them (`Hash symbols: ...`) so racers can compare. **Join Race** applies a host's string with
-its seed and locks the settings and the seed until **Leave Race**; once the host has installed the seed, their
-**Copy with Seed** also carries the seed hash, and a guest's app then says after the install whether they got the
+the command line name them (`Hash symbols: ...`) so racers can compare. Once the host has installed the seed, their
+**Copy with Seed** also carries the seed hash, and a racer's app then says after the install whether they got the
 same seed. See [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## Settings

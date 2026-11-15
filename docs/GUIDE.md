@@ -223,18 +223,17 @@ These settings are **not validated in game yet** (feedback welcome).
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
 for Longshot or Eden, with the settings on pages instead of `--set`. For a race:
 
-1. The host sets the options, presses **Install Seed**, then **Copy with Seed** (bottom left): a short string such
+1. The host sets the options, presses **Install Seed**, then **Copy with Seed** (under Install Seed): a short string such
    as `R2-0VZV0RT00T4-999-HE668CBE6F0` goes to the clipboard (settings + seed + the host's seed hash; copied before
    installing, it has no `-H...` part). **Copy Settings** copies the settings only, each racer then rolls their own
    seed.
-2. The guests copy that string and press **Join Race**: every option and the seed are set and **locked** (the rows,
-   presets, seed and dice no longer change; the banner says "Race: settings locked"). The race is kept if the app is
-   closed; **Leave Race** unlocks everything. **Paste Settings** applies a string without locking (and also takes a
-   string without seed). A damaged string, or one from another string format, is refused with a message in the log.
-3. Everyone presses **Install Seed**. In race mode, when the string has the host's seed hash, the app then says
-   "same seed as the host" or, in red, that the seed differs (another OoTRR version). Five item symbols then appear above the log (the seed's hash, as in OoT
+2. The others copy that string and press **Paste Settings**: every option (and the seed, if the string has one) is
+   set. Don't change anything afterwards. A damaged string, or one from another string format, is refused with a
+   message in the log.
+3. Everyone presses **Install Seed**. Five item symbols then appear above the log (the seed's hash, as in OoT
    Randomizer; hover one to read its name). Same 5 symbols in the same order = same seed. The spoiler log names them
-   on its `Hash symbols` line, and the command line prints them too.
+   on its `Hash symbols` line, and the command line prints them too. When the pasted string has the host's seed
+   hash, the app also says "same seed as the host" or, in red, that the seed differs (another OoTRR version).
 
 Everyone must use the same OoTRR version: the same string and seed give the same placement only with the same
 generator (a different version gives different symbols, which shows the mismatch). Text seeds are shared as the

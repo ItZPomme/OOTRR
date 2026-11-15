@@ -10,14 +10,10 @@ Close the game first. Settings come from `ootrr.settings_ui` (same texts as the 
 settings only the native module can apply (shops) are not offered.
 
 For races, "Copy Settings" / "Copy with Seed" put a short settings string (`ootrr.race`) on the clipboard and
-"Paste Settings" applies one; after an install, the 5 hash symbols of the seed are drawn in the forge box (the
-spoiler log names them), so racers can check they play the same seed. Once the host has installed the seed,
-"Copy with Seed" also adds the seed hash to the string.
-
-Race mode ("Join Race"): a guest pastes the host's string with its seed; the settings, preset and seed are then
-locked (only "Leave Race" unlocks them, the race survives a restart of the app) and, if the string has the host's
-seed hash, the app says after the install whether the guest got the same seed (a different hash = another
-OoTRR version).
+"Paste Settings" applies one (the three buttons are under "Install Seed"); after an install, the 5 hash symbols
+of the seed are drawn in the forge box (the spoiler log names them), so racers can check they play the same seed.
+Once the host has installed the seed, "Copy with Seed" also adds the seed hash to the string; a racer who pastes it
+is told after the install whether they got the host's seed (a different hash = another OoTRR version).
 
 Everything is drawn on a single tkinter canvas (no extra dependency): bronze leather rows, amber selectors on dark
 tracks, a white focus halo, ornamental dividers and a paged list with a "Next Page" button, like the in-game menu.
@@ -84,7 +80,6 @@ PRESET_HINTS = {
     "Quick": "Forest and Door of Time open, cutscenes skipped, Zelda's items and consumables at the start.",
     "Chaos": "Almost everything shuffled: songs, scrubs, skulltulas, rewards, ocarinas, maps and compasses.",
 }
-LOCKED_HINT = "Locked by the race: Leave Race (bottom left) to change it."
 DEFAULT_HINT = "Left-click a row to change it, right-click to go back. Hover a row to read what it does."
 
 
@@ -177,13 +172,8 @@ class App:
         self.done_at = 0.0
         self.status = ("Ready", CREAM)
         self.result: dict = {}
-        self.race: race.RaceCode | None = None  # race mode: settings and seed locked by the host's string
-        self.race_text = ""
-        if self.cfg.get("race"):
-            with contextlib.suppress(race.SettingsStringError):
-                self.race = race.decode_full(self.cfg["race"])
-                self.race_text = self.cfg["race"]
-                self.values = dict(self.race.settings)
+        # (string of the pasted settings and seed, host's seed hash): checked after an install of that very seed
+        self.expected: tuple[str, str] | None = None
         self.q: queue.Queue = queue.Queue()
         self.t = 0.0
         self.running = game_running(self.target)
@@ -225,7 +215,7 @@ class App:
                 "romfs": str(self.romfs_override) if self.romfs_override else None,
                 "target": self.target, "emu_dir": str(self.emu_dir) if self.emu_dir else None,
                 "eden_romfs": str(self.eden_romfs) if self.eden_romfs else None,
-                "preset": self.preset, "seed": self.seed_var.get(), "race": self.race_text or None,
+                "preset": self.preset, "seed": self.seed_var.get(),
                 "settings": {k: v for k, v in self.values.items() if k != "spawn_point"}}, indent=2),
                 encoding="utf-8")
         except OSError:
@@ -240,8 +230,6 @@ class App:
             return
         k = e.keysym.lower()
         if k == "y":
-            if self._locked():
-                return
             self.apply_preset("Standard")
         elif k == "x":
             self.open_spoiler()
@@ -334,9 +322,6 @@ class App:
                              height=int(28 * self.S))
         self.entry.bind("<FocusIn>", lambda e: self.draw())
         self.entry.bind("<FocusOut>", lambda e: self.draw())
-        if self.race:
-            self.seed_var.set(self.race.seed)
-        self._lock_entry()
 
         self.log = tk.Text(self.root, bg="#1a130b", fg="#d8c9aa", relief="flat", bd=0, highlightthickness=0,
                            font=("Consolas", 10), wrap="word", state="disabled", padx=10, pady=8,
@@ -344,10 +329,6 @@ class App:
         self.c.create_window(*self.p(700, 430), window=self.log, anchor="nw", width=int(430 * self.S),
                              height=int(120 * self.S))
         self.log_line("The seed is waiting. Choose your options and press Install Seed.\n")
-
-    def _lock_entry(self):
-        self.entry.configure(state="disabled" if self.race else "normal", disabledbackground=TRACK,
-                             disabledforeground=CREAM)
 
     def log_line(self, s: str):
         self.log.configure(state="normal")
@@ -362,6 +343,7 @@ class App:
         self._banner()
         self._left_panel()
         self._right_column()
+        self._race_buttons()
         self._footer()
 
     def _banner(self):
@@ -374,8 +356,7 @@ class App:
         self.rect(0, 0, W, 62, outline="")
         self.text(W / 2 + 1, 33, "Ocarina of Time Randomizer", self.f_title, "#2b1c0a", anchor="center")
         self.text(W / 2, 31, "Ocarina of Time Randomizer", self.f_title, "#fff3d6", anchor="center")
-        self.text(28, 31, TARGETS[self.target] + ("  ·  Race: settings locked" if self.race else ""), self.f_small,
-                  "#e7cfa0", anchor="w")
+        self.text(28, 31, TARGETS[self.target], self.f_small, "#e7cfa0", anchor="w")
         self.text(W - 28, 31, f"{PAGES[self.page][0]}  ·  {self.page + 1} / {len(PAGES)}", self.f_small, "#e7cfa0",
                   anchor="e")
 
@@ -399,14 +380,13 @@ class App:
         if focus:
             self.focus_ring(*cell)
         self.rect(cell[0], cell[1], cell[2], cell[3], outline=TRACK_EDGE if not focus else "")
-        hot = self.hover == "dice" and not self.race
+        hot = self.hover == "dice"
         dx0 = cell[2] - 46
         self.rect(dx0, y + 4, cell[2] - 4, y + 36, fill=AMBER_HI if hot else AMBER, outline=AMBER_LO)
         for ox, oy in ((-6, -6), (6, 6), (0, 0), (-6, 6), (6, -6)):
             self.oval(dx0 + 21 + ox - 2, y + 20 + oy - 2, dx0 + 21 + ox + 2, y + 20 + oy + 2, fill="#fff7e2", outline="")
         self.add_region((dx0, y + 4, cell[2] - 4, y + 36), "dice", self.roll, None,
-                        LOCKED_HINT if self.race else "Roll a random seed. Leave the field empty for a random one; "
-                        "any number or word works.")
+                        "Roll a random seed. Leave the field empty for a random one; any number or word works.")
 
         # preset row: three segments
         y = 134
@@ -422,8 +402,8 @@ class App:
                 self.line(sx0 + 2, y + 5, sx0 + seg - 2, y + 5, fill=AMBER_HI)
             self.text(sx0 + seg / 2, y + 20, name, self.f_row, "#ffffff" if on else FAINT, anchor="center")
             self.add_region((sx0, y, sx0 + seg, y + 40), rid, lambda n=name: self.apply_preset(n), None,
-                            LOCKED_HINT if self.race else PRESET_HINTS[name])
-            if self.hover == rid and not self.race:
+                            PRESET_HINTS[name])
+            if self.hover == rid:
                 self.focus_ring(sx0 + 1, y + 4, sx0 + seg - 1, y + 36)
 
         self.swirl(345, 198)
@@ -452,9 +432,9 @@ class App:
         label = settings_ui.title(name)
         disabled = not settings_ui.enabled(name, self.values)
         rid = f"rune:{name}"
-        hot = self.hover == rid and not disabled and not self.race
+        hot = self.hover == rid and not disabled
         cell = self._cell_row(y, label, rid)
-        hint = settings_ui.caption(name) + (" " + LOCKED_HINT if self.race else "")
+        hint = settings_ui.caption(name)
         if self.values[name] != defaults[name] and not disabled:  # lit diamond = differs from the default
             self.poly(78, y + 20, 83, y + 15, 88, y + 20, 83, y + 25, fill=AMBER, outline="")
         if disabled:
@@ -617,25 +597,23 @@ class App:
         if enabled:
             self.add_region(box, rid, fn, None, hint)
 
-    def _footer(self):
+    def _race_buttons(self):
+        """Copy / paste a settings string, under Install Seed."""
         for i, (lab, rid, fn, hint) in enumerate((
                 ("Copy Settings", "copy", lambda: self.copy_settings(False),
                  "Copy a short string of these settings to the clipboard, to share them for a race."),
                 ("Copy with Seed", "copyseed", lambda: self.copy_settings(True),
                  "Copy these settings and the seed: everyone who pastes it builds exactly the same seed "
-                 "(same OoTRR version needed). Compare the 5 hash symbols after installing."),
+                 "(same OoTRR version needed). Install first: the string then carries the seed hash."),
                 ("Paste Settings", "paste", self.paste_settings,
-                 "Apply a settings string from the clipboard (and its seed, if it has one)."),
-                (("Leave Race", "race", self.leave_race,
-                  "Unlock the settings and the seed (the race string stays in the log).") if self.race else
-                 ("Join Race", "race", self.join_race,
-                  "Join a race: apply the host's string from the clipboard (Copy with Seed) and lock the settings "
-                  "and the seed, so they cannot be changed by mistake.")))):
-            bx = 50 + i * 148
-            enabled = not self.busy and not (self.race and rid == "paste")
-            self._small_button((bx, 693, bx + 140, 717), lab, rid, fn, enabled, hint)
+                 "Apply a settings string from the clipboard (and its seed, if it has one). If it has the host's "
+                 "seed hash, the app says after the install whether you got the same seed."))):
+            bx = 690 + i * 153
+            self._small_button((bx, 652, bx + 144, 678), lab, rid, fn, not self.busy, hint)
+
+    def _footer(self):
         items = [("Spoiler", "X", "spoiler", self.open_spoiler, bool(self.result.get("spoiler"))),
-                 ("Default Settings", "Y", "defaults", lambda: self.apply_preset("Standard"), not self.race),
+                 ("Default Settings", "Y", "defaults", lambda: self.apply_preset("Standard"), True),
                  ("Back", "B", "close", self._close, True)]
         x = W - 28
         for label, letter, rid, fn, en in reversed(items):
@@ -717,14 +695,7 @@ class App:
         if not self.busy:
             self.draw()
 
-    def _locked(self) -> bool:
-        if self.race:
-            self.status = ("Race: settings locked (Leave Race to change them)", AMBER_HI)
-        return self.race is not None
-
     def step(self, name, d):
-        if self._locked():
-            return
         default, allowed, _ = settings_mod.SETTINGS[name]
         cur = self.values[name]
         if allowed is bool:
@@ -742,8 +713,6 @@ class App:
         self.page = (self.page + d) % len(PAGES)
 
     def apply_preset(self, name):
-        if self._locked():
-            return
         self.values = settings_mod.defaults()
         self.values.update(PRESETS[name])
         self.preset = name
@@ -767,14 +736,12 @@ class App:
         self.log_line(f"Copied to the clipboard: {s}\n")
 
     def paste_settings(self):
-        if self._locked():
-            return
         try:
             text = self.root.clipboard_get()
         except tk.TclError:
             text = ""
         try:
-            values, seed = race.decode(text)
+            values, seed, seed_hash = race.decode_full(text)
         except race.SettingsStringError as exc:
             self.status = ("Not a valid settings string", RED)
             self.log_line(f"Paste Settings: {exc}.\n")
@@ -785,51 +752,14 @@ class App:
         if seed is not None:
             self.seed_var.set(seed)
         self.result = {}
+        self.expected = (race.encode(values, seed), seed_hash) if seed_hash else None
         self.status = ("Settings and seed pasted" if seed is not None else "Settings pasted", AMBER_HI)
         self.log_line(f"Pasted {''.join(text.split()).upper()}" + (f" (seed {seed})" if seed else "") + ".\n")
-        self._save_cfg()
-
-    def join_race(self):
-        try:
-            text = self.root.clipboard_get()
-        except tk.TclError:
-            text = ""
-        try:
-            code = race.decode_full(text)
-        except race.SettingsStringError as exc:
-            self.status = ("Not a valid race string", RED)
-            self.log_line(f"Join Race: {exc}.\n")
-            return
-        if code.seed is None:
-            self.status = ("This string has no seed", RED)
-            self.log_line("Join Race: the host must use Copy with Seed (a string ending in -<seed>), otherwise every "
-                          "racer would get another seed. Paste Settings applies settings without a seed.\n")
-            return
-        self.race, self.race_text = code, "".join(text.split()).upper()
-        self.values = dict(code.settings)
-        self.preset = next((n for n, over in PRESETS.items() if {**settings_mod.defaults(), **over} == self.values),
-                           "Custom")
-        self.seed_var.set(code.seed)
-        self._lock_entry()
-        self.result = {}
-        self.status = ("Race joined: settings and seed locked", AMBER_HI)
-        self.log_line(f"Joined the race {self.race_text} (seed {code.seed}).\n"
-                      + ("Press Install Seed: the app will check that you get the host's seed.\n" if code.seed_hash
-                         else "Press Install Seed, then compare the 5 hash symbols with the host's.\n"))
-        self._save_cfg()
-
-    def leave_race(self):
-        if self.busy or not self.race:
-            return
-        self.log_line(f"Left the race {self.race_text}.\n")
-        self.race, self.race_text = None, ""
-        self._lock_entry()
-        self.status = ("Race left: settings unlocked", CREAM)
+        if seed_hash:
+            self.log_line("Press Install Seed: the app will check that you get the host's seed.\n")
         self._save_cfg()
 
     def roll(self):
-        if self._locked():
-            return
         self.seed_var.set(str(secrets.randbelow(10 ** 9)))
 
     def set_target(self, key):
@@ -953,7 +883,7 @@ class App:
                         name = TARGETS[self.target]
                         self.status = (f"Installed. Start {name} to play.", AMBER_HI)
                         self.log_line(f"\nDone. The mod is in {name}'s mods folder; start the game to play.\n")
-                        self._check_race_hash(data.get("hash"))
+                        self._check_host_hash(data)
                         others = self._other_ootrr_mods()
                         if others:
                             self.log_line(f"Other OoTRR mods are installed ({', '.join(others)}): disable them in "
@@ -978,20 +908,18 @@ class App:
                 self.draw()
         self.root.after(33, self._tick)
 
-    def _check_race_hash(self, seed_hash: str | None):
-        """In race mode, compare the seed hash with the host's (if their string has it)."""
-        if not self.race:
+    def _check_host_hash(self, data: dict):
+        """After an install of a pasted seed: compare its hash with the host's (if the string had it)."""
+        if not self.expected or data.get("code") != self.expected[0]:
             return
-        expected = self.race.seed_hash
-        if not expected:
-            self.log_line("Compare the 5 hash symbols with the host's: the same symbols = the same seed.\n")
-        elif seed_hash == expected:
-            self.status = ("Installed: same seed as the host ✓", AMBER_HI)
-            self.log_line(f"Same seed as the host (hash {seed_hash}).\n")
+        expected = self.expected[1]
+        if data.get("hash") == expected:
+            self.status = ("Installed: same seed as the host \u2713", AMBER_HI)
+            self.log_line(f"Same seed as the host (hash {expected}).\n")
         else:
             self.status = ("Not the host's seed: check the OoTRR version", RED)
-            self.log_line(f"Your seed hash is {seed_hash}, the host's is {expected}: same settings and seed, but "
-                          "another placement. You and the host must use the same OoTRR version.\n")
+            self.log_line(f"Your seed hash is {data.get('hash')}, the host's is {expected}: same settings and seed, "
+                          "but another placement. You and the host must use the same OoTRR version.\n")
 
     def _other_ootrr_mods(self) -> list[str]:
         if self.target != "eden":
