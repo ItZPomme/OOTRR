@@ -95,6 +95,25 @@ TESTS["12"] = {
     10831981390482426294: {"Drop__DropActor": "Item_BombBag_Small"},
     4555665598794293658: {"Drop__DropActor": "Item_Gauntlet_Goron"},
 }
+# test 13: magic arrows from chests as child without a bow (Ice Arrows obtained, IsGet set, but missing
+# from the inventory; Fire Arrows obtained as adult were there). Open in this order, checking the Items tab
+# after each chest: Ice, Fire, Light, then the Bow (do the arrows show up once the bow is owned?)
+TESTS["13"] = {
+    10831981390482426294: "Item_Arrow_Ice",     # Mido, open 1st
+    4555665598794293658: "Item_Arrow_Fire",     # Mido, open 2nd
+    12786193094758345086: "Item_Arrow_Light",   # Mido, open 3rd
+    9725242744547055868: "Item_Range_Bow",      # Mido, open last
+}
+# test 14: same item in the conditional chest (Obj_TBox_A_06) of the Graveyard shield grave, with the
+# conditional keys removed as patch.chest_changes does (test 13 worked in Mido's plain chests)
+TESTS["14"] = {
+    16912540161937823130: {"Drop__DropActor": "Item_Arrow_Ice",
+                           "Drop__CheckActor": None, "Drop__DropActor_Substitute": None},
+}
+# start point per test (banc, start position), as in ootrr/data/spawns.json
+START_WARPS = {
+    "14": ("Graveyard_Child", "GraveYard_KakarikoSide"),
+}
 PICKUP_TESTS = {
     "10": {"Obj_OoTRR_Pickup_000": "Item_Range_Bow", "Obj_OoTRR_Pickup_001": "Item_HoverBoot"},
     # test 11 : mêmes emplacements, objets d'enfant (visibles dans l'inventaire de Link enfant)
@@ -145,7 +164,7 @@ def main(argv=None) -> int:
     builder = ModBuilder(args.romfs)
     report = builder.build(changes, out / "romfs", event_changes=EVENT_TESTS.get(args.test),
                            pack_changes=PACK_TESTS.get(args.test), rsdb_changes=RSDB_TESTS.get(args.test),
-                           pickups=PICKUP_TESTS.get(args.test))
+                           pickups=PICKUP_TESTS.get(args.test), start_warp=START_WARPS.get(args.test))
     for line in report:
         print(line)
 

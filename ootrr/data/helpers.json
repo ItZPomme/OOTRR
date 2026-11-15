@@ -7,6 +7,7 @@
     "can_blast_or_smash":    "has_explosives or can_use(Megaton_Hammer)",
     "can_open_grotto":       "can_blast_or_smash",
     "has_bottle":            "Bottle or Rutos_Letter",
+    "blue_fire_arrows_usable": "blue_fire_arrows and can_use(Ice_Arrows)",
     "has_fire":              "can_use(Dins_Fire) or can_use(Fire_Arrows)",
     "has_fire_or_sticks":    "has_fire or is_child",
     "has_deku_shield":       "is_child",

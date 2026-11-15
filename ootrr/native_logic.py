@@ -236,7 +236,7 @@ class Exporter:
                 skulltula=bool(lbody.get("skulltula", False)), shop=int(lbody.get("shop", 0)),
                 shop_actor=lbody.get("shop_actor") or "", price=int(lbody.get("price", 0)),
                 slot=int(lbody.get("slot", -1)), ocarina=bool(lbody.get("ocarina", False)),
-                gift=bool(lbody.get("gift", False)),
+                gift=bool(lbody.get("gift", False)), trade=bool(lbody.get("trade", False)),
                 hashes=[int(h) for h in hashes]))
 
         for rname, body in self.regions_raw.items():
@@ -250,7 +250,8 @@ class Exporter:
         for name, body in self.actors.items():
             logic = body.get("logic")
             items.append(dict(name=name, logic=self.inv[logic] if logic else -1, level=body.get("level") or 0,
-                              heart=logic in heart_logic, ground=name in self.ground or name in self.ground_native))
+                              heart=logic in heart_logic, trade=bool(body.get("trade")),
+                              ground=name in self.ground or name in self.ground_native))
         return dict(regions=regions, dungeons=dungeons, exits=exits, events=events, locations=locations,
                     items=items, rid=rid, lid=lid, aid=aid)
 
@@ -341,10 +342,10 @@ class Exporter:
         # inventaire, objets
         lines.append(f"constexpr int kInventoryCount = {len(self.inventory)};")
         lines.append("inline constexpr const char* kInventoryNames[kInventoryCount] = {" + ", ".join(cstr(n) for n in self.inventory) + "};")
-        lines.append("struct ItemInfo { const char* name; int32_t logic; int32_t level; bool heart; bool ground; };")
+        lines.append("struct ItemInfo { const char* name; int32_t logic; int32_t level; bool heart; bool trade; bool ground; };")
         lines.append(f"constexpr int kItemCount = {len(w['items'])};")
         lines.append("inline constexpr ItemInfo kItems[kItemCount] = {")
-        lines += [f"    {{{cstr(i['name'])}, {i['logic']}, {i['level']}, {str(i['heart']).lower()}, {str(i['ground']).lower()}}},"
+        lines += [f"    {{{cstr(i['name'])}, {i['logic']}, {i['level']}, {str(i['heart']).lower()}, {str(i['trade']).lower()}, {str(i['ground']).lower()}}},"
                   for i in w["items"]]
         lines.append("};")
         # régions, sorties, événements
@@ -358,13 +359,13 @@ class Exporter:
         lines.append("inline constexpr Event kEvents[kEventCount] = {" + ", ".join(f"{{{a}, {b}, {r}}}" for a, b, r in w["events"]) + "};")
         # lieux
         lines.append("// event : 0 aucun, 1 keep, 2 drop (scène de l'objet d'origine, retirée si l'objet change)")
-        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; bool ocarina; bool gift; };")
+        lines.append("struct LocationInfo { const char* name; int32_t region, kind, rule, vanilla, dungeon; bool shuffle; int32_t dungeon_item, pickup; bool no_progression; int32_t event; bool conditional; bool scrub; bool skulltula; int32_t shop; const char* shop_actor; int32_t price; bool ocarina; bool gift; bool trade; };")
         lines.append(f"constexpr int kLocationCount = {len(w['locations'])};")
         lines.append("inline constexpr LocationInfo kLocations[kLocationCount] = {")
         for l in w["locations"]:
             lines.append(f"    {{{cstr(l['name'])}, {l['region']}, {l['kind']}, {l['rule']}, {l['vanilla']}, {l['dungeon']}, "
                          f"{str(l['shuffle']).lower()}, {l['dungeon_item']}, {l['pickup']}, {str(l['no_progression']).lower()}, "
-                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}, {str(l['ocarina']).lower()}, {str(l['gift']).lower()}}},")
+                         f"{l['event']}, {str(l['conditional']).lower()}, {str(l['scrub']).lower()}, {str(l['skulltula']).lower()}, {l['shop']}, {cstr(l['shop_actor'])}, {l['price']}, {str(l['ocarina']).lower()}, {str(l['gift']).lower()}, {str(l['trade']).lower()}}},")
         lines.append("};")
         # Peste Mojo : entier GameData du prix (prix / 5), écrit par le module selon les réglages
         from .formats.gamedata import flag_hash

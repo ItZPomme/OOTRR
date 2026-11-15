@@ -64,11 +64,11 @@
     "Ice Cavern": {
       "dungeon": "Ice Cavern",
       "locations": {
-        "Ice Cavern Freestanding PoH": {"rule": "has_bottle", "vanilla": "Obj_Heart_Piece"},
-        "Sheik in Ice Cavern":         {"kind": "song", "rule": "has_bottle", "vanilla": "Item_Melody_WaterSerenade"}
+        "Ice Cavern Freestanding PoH": {"rule": "has_bottle or blue_fire_arrows_usable", "vanilla": "Obj_Heart_Piece"},
+        "Sheik in Ice Cavern":         {"kind": "song", "rule": "has_bottle or blue_fire_arrows_usable", "vanilla": "Item_Melody_WaterSerenade"}
       },
       "events": {
-        "Blue_Fire": "has_bottle"
+        "Blue_Fire": "has_bottle or blue_fire_arrows_usable"
       },
       "exits": {
         "Zoras Fountain": "True"

@@ -39,6 +39,8 @@ PRESETS = {
     "ocarinas": {"shuffle_ocarinas": True, "skip_cutscenes": "safe", "shuffle_hearts": "all"},
     "adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 22, "start_with_consumables": True},
     "apparition": {"spawn_point": 9, "shuffle_scrubs": True},
+    "échange adulte": {"adult_trade_sequence": True, "shuffle_hearts": "freestanding", "skip_child_zelda": True},
+    "flèches feu bleu": {"blue_fire_arrows": True, "starting_age": "adult", "open_door_of_time": True},
     "chants mélangés": {"shuffle_songs": "shuffle", "shuffle_rewards": "shuffled", "skip_child_zelda": True},
     "chants aléatoires": {"shuffle_songs": "random", "shuffle_hearts": "all", "shuffle_scrubs": True},
     "adulte loin": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 33, "shuffle_rewards": "shuffled"},

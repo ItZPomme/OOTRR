@@ -1,4 +1,4 @@
-"""Adding nodes to actor AI modules (AINB) with the `ainb` library.
+"""Adding nodes to actor AI modules (AINB) with the `ainb` library (fast Bunny Hood, Ice Arrows as Blue Fire).
 
 Validated in game (Longshot, 2026-11-14) for `Player.action.walk.module` (fast Bunny Hood). What matters:
 - every edited file INSIDE a pack has its own RESTBL entry (the game's margin is only ~0x190 bytes over the file
@@ -41,6 +41,25 @@ class Templates:
         "get_forward_speed": ("Enemy_BabyDodongo", None, "QueryPhysicsCctGetForwardSpeedMps"),
         "mul_f32": ("Obj_BlueFire_A_03", None, "QueryMathMulF32"),
         "set_forward_speed": ("Player_Child", None, "ExecutePhysicsCctSetForwardSpeedMps"),
+        # blue_fire_arrows
+        "simultaneous": ("Obj_RedIce_A_02", "AI/Obj_RedIce_A_01.root.ainb", 14),
+        "or": ("Obj_RedIce_A_02", "AI/Obj_RedIce_A_01.root.ainb", "QueryLogicalDisjunction"),
+        "get_int": ("Dm_Poe_Amy", None, "QueryGetNonStructGameDataInt"),
+        "add_int": ("Land_Gerudo_HorsebackArcheryTarget_A_01", None, "OneShotAddNonStructGameDataInt"),
+        "blackboard_s32": ("DungeonRoomArea", None, "QueryBlackboardGetS32NoError"),
+        "equal_s32": ("Animal_Cow", None, "QueryMathEqualS32"),
+        "less_s32": ("Animal_Cucco", None, "QueryMathLessS32"),
+        "less_f32": ("Animal_Cow", None, "QueryMathLessF32"),
+        "select_s32": ("Animal_Cucco", None, "QuerySelectS32ByBool"),
+        "shootable_state": ("Octorok_Bullet", None, "QueryShootableGetState"),
+        "camera": ("Dm_Npc_Base", None, "QueryCameraGetGameCameraWorldPosition"),
+        "actor_position": ("Obj_BlueFire_A_03", None, "QueryActorGetPosition"),
+        "add_vec": ("Animal_Cow", None, "QueryMathAddVector3f"),
+        "sub_vec": ("Obj_BlueFire_A_03", None, "QueryMathSubVector3f"),
+        "normalize": ("Obj_BlueFire_A_03", None, "QueryMathNormalizeVector"),
+        "dot": ("Animal_Horse", None, "QueryMathDotVector"),
+        "distance": ("Animal_Cucco", None, "QueryMathCalcVectorDistance"),
+        "add_f32": ("Obj_RedIce_A_02", "AI/Obj_RedIce_A_01.root.ainb", "QueryMathAddF32"),
     }
 
     def __init__(self, romfs: Path, codec) -> None:
@@ -164,6 +183,202 @@ class Graph:
         self._link(out.params.float_inputs[0], mul)
         out.queries = [mul.index]
         return out
+
+
+class Logic(Graph):
+    """Helpers for AIs that keep running (blue_fire_arrows). Validated in game (Longshot, 2026-11-15): a selector
+    added beside the original tree of such an AI is only evaluated on its first frame, so conditions are turned
+    into numbers (QuerySelectS32ByBool) feeding ExecuteEveryFrame actions, or ORed into the AI's own selectors."""
+
+    @staticmethod
+    def _from(param, node, out: int = 0) -> None:
+        param.source.src_node_index, param.source.src_output_index = node.index, out
+        param.source.flags = type(param.source.flags)(0)
+
+    @staticmethod
+    def _const(param, value) -> None:
+        param.default_value = value
+        param.source.src_node_index, param.source.src_output_index = -1, 0
+        param.source.flags = type(param.source.flags)(IMMEDIATE)
+
+    @staticmethod
+    def _param(node, kind: str, name: str):
+        return next(p for p in getattr(node.params, f"{kind}_inputs") if p.name == name)
+
+    def query(self, key: str, *sources):
+        """New node; its OutputOnlyOnEnter property is cleared; `sources` are listed as its queries."""
+        n = self.add(key)
+        for p in n.properties.bool_properties:
+            if p.name == "OutputOnlyOnEnter":
+                p.default_value = False
+        n.queries = [s.index for s in sources]
+        return n
+
+    def feed(self, node, kind: str, name: str, value, out: int = 0) -> None:
+        """Input `name` from a node (its output `out`) or a constant."""
+        param = self._param(node, kind, name)
+        if hasattr(value, "params"):
+            self._from(param, value, out)
+            if value.index not in node.queries:
+                node.queries.append(value.index)
+        else:
+            self._const(param, value)
+
+    def group(self, *children):
+        box = self.add("simultaneous")
+        box.flags = type(box.flags)(0)
+        box.child_plugs.clear()
+        box.child_plugs.extend(self.child(c) for c in children)
+        return box
+
+    def int_data(self, key: str, name: str):
+        """GameData Int node (get / add), every frame."""
+        n = self.query(key)
+        self._const(self._param(n, "string", "GameDataFullName"), name)
+        for p in n.properties.bool_properties:
+            if p.name == "ExecuteEveryFrame":
+                p.default_value = True
+        return n
+
+    def add_by(self, name: str, query, if_true: int, out: int = 0):
+        """Int `name` += if_true on every frame where `query` is true."""
+        value = self.query("select_s32")
+        self.feed(value, "bool", "Bool", query, out)
+        self.feed(value, "int", "TrueValue", int(if_true))
+        self.feed(value, "int", "FalseValue", 0)
+        add = self.int_data("add_int", name)
+        self.feed(add, "int", "Value", value)
+        return add
+
+    def compare(self, key: str, kind: str, a, b, a_out: int = 0, b_out: int = 0):
+        """QueryMathLess* = (a < b): inputs (S32 / F32, S32Base / F32Base); also EqualS32."""
+        n = self.query(key)
+        first, base = ("S32", "S32Base") if kind == "int" else ("F32", "F32Base")
+        self.feed(n, kind, first, a, a_out)
+        self.feed(n, kind, base, b, b_out)
+        return n
+
+    def both(self, key: str, a, b, a_out: int = 0, b_out: int = 0):
+        """QueryLogicalConjunction ("and") / QueryLogicalDisjunction ("or")."""
+        n = self.query(key)
+        x, y = n.params.bool_inputs
+        self._from(x, a, a_out)
+        self._from(y, b, b_out)
+        n.queries = [a.index, b.index]
+        return n
+
+    def vec(self, key: str, a, b, a_out: int = 0, b_out: int = 0):
+        """Two-vector node (add / sub / dot / distance): first two vec3f inputs, in order."""
+        n = self.query(key)
+        x, y = n.params.vec3f_inputs[:2]
+        for param, value, out in ((x, a, a_out), (y, b, b_out)):
+            if hasattr(value, "params"):
+                self._from(param, value, out)
+                n.queries.append(value.index)
+            else:
+                self._const(param, tuple(float(v) for v in value))
+        return n
+
+    def wrap_root(self, extra) -> None:
+        """New root = Simultaneous[old root, extra]."""
+        cmd = self.s.commands[0]
+        old = self.nodes[cmd.root_node_index]
+        root = self.group(old, extra)
+        root.flags = type(old.flags)(int(old.flags))
+        old.flags = type(old.flags)(0)
+        cmd.root_node_index = root.index
+
+
+def ice_arrow_ai(base: bytes, templates: Templates, filename: str, timer: str, value: int, ice_type: int) -> bytes:
+    """AI for NormalArrow (it has none), built in the root file of another actor (`base`, whose own tree never runs).
+
+    Validated in game (Longshot, 2026-11-15): the AI runs while the arrow is nocked and 2 frames after the shot
+    (QueryShootableGetState > 1); the blackboard S32 ShootableArrow_ArrowType is 2 for an Ice Arrow. During those 2
+    frames an Ice Arrow adds `value` to the saved Int `timer`; on the other frames the arrow takes 1 from it while it
+    is > 0 (not validated in game: the tested version only added)."""
+    g = Logic(base, templates)
+    g.s.filename = filename
+    old = g.nodes[g.s.commands[0].root_node_index]
+    kind = g.query("blackboard_s32")
+    for p in kind.properties.string_properties:
+        if p.name == "BlackboardKey":
+            p.default_value = "ShootableArrow_ArrowType"
+    for p in kind.properties.int_properties:
+        if p.name == "BlackboardType":
+            p.default_value = 1
+    never = g.compare("equal_s32", "int", 99, kind)
+    state = g.query("shootable_state")
+    shot = g.compare("less_s32", "int", 1, state)               # 1 < state: released
+    ice_shot = g.both("and", g.compare("equal_s32", "int", ice_type, kind), shot)
+    # every other frame of a nocked arrow counts the timer down, so a shot far from any red ice (which also counts
+    # it down) is forgotten once the bow is drawn again
+    left = g.compare("less_s32", "int", 0, g.int_data("get_int", timer))
+    step = g.query("select_s32")
+    g.feed(step, "bool", "Bool", ice_shot)
+    g.feed(step, "int", "TrueValue", int(value))
+    drain = g.query("select_s32")
+    g.feed(drain, "bool", "Bool", left)
+    g.feed(drain, "int", "TrueValue", -1)
+    g.feed(drain, "int", "FalseValue", 0)
+    g.feed(step, "int", "FalseValue", drain)
+    add = g.int_data("add_int", timer)
+    g.feed(add, "int", "Value", step)
+    root = g.group(g.selector(never, old, g.add("dummy")), add)
+    root.flags = type(old.flags)(int(old.flags))
+    old.flags = type(old.flags)(0)
+    g.s.commands[0].root_node_index = root.index
+    return g.to_binary()
+
+
+def red_ice_melt(raw: bytes, templates: Templates, timer: str, centre: tuple, radius: float,
+                 dot_min: float = 0.85, max_dist: float = 15.0) -> bytes:
+    """AI/Obj_RedIce_A_01.root.ainb: melts on the Blue Fire message OR (0 < `timer` AND the camera aims at the ice).
+
+    Aim: the actor position + `centre` (its Tgt shape centre) is within 15 m of the camera and either at most
+    ~30 degrees from its forward axis (DIrZ) or within `radius` of its ray. The ice decrements `timer` every frame
+    while it is > 0. Validated in game (Longshot, 2026-11-15): Ice Cavern red ice and King Zora's ice (Zora Tunic)."""
+    g = Logic(raw, templates)
+    n = g.nodes
+    if n[51].name != "QueryMessageBlueFireReceiveMessage" or n[48].name != "QueryLogicalDisjunction":
+        raise ValueError("red ice AI: unexpected nodes")
+    active = g.compare("less_s32", "int", 0, g.int_data("get_int", timer))
+    cam = g.query("camera")
+    outs = [p.name for p in cam.params.vec3f_outputs]
+    at, ahead = outs.index("Position"), outs.index("DIrZ")
+    middle = g.vec("add_vec", g.query("actor_position"), centre)
+    # cone around the centre
+    norm = g.query("normalize")
+    to = g.vec("sub_vec", middle, cam, b_out=at)
+    g._from(norm.params.vec3f_inputs[0], to)
+    norm.queries = [to.index]
+    in_cone = g.compare("less_f32", "float", float(dot_min), g.vec("dot", norm, cam, b_out=ahead))
+    near = g.compare("less_f32", "float", g.vec("distance", middle, cam, b_out=at), float(max_dist))
+    # ray: with v = centre - camera and t = v . DIrZ: |v|^2 < t^2 + radius^2 and t > 0
+    along = g.vec("dot", g.vec("sub_vec", middle, cam, b_out=at), cam, b_out=ahead)
+    square = g.query("mul_f32")
+    for p in square.params.float_inputs:
+        g._from(p, along)
+    square.queries = [along.index]
+    limit = g.query("add_f32")
+    g.feed(limit, "float", "InputA", square)
+    g.feed(limit, "float", "InputB", float(radius) ** 2)
+    d2 = g.vec("distance", middle, cam, b_out=at)
+    for p in d2.properties.bool_properties:
+        if p.name == "IsCalcSquareDistance":
+            p.default_value = True
+    on_ray = g.both("and", g.compare("less_f32", "float", d2, limit), g.compare("less_f32", "float", 0.0, along))
+    aimed = g.both("and", g.both("or", in_cone, on_ray), near)
+    melt = g.both("and", active, aimed)
+    for sel_index, (src, out) in ((28, (51, 1)), (45, (48, 0))):   # the selectors waiting for the Blue Fire message
+        sel = n[sel_index]
+        inp = sel.params.bool_inputs[0]
+        if (inp.source.src_node_index, inp.source.src_output_index) != (src, out):
+            raise ValueError("red ice AI: unexpected selector input")
+        either = g.both("or", n[src], melt, a_out=out)
+        g._from(inp, either)
+        sel.queries = [either.index]
+    g.wrap_root(g.group(g.add_by(timer, active, -1)))
+    return g.to_binary()
 
 
 def fast_walk(raw: bytes, templates: Templates, bool_exp: str, head_flag: str, head_actor: str,

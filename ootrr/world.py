@@ -213,6 +213,16 @@ BUNNY_HEAD_FLAG = "PlayerStatus.EquipHeadArmor"
 BUNNY_SPEED = 1.5  # Majora's Mask: the Bunny Hood makes Link about 1.5 times faster
 PLAYER_PACKS = ("Player_Child", "Player_Adult", "Player_Base")
 PLAYER_WALK_MODULE = "AI/Player.action.walk.module.ainb"
+# Ice Arrows act as Blue Fire (blue_fire_arrows), validated in game (Longshot, 2026-11-15; GAME_KNOWLEDGE, "Ice
+# Arrows melt red ice by aiming"). No hit reaches red ice, so two AIs share a saved Int: NormalArrow (no AI in the
+# game; its new AI runs while nocked and 2 frames after the shot) adds to it when an Ice Arrow is shot, and red
+# ice (7 packs sharing AI/Obj_RedIce_A_01.root.ainb) counts it down and melts while it is > 0 and the camera aims
+# at it. King Zora thaws with his ice (Obj_RedIce_A_02; vanilla scene and Zora Tunic).
+BLUE_FIRE_TIMER = "OoTRR.IceArrowShot"
+BLUE_FIRE_ARROW = {"actor": "NormalArrow", "base": ("Obj_BrokenIcePillar_A_01", "AI/Obj_BrokenIcePillar_A_01.root.ainb"),
+                   "ai": "OoTRR_IceArrow.root", "value": 60, "ice_type": 2}
+RED_ICE_PACKS = tuple(f"Obj_RedIce_A_0{i}" for i in (1, 2, 4, 6, 7, 8, 9))
+RED_ICE_AI = "AI/Obj_RedIce_A_01.root.ainb"
 STONE_FLAGS = [f"IsGet.Item_Stone_{x}" for x in ("Forest", "Fire", "Water")]
 MEDAL_FLAGS = [f"IsGet.Item_Medal_{x}" for x in ("Forest", "Fire", "Water", "Spirit", "Shadow", "Light")]
 MAX_LIFE = "PlayerStatus.MaxLife"  # en quarts de cœur (12 = 3 cœurs)
@@ -347,6 +357,7 @@ class Location:
     price: int = 0  # prix d'origine de l'article
     ocarina: bool = False  # ocarina donné par une scène (Saria, douves) : mélangé avec shuffle_ocarinas
     gift: bool = False  # cadeau donné par une scène ou un PNJ (data/gifts.json) : mélangé avec shuffle_gifts
+    trade: bool = False  # end of the adult trade sequence (Biggoron): no progression without adult_trade_sequence
 
     @property
     def is_chest(self) -> bool:
@@ -426,6 +437,8 @@ class World:
                 raise DataError(f"items.json : {name} donne « {logic} », absent de la section logic")
             if logic in ("Heart_Piece", "Heart_Container") and settings.get("bridge") != "hearts":
                 logic = None  # les cœurs ne comptent pour la logique qu'avec le pont « hearts »
+            if body.get("trade") and not settings.get("adult_trade_sequence"):
+                logic = None  # adult trade sequence items only count with adult_trade_sequence
             self.items[name] = Item(name, logic, body.get("level"))
         self.ground: set[str] = set(items_raw.get("ground", []))
         self.ground_native: dict[str, str] = dict(items_raw.get("ground_native", {}))
@@ -497,7 +510,10 @@ class World:
             price=int(lbody.get("price", 0)),
             ocarina=bool(lbody.get("ocarina", False)),
             gift=bool(lbody.get("gift", False)),
+            trade=bool(lbody.get("trade", False)),
         )
+        if loc.trade and not self.settings.get("adult_trade_sequence"):
+            loc.no_progression = True  # the trade sequence is out of the logic: never an item needed to finish
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
         if loc.pickup:
@@ -778,10 +794,14 @@ class World:
 
     def ainb_edits(self) -> dict[str, dict]:
         """Nodes added to AI modules of actor packs (ModBuilder._write_ainb_edits)."""
-        if not self.settings.get("fast_bunny_hood"):
-            return {}
-        return {"fast_walk": {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
-                              "head_flag": BUNNY_HEAD_FLAG, "head_actor": BUNNY_HOOD, "factor": BUNNY_SPEED}}
+        out: dict[str, dict] = {}
+        if self.settings.get("fast_bunny_hood"):
+            out["fast_walk"] = {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
+                                "head_flag": BUNNY_HEAD_FLAG, "head_actor": BUNNY_HOOD, "factor": BUNNY_SPEED}
+        if self.settings.get("blue_fire_arrows"):
+            out["blue_fire_arrows"] = {"timer": BLUE_FIRE_TIMER, "arrow": dict(BLUE_FIRE_ARROW),
+                                       "red_ice": list(RED_ICE_PACKS), "file": RED_ICE_AI}
+        return out
 
     def actor_changes(self) -> dict[int, dict]:
         """Modifications d'acteurs liées aux réglages (hors contenu des coffres)."""

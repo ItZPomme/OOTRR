@@ -35,9 +35,13 @@ class ModBuilder:
         return found
 
     def _write_gamedata(self, flags: dict[str, object], out_romfs: Path,
-                        bool_exps: dict[str, list] | None = None) -> list[str]:
+                        bool_exps: dict[str, list] | None = None,
+                        saved_ints: list[str] | None = None) -> list[str]:
         """Change la valeur de départ (DefaultValue) de drapeaux de sauvegarde, et ajoute
-        des expressions booléennes (bool_exps : {nom: programme postfixe})."""
+        des expressions booléennes (bool_exps : {nom: programme postfixe}).
+
+        saved_ints: new Int entries saved in progress.sav (default 0). An AI only sees another AI's writes through a
+        saved entry (blue_fire_arrows, 2026-11-15: runtime Ints / Bools written by the arrow were never seen)."""
         from .formats.byml import U32, U64
         from .formats.gamedata import encode_bool_exp, enum_value, flag_hash, index
 
@@ -69,6 +73,18 @@ class ModBuilder:
             root["Data"]["BoolExp"].append({"Hash": U32(h), "ResetTypeValue": 0, "SaveFileIndex": -1,
                                             "Values": values})
             report.append(f"GameData : nouvelle expression {name}")
+        if saved_ints:
+            import copy
+            from .ingame_menu import PROGRESS_SAVE, add_saved_entries
+            template = next(e for e in root["Data"]["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE)
+            for name in saved_ints:
+                if flag_hash(name) in idx:
+                    raise KeyError(f"entrée déjà présente dans GameData : {name}")
+                entry = copy.deepcopy(template)
+                entry.update({"Hash": U32(flag_hash(name)), "ResetTypeValue": 0,
+                              "DefaultValue": type(template["DefaultValue"])(0)})
+                root["Data"]["Int"].append(entry)
+            report += add_saved_entries(root, PROGRESS_SAVE, len(saved_ints))
         new = write_byml(root, byml_version(raw))
         rel = path.relative_to(self.romfs).as_posix()
         self.restbl.resize_like(rel[:-3], len(raw), len(new))
@@ -203,6 +219,9 @@ class ModBuilder:
         report = []
         templates = ainb_graph.Templates(self.romfs, self.codec)
         for kind, edit in sorted(ainb_edits.items()):
+            if kind == "blue_fire_arrows":
+                report += self._write_blue_fire_arrows(edit, out_romfs, templates, pack_changes)
+                continue
             if kind != "fast_walk":
                 raise KeyError(f"unknown AINB edit: {kind}")
             clash = set(edit["actors"]) & set(pack_changes or {})
@@ -227,6 +246,72 @@ class ModBuilder:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(self.codec.compress(path.name, new))
                 report.append(f"  pack {actor}")
+        return report
+
+    def _write_blue_fire_arrows(self, edit: dict, out_romfs: Path, templates,
+                                pack_changes: dict[str, dict[str, dict]] | None = None) -> list[str]:
+        """Ice Arrows act as Blue Fire (world.BLUE_FIRE_ARROW, ainb_graph.ice_arrow_ai / red_ice_melt).
+
+        NormalArrow gets an AI (new AIInfo + root file, PostSensorAIRef); each red ice pack gets the melt condition,
+        aimed at the centre of its own Tgt shape, with a radius of twice its half size (King Zora's ice is 7.5 m
+        tall; with the bow drawn the camera ray passed 4 to 8 m from its centre)."""
+        from . import ainb_graph
+        from .formats.sarc import Sarc, read_sarc
+
+        arrow = edit["arrow"]
+        clash = ({arrow["actor"]} | set(edit["red_ice"])) & set(pack_changes or {})
+        if clash:
+            raise ValueError(f"packs edited twice: {sorted(clash)}")
+
+        def put(sarc, name: str, data: bytes) -> None:
+            try:
+                known = self.restbl.get(name)
+            except KeyError:
+                known = 0
+            self.restbl.set(name, max(known, len(data) + ainb_graph.INNER_MARGIN))
+            if name not in sarc.files:
+                sarc.align[name] = 8
+            sarc.files[name] = data
+
+        def write(actor: str, sarc, raw: bytes) -> None:
+            path = self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+            new = sarc.to_bytes()
+            rel = path.relative_to(self.romfs).as_posix()
+            self.restbl.resize_like(rel[:-3], len(raw), len(new) + ainb_graph.INNER_MARGIN)
+            dest = out_romfs / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(self.codec.compress(path.name, new))
+
+        report = []
+        base_actor, base_file = arrow["base"]
+        base = read_sarc(self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{base_actor}.pack.zs"))
+        ai = ainb_graph.ice_arrow_ai(base[base_file], templates, arrow["ai"], edit["timer"], arrow["value"],
+                                     arrow["ice_type"])
+        raw = self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{arrow['actor']}.pack.zs")
+        sarc = Sarc(raw)
+        param = f"Actor/{arrow['actor']}.engine__actor__ActorParam.bgyml"
+        version = byml_version(sarc.files[param])
+        info = f"AI/AIInfo/{arrow['ai'].split('.')[0]}.engine__actor__AIInfo.bgyml"
+        put(sarc, f"AI/{arrow['ai']}.ainb", ai)
+        put(sarc, info, write_byml({"PostSensorAIRef": f"Work/AI/Root/{arrow['ai']}.ain"}, version))
+        tree = read_byml(sarc.files[param])
+        tree["Components"]["AIInfoRef"] = "?" + info
+        put(sarc, param, write_byml(tree, version))
+        write(arrow["actor"], sarc, raw)
+        report.append(f"{arrow['actor']}: AI {arrow['ai']} ({len(ai)} bytes), Ice Arrow shot -> {edit['timer']}")
+        for actor in edit["red_ice"]:
+            raw = self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs")
+            sarc = Sarc(raw)
+            shapes = sorted(k for k in sarc.files if k.startswith("Phive/ShapeParam/") and "__Tgt" in k)
+            shape = ([k for k in shapes if f"/{actor}__" in k] or shapes)[0]
+            box = read_byml(sarc.files[shape])["AutoCalc"]
+            centre = tuple(float(box["Center"][k]) for k in "XYZ")
+            radius = 2 * max((float(box["Max"][k]) - float(box["Min"][k])) / 2 for k in "XYZ")
+            new_ai = ainb_graph.red_ice_melt(sarc.files[edit["file"]], templates, edit["timer"], centre, radius)
+            put(sarc, edit["file"], new_ai)
+            write(actor, sarc, raw)
+            report.append(f"  {actor}: melts on an Ice Arrow shot (centre {tuple(round(v, 2) for v in centre)}, "
+                          f"radius {radius:.1f} m)")
         return report
 
     def _write_packs(self, pack_changes: dict[str, dict[str, dict]], out_romfs: Path) -> list[str]:
@@ -1055,8 +1140,9 @@ class ModBuilder:
         missing = set(changes) - applied
         if missing:
             raise KeyError(f"acteurs introuvables : {sorted(missing)}")
-        if start_flags or bool_exps:
-            report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps)
+        saved_ints = [e["timer"] for e in (ainb_edits or {}).values() if "timer" in e]
+        if start_flags or bool_exps or saved_ints:
+            report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps, saved_ints)
         if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
             report += self._write_events(event_changes or {}, out_romfs, event_skips, start_items, moat_gate,
                                          start_warp, scrub_sales, questions, timeline_skips, timeline_fade_in)

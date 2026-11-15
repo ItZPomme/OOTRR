@@ -15,9 +15,11 @@ constexpr int kAdult = 1;
 // ------------------------------------------------------------------ monde selon les réglages
 struct World {
     const Settings* settings;
-    int32_t item_logic[kItemCount];      // capacité donnée, -1 si aucune (cœurs hors pont « hearts »)
+    int32_t item_logic[kItemCount];      // capacité donnée, -1 si aucune (cœurs hors pont « hearts », trade items
+                                         // without adult_trade_sequence)
     bool item_repeated[kItemCount];      // vanilla content of several locations (world.repeated_items)
     bool loc_shuffle[kLocationCount];
+    bool loc_no_progression[kLocationCount];  // no_progression, or trade without adult_trade_sequence
     int32_t loc_region[kLocationCount];
     int32_t loc_rule[kLocationCount];    // -1 = toujours vrai (objet donné au départ)
     bool free_return;
@@ -29,7 +31,8 @@ struct World {
         settings = &s;
         bool hearts_bridge = s[SET_bridge] == kBridgeHearts;
         for (int i = 0; i < kItemCount; i++)
-            item_logic[i] = (kItems[i].heart && !hearts_bridge) ? -1 : kItems[i].logic;
+            item_logic[i] = (kItems[i].heart && !hearts_bridge) || (kItems[i].trade && !s[SET_adult_trade_sequence])
+                                ? -1 : kItems[i].logic;
         int16_t vanilla_count[kItemCount] = {};
         for (int l = 0; l < kLocationCount; l++)
             if (kLocations[l].vanilla >= 0) vanilla_count[kLocations[l].vanilla]++;
@@ -63,6 +66,7 @@ struct World {
             if (info.kind == kKindSong) shuffle = s[SET_shuffle_songs] == kSongsRandom;
             if (info.gift) shuffle = s[SET_shuffle_gifts] != 0;
             loc_shuffle[l] = shuffle;
+            loc_no_progression[l] = info.no_progression || (info.trade && !s[SET_adult_trade_sequence]);
         }
         free_return = s[SET_free_time_travel] != 0;
         int n = 0;
@@ -103,7 +107,7 @@ struct World {
             if (!*prefix) return false;
             if (IsRupee(kItems[item].name)) return false;
         }
-        if (info.no_progression && IsProgression(item)) return false;
+        if (loc_no_progression[loc] && IsProgression(item)) return false;
         return true;
     }
 

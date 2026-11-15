@@ -18,9 +18,9 @@ PAGES: list[tuple[str, list[str]]] = [
     ("World", ["starting_age", "open_forest", "open_door_of_time", "free_time_travel",
                "bridge", "bridge_count"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
-                 "shuffle_skulltulas", "maps_compasses"]),
+                 "shuffle_skulltulas", "maps_compasses", "adult_trade_sequence"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
-                 "complete_mask_quest", "fast_bunny_hood"]),
+                 "complete_mask_quest", "fast_bunny_hood", "blue_fire_arrows"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
 ]
 MAX_ROWS = 8
@@ -54,6 +54,9 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
     # PC-only: nodes added to Link's walk module (the native menu's mod is built once and has no row)
     "fast_bunny_hood": ("Fast Bunny Hood", "As in Majora's Mask: Link runs 1.5 times faster while he wears the "
                         "Bunny Hood.", {}),
+    # PC-only: nodes added to the arrow and red ice AIs (the native menu's mod is built once and has no row)
+    "blue_fire_arrows": ("Blue Fire Arrows", "Ice Arrows act as Blue Fire: shoot one at red ice to melt it (Ice "
+                         "Cavern, King Zora). The logic accepts them instead of a bottle.", {}),
     "accessibility": ("Accessibility", "All: every location can be reached. Beatable: only Ganon has to be "
                       "reachable, some items may be locked away.", {"all": "All", "beatable": "Beatable"}),
 }
