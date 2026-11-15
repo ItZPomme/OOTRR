@@ -15,6 +15,9 @@ of the seed are drawn in the forge box (the spoiler log names them), so racers c
 Once the host has installed the seed, "Copy with Seed" also adds the seed hash to the string; a racer who pastes it
 is told after the install whether they got the host's seed (a different hash = another OoTRR version).
 
+At start, the app asks GitHub for the latest release (`ootrr.updates`, background thread); if it is newer, a
+button at the bottom left opens its page. Nothing is downloaded by the app.
+
 Everything is drawn on a single tkinter canvas (no extra dependency): bronze leather rows, amber selectors on dark
 tracks, a white focus halo, ornamental dividers and a paged list with a "Next Page" button, like the in-game menu.
 """
@@ -34,7 +37,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import font as tkfont
 
-from .. import race
+from .. import __version__, race, updates
 from .. import settings as settings_mod
 from .. import settings_ui
 from . import seed_icons
@@ -172,6 +175,7 @@ class App:
         self.done_at = 0.0
         self.status = ("Ready", CREAM)
         self.result: dict = {}
+        self.new_release: dict | None = None  # newer release on GitHub, see updates.check
         # (string of the pasted settings and seed, host's seed hash): checked after an install of that very seed
         self.expected: tuple[str, str] | None = None
         self.q: queue.Queue = queue.Queue()
@@ -199,6 +203,7 @@ class App:
         self.root.bind("<Key>", self._key)
         self.root.protocol("WM_DELETE_WINDOW", self._close)
         self.root.after(33, self._tick)
+        threading.Thread(target=lambda: self.q.put(("update", updates.check())), daemon=True).start()
 
     # ---- config ---------------------------------------------------------------------------------------------
     def _load_cfg(self) -> dict:
@@ -612,6 +617,13 @@ class App:
             self._small_button((bx, 652, bx + 144, 678), lab, rid, fn, not self.busy, hint)
 
     def _footer(self):
+        if self.new_release:
+            self._small_button((50, 693, 300, 717), f"Update available: {self.new_release['tag']}", "update",
+                               self.open_update, True,
+                               f"{self.new_release['name']} is out (this app is v{__version__}). Open the release "
+                               "page to download the new OoTRR-App.exe. Racers must all use the same version.")
+        else:
+            self.text(56, 705, f"OoTRR v{__version__}", self.f_small, FAINT)
         items = [("Spoiler", "X", "spoiler", self.open_spoiler, bool(self.result.get("spoiler"))),
                  ("Default Settings", "Y", "defaults", lambda: self.apply_preset("Standard"), True),
                  ("Back", "B", "close", self._close, True)]
@@ -804,6 +816,11 @@ class App:
         if self.result.get("spoiler"):
             os.startfile(self.result["spoiler"])
 
+    def open_update(self):
+        if self.new_release:
+            import webbrowser
+            webbrowser.open(self.new_release["url"])
+
     def open_mods(self):
         mods = self._mods_dir()
         mods.mkdir(parents=True, exist_ok=True)
@@ -873,6 +890,13 @@ class App:
                 kind, data = self.q.get_nowait()
                 if kind == "log":
                     self.log_line(data)
+                elif kind == "update":
+                    self.new_release = data
+                    if data:
+                        self.log_line(f"{data['name']} is available (this app is v{__version__}): see the "
+                                      "button at the bottom left.\n")
+                    if not self.busy:
+                        self.draw()
                 else:
                     self.busy = False
                     self.result = data

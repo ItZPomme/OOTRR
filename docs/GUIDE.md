@@ -221,7 +221,9 @@ These settings are **not validated in game yet** (feedback welcome).
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
-for Longshot or Eden, with the settings on pages instead of `--set`. For a race:
+for Longshot or Eden, with the settings on pages instead of `--set`. At start it checks GitHub for a newer release:
+if there is one, an **Update available** button (bottom left) opens its page, where you download the new
+`OoTRR-App.exe` (the app downloads nothing itself; offline, it just says nothing). For a race:
 
 1. The host sets the options, presses **Install Seed**, then **Copy with Seed** (under Install Seed): a short string such
    as `R2-0VZV0RT00T4-999-HE668CBE6F0` goes to the clipboard (settings + seed + the host's seed hash; copied before
