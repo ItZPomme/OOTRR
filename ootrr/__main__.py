@@ -161,7 +161,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 scrub_sales=scrub_sales or None,
                                 questions=patch.get("ingame_questions") or None,
                                 rsdb_changes=patch.get("rsdb_changes") or None,
-                                pack_changes=patch.get("pack_changes") or None)
+                                pack_changes=patch.get("pack_changes") or None,
+                                ainb_edits=patch.get("ainb_edits") or None)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():

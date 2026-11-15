@@ -27,6 +27,9 @@
     "Kak Anju as Adult": [
       ["Npc_Hylia_049_Adult", 223, "ReveiveItem", "Item_PocketEgg"]
     ],
+    "DMT Biggoron": [
+      ["Npc_Goron_Biggoron_Adult", 95, "ActorName", "Item_Sword_Biggoron"]
+    ],
     "LLR Talons Chickens": [
       ["Minigame_FindOutCucco", 262, "ReveiveItem", "Item_Bottle_Milk"]
     ],

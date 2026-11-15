@@ -88,6 +88,9 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:
   `Npc_Hylia_001_Adult` step 14, `Npc_Hylia_Dampe_001` and `.110` step 602; the Piece of Heart that comes out of the
   ground stays visible), **to validate in game**.
+- [ ] Biggoron (Claim Check) gives a seed item (location "DMT Biggoron", Biggoron Sword in the pool) and
+  `adult_trade_sequence` puts the vanilla trade quest in the logic: **to validate in game** (another item given by
+  `GetInEventItemSwordBiggoron`; the quest with a Pocket Egg found in a chest). Later: shuffle the trade items.
 - [ ] Shuffled checks giving bottles: Anju, market potion shop, 5 Big Poes, Talon and Ruto's letter (on the lake
   floor) are locations shuffled with `shuffle_gifts` (see GAME_KNOWLEDGE, "Bottles"), **to validate in game**
   (especially the letter given from elsewhere and the King Zora quest).
@@ -145,6 +148,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   that read an answer flag), starting items. Translate the questions.
 
 ## Miscellaneous
+- `blue_fire_arrows` (Ice Arrows act as Blue Fire): done, PC-built mod only, validated in game (generator-built
+  mod, King Zora). To do: the native menu (its mod is built once: the arrow and red ice AIs would have to be in it
+  and read the setting), the Ice Cavern red ice one by one with the generator-built mod, and the arrow-side
+  countdown of the timer (not validated in game).
+- `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).
 - First-obtain animation of consumables: not removed (decided by the engine).
 - Progressive upgrades in chests (mechanism of the A_06 chests with conditional content).
 - Shuffled NPCs and songs (replacing the item name in their scenes — validated for one NPC).

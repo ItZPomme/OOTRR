@@ -106,7 +106,18 @@ confirmed.
   placed item's name directly replaces the text. **Not fully validated in game yet.**
 - Adult Anju (`Npc_Hylia_049_Adult`, event 223, `ReveiveItem` = `Item_PocketEgg`): location "Kak Anju as Adult". After
   the gift the script moves the quest `SubEvent_GetSwordBigGoron` to `StartSubEvent` whatever item was given; the
-  rest of the Biggoron trade quest (Cojiro at event 194, etc.) stays vanilla and out of the logic.
+  rest of the Biggoron trade quest (Cojiro at event 194, etc.) stays vanilla.
+- Biggoron (`Npc_Goron_Biggoron_Adult`, entry `SubEvent_GetSwordBigGoron_Step11`, event 95 = sub-sequence
+  `Dm_SY_GetInEvent:GetInEventItemSwordBiggoron`, `ActorName` = `Item_Sword_Biggoron`): location "DMT Biggoron".
+  Every path after the Claim Check is shown (Talk_301 / Talk_312, removal of `Weapon_Sword_Giant` or
+  `Weapon_Sword_BrokenGiant` if Link has one) reaches this event; then the quest step `Complete`. Saved flag
+  `IsGet.Weapon_Sword_Biggoron`; PouchActorInfo: `PouchTabCategory` Equipment (so not a ground item).
+  `adult_trade_sequence`: the logic follows the vanilla quest through events `Trade_*` (Kakariko: Cojiro once Talon
+  is woken with the hatched egg, Granny's Odd Potion; Lost Woods: Grog, Fado; Gerudo Fortress side: carpenter boss;
+  summit: Prescription; Zora's Domain: Eyeball Frog, King Zora thawed with Blue Fire; Lake Hylia lab: Eyedrops).
+  Timers (Odd Potion, Eyedrops) are not modelled. Off: the location has `no_progression` (`trade: true`) and
+  `Item_PocketEgg` gives no logic item. **Verified in the files, not validated in game** (an item other than the
+  sword given by `GetInEventItemSwordBiggoron`, and a Pocket Egg found elsewhere than at Anju's).
 - Not done: Zelda's letter (`Dm_HrlCastle_0050`, interferes with `skip_child_zelda`), the Ghost Shop's 1000-point
   "golden reward", bowling 2nd prize, horseback archery 1000 points and other Pieces of Heart: mechanism not found
   yet.
@@ -193,6 +204,117 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   are released), `Enemy_Skulltula_Gold_Nocturnal` (night), `AppearPopOut` + `AppearWarpRotOffset` (tree), an
   `Obj_BrokenBox_A_*` crate at the same position, `DefaultDungeonRoomIndex`. Rules in `skulltulas.json` (9 uncertain
   ones keep `no_progression`): **verified in the files**, not yet validated in game one by one.
+
+## Masks, Blue Fire, player movement **[files]** (2026-11-14)
+
+- **Happy Mask Shop quest**: GameData Enum without a known name, hash `3925934864` (found in
+  `SubEvent_MaskSalesman_IsCompleted_Exp`): NotReady, Ready, UntilRentMaskOfKeaton, Step01_Hint, Step01, Step02,
+  UntilRentMaskOfSkull, Step03_Hint, Step03, Step04, UntilRentMaskOfSpooky, Step05_Hint, Step05, Step06,
+  UntilRentMaskOfBunny, Step07_Hint, Step07, Step08, Complete. Buyers in `SubEvent_MaskSalesman` (Kakariko guard
+  `Npc_Hylia_Soldier_003` Step01/02, Skull Kid Step03/04, Running Man Step07/08; the Spooky Mask buyer is not in
+  this flow), payments in `Npc_Hylia_023_Shop_Child` (`Pay_ki-tan`, `Pay_dokuro`, `Pay_kowaso`, `Pay_usagi`; at
+  Complete the talk goes to `TalkWithoutMask_Complete`). The shop's `ShopParam` (`Npc_Hylia_023_Shop_Child`) shows
+  each mask while the BoolExp `HappyMaskShop_HasMask_<mask>` is true: quest after Step01 (Skull), Step03 (Spooky),
+  Step05 (Bunny), Step07 (Zora, Goron, Gerudo, Truth; Truth also needs `IsPlayingFirstTruthMaskGetDemo` false),
+  `PouchData.Armor_Child_Mask_<mask>.StockNum` = 0 and the lent-mask integer (hash 3472691999, -1 at the start)
+  not equal to the mask's rank in the list (Spooky 0, Keaton 1, Bunny 2, Skull 3, Zora 4, Goron 5, Gerudo 6,
+  Truth 7). Keaton needs `Npc_Hylia_Soldier_003_GateOpen` (Kakariko gate) instead of a step. Setting
+  `complete_mask_quest`: the Enum starts at Complete (start flag, PC-built mod only). The Lost Woods Skull Kid
+  only disappears with `NPC_SkullKid_Delete` (set when he buys the mask), not with the quest step. **To test in
+  game.**
+- **Red ice and Blue Fire**: `Obj_RedIce_A_*` has no Chemical or Life component: its AI (`Obj_RedIce_A_01.root`)
+  only melts on a message `QueryMessageBlueFireReceiveMessage` (MessageType 890699779), then relays it to its
+  linked actors. The poured Blue Fire (`Obj_BlueFire_A_03`, ActorHolder of `Weapon_Bottle_BlueFire`) finds the
+  target with `QueryBlueFireFindTarget` (attention client `Obj_RedIce_A_01_BlueFireTarget`, range 4 m), flies to
+  it (`ExecuteBlueFireMove`) and sends that message (`OneShotMessageBlueFireSendMessage`). King Zora has his own
+  Blue Fire handling in `Npc_Zora_KingZora_adult.event.root`.
+- **Ice Arrows**: every arrow is the actor `NormalArrow` (`AssginableItemParam.ShootableActor`), without AI; the
+  arrow type picks an entry of `GameBalance/AttackParam/NormalArrow` by `AttackType` (Ice Arrow = 3740198074 =
+  `AssignableItem` of `Item_Arrow_Ice`, `DamageElements` [2817341698], multiplier 2). The element only reaches
+  actors with a damage receiver (Life / DamageCalculator, e.g. `QueryGetLastDamageIsOnDamageElementFromExternal...`),
+  which red ice does not have, and no hit of any kind reaches red ice (see "Red ice graft" below).
+- **Ice Arrows melt red ice (`blue_fire_arrows`) [game]** (Longshot, 2026-11-15; prototype mods
+  `OoTRR-essai-fleche11`, `roizora4..6`, script `output/essai/exp_ice3.py`; setting built by the generator,
+  `ainb_graph.ice_arrow_ai` / `red_ice_melt`, validated with the generator-built mod `OoTRR-essai-bluefire1` on
+  King Zora). Two AIs linked by a saved GameData Int (`OoTRR.IceArrowShot`):
+  - `NormalArrow` gets an AI (`AIInfoRef` -> `PostSensorAIRef`; the actor had none). It runs while the arrow is
+    nocked (`QueryShootableGetState` 1) and **only 2 more frames after the shot** (state 2, then 0; selector-free
+    count, `roizora6`); not in flight nor stuck. There the blackboard S32
+    `ShootableArrow_ArrowType` (`QueryBlackboardGetS32NoError`, `BlackboardType` 1) is 0 for a normal arrow, 2 for an
+    Ice Arrow. While it is 2, the arrow writes 60 to `OoTRR.IceAim`, a **saved** Int (SaveFileIndex 0). A runtime
+    Int or Bool (SaveFileIndex -1) written by the arrow was never seen by red ice; a Bool also cleared by normal
+    arrows stayed false.
+  - Red ice (`AI/Obj_RedIce_A_01.root.ainb`, 7 packs) decrements it while > 0 and melts on the Blue Fire message OR
+    (`0 < OoTRR.IceAim` AND camera aim): `QueryCameraGetGameCameraWorldPosition` (vec3f outputs `DIrZ`, `Position`,
+    used in that order), direction camera -> actor position + (0, 1.5, 0) normalised, `dot(direction, DIrZ) > 0.9`
+    (DIrZ points forward) and `QueryMathCalcVectorDistance` < 15 m (the `Magnitude` output of
+    `QueryMathNormalizeVector` is not usable). The melt condition is ORed into the two original selectors that
+    wait for the Blue Fire message (nodes 28 and 45).
+  - `fleche11`: the timer was written while nocked, so the ice melted while aiming. **Melting on the shot [game]**
+    (`roizora6`, King Zora): the arrow writes the timer only when it is an Ice Arrow AND `1 < state` (the 2 frames
+    after the release), with `QuerySelectS32ByBool` (60, else the current value) into an `ExecuteEveryFrame`
+    `OneShotSetNonStructGameDataInt`; the camera still points at the ice then. Aiming without shooting no longer
+    melts it. Possible flaw, not checked: nocked arrows write back the current value every frame, which may keep
+    the timer alive after an Ice Arrow shot while the bow stays drawn.
+  - **King Zora [game]** (mod `OoTRR-essai-roizora4`): his ice is `Obj_RedIce_A_02` (same position as
+    `Npc_Zora_KingZora_adult`, which links to it; `NpcZora.interruptseq.ControlFrozen` keeps him frozen while that
+    ice actor exists). Melting it this way thaws him with the vanilla scene and the Zora Tunic. A cone around
+    actor position + 1.5 m missed this 7.5 m ice: each pack now aims at the centre of its own Tgt shape
+    (`AutoCalc.Center`) and also melts when the camera ray passes within a radius of it (|v|^2 < t^2 + r^2, t > 0,
+    with `QueryMathCalcVectorDistance` `IsCalcSquareDistance`). With the bow drawn the ray passed 4 to 8 m from
+    King Zora's ice centre (r = 4.1 m: 52 aimed frames out of 1163), so r is now twice the Tgt half size
+    (`roizora5`; `roizora6` with it melted King Zora's ice on the shot). `Obj_RedIce_A_03` (Zora's Domain adult,
+    no AI) is a decoration.
+  - Not tested: the other red ice packs one by one, Blue Fire from a bottle with the mod.
+- **Fast Bunny Hood (`fast_bunny_hood`) [game]** (Longshot, 2026-11-14, PC-built mod): nodes added to Link's
+  `Player.action.walk.module` (`ootrr/ainb_graph.py`). `ExecutePlayerMove` has no parameter and masks have no
+  movement data, but `QueryPhysicsCctGetForwardSpeedMps` x factor -> `ExecutePhysicsCctSetForwardSpeedMps` after it
+  scales Link's speed and follows the stick (a constant forward speed or `ExecutePhysicsCctSetForwardAndSide...Rate`
+  do not: the side rate pushed Link sideways). Condition: BoolExp `OoTRR_HoodWorn_Exp` = the unnamed saved
+  `PlayerStatus` Bool (member key 3947362076, flag hash 3262939387: 0 without the hood, 1 with it, read in
+  progress.sav) AND `PlayerStatus.EquipHeadArmor` == `Armor_Child_Mask_Bunny` (that String64 keeps the last mask
+  after it is taken off). Tested in game with x1.6; the setting uses x1.5.
+
+- **Adding nodes to actor AI modules [game]** (Longshot, 2026-11-14; experiment scripts in `output/essai/`):
+  - **Each file inside a pack has its own RESTBL entry**, only ~0x190 bytes over its size. A bigger `.ainb`
+    without a bigger entry overwrites memory: black screen when Link is created, Bunny Hood that no longer equips.
+    Raising the pack's entry or RSDB `InstanceHeapSize` does not help. With the inner entry raised, nodes copied
+    from other packs work (`ainb_graph.inner_size_entry`).
+  - A file shared by several packs (the walk module: `Player_Child`, `Player_Adult`, `Player_Base`) is edited in
+    each of them.
+  - `Element_BoolSelector` with `CalculateTiming` 1 re-evaluates its input every frame (0 keeps its choice while
+    the child runs). `QueryGetNonStructGameDataBool` reads flags correctly (control test).
+  - **A selector added beside the original tree of an AI that keeps running is only evaluated on its first
+    frame** (red ice, 2026-11-15), even with `CalculateTiming` 1 and branches that never finish: every condition
+    logged that way was its first-frame value (counters equal to 0 or to the frame count). The walk module and the
+    arrow AI are re-entered, so selectors work there. What works in a running AI: an `ExecuteEveryFrame` action
+    whose input comes from a query (re-read every frame), e.g. `QuerySelectS32ByBool` -> `OneShotAdd...Int` to
+    count frames, and conditions ORed into the original tree's own selectors. **The red ice logs of
+    `glace2`..`glace14` and `fleche5`..`fleche9` were therefore first-frame values only.**
+  - `QueryMathLessF32` / `QueryMathLessS32` = (`F32` < `F32Base`).
+  - The AI of `Armor_Child_Mask_Bunny` only runs for a moment when the actor is created (a saved frame counter
+    written by it stopped at 96): it cannot report "worn" every frame. Wrapping its root in a `SplitTiming` broke
+    the hood (before the RESTBL fix).
+  - **Logging**: an AI can write saved GameData Ints (`OneShotSetNonStructGameDataInt`, new entries saved with
+    `ingame_menu.add_saved_entries`); the values are read back from `user/save/*/slot_*/progress.sav` (pairs hash,
+    value after a 0x20 header; String64 values are offsets in the file). Longshot saves in rotating slots.
+  - Red ice + `LifeRef` / `SensorHitRef` components copied from `Obj_LakeHrl_SwitchHit_A_01`: **crash** when
+    Zora's Domain (adult) creates `Obj_RedIce_A_02` (heap corruption in the engine's allocator), also with the
+    original AI and with `InstanceHeapSize` + 256 KB; tried before the RESTBL fix above.
+  - **Red ice graft, with the inner RESTBL entries raised [game]** (Longshot, 2026-11-14/15, mods
+    `OoTRR-essai-glace2`..`glace14`, scripts `output/essai/exp_ice.py`, `ice_*.py`): no crash, the added AI runs
+    (frame counter), but no hit was logged on the red ice (first-frame values only, see above), with normal or Ice Arrows (TgHit, TgIgnore,
+    DamageTypeAny, IsDamaged, Life external damage, damage elements 0..10: all 0). Tried, cumulatively: Chemical
+    (`Obj_BrokenIcePillar_A_01`), Life (pillar's, made invincible), SensorHit (pillar's, then `Obj_Ice_A_01`'s with
+    `IsIgnoreOcclusionCheckTgHit`), Tg sensor layer `EnemyReceipt` / `Default` + `MotionType` like
+    `Ptm_DgnObjStatic_00_Tgt`, and the actor class `ActorLogicSimpleActor` instead of `ActorLogicRedIce`. Same Tgt
+    / Physical shape sizes as `Obj_Ice_A_01` (which fire arrows melt via TgHit AND `QueryChemicalIsContactFire`).
+    Control: the same log beside the AI of `Obj_BlueFirePedestalLid_A_01` (Ice Cavern, root
+    `Obj_BrokenIcePillar_A_01.root`, `PreActorSetting` ActorOnly) never ran at all, even when shot (frame counter
+    0): likely a pre-actor that only becomes a full actor on an effective hit. The ice never melted either, so
+    hits really do not reach it; the aim method above replaces this graft. Test mods with the bow need `Item_Quiver_Small`, `Item_Arrow_Normal` and
+    `PouchData.Item_Arrow_Normal.StockNum`; a start in a banc without an `_Adult` variant (IceCavern) makes Link a
+    child even with `starting_age=adult` (use `ZoraFountain_Adult=ZoraFountain_FromIceCavern`).
 
 ## Messages (Mals)
 

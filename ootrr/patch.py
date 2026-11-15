@@ -76,6 +76,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "event_ints": {f: [list(e) for e in v] for f, v in world.event_ints().items()},
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},
+        "ainb_edits": world.ainb_edits(),
         "actor_changes": {str(h): c for h, c in world.actor_changes().items()},
         "extra_pickups": world.extra_pickups(),
         "ocarina_moat_gate": bool(world.settings.get("open_door_of_time")),

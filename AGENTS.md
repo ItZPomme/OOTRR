@@ -66,6 +66,7 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 | `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards |
 | `ootrr/patch.py` | Result -> JSON patch (everything the builder must apply) |
 | `ootrr/modbuild.py` | Mod building: maps, GameData, scripts, RSDB, actor archives, messages, AINB modules |
+| `ootrr/ainb_graph.py` | Nodes added to actor AI modules (fast Bunny Hood, Ice Arrows as Blue Fire); inner RESTBL entries, see GAME_KNOWLEDGE |
 | `ootrr/ingame_menu.py` | In-game menu: GameData structures, option tables, texts, title sequence |
 | `ootrr/formats/` | Read/write: zstd, SARC, BYML, RESTBL, GameData, BFEVFL (scripts), MSBT (messages) |
 | `ootrr/tools/` | Tools: verification, inspection, saves, test mods, menu mod, installer |

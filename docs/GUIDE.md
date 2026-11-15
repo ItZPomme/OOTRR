@@ -166,7 +166,8 @@ Required (1–6), Rewards Required (1–9), or Hearts Required (3 or 12) + Extra
 | Deku Scrubs | The 5 Deku Scrubs that sell a unique item sell a seed item. |
 | Deku Scrub Prices | Vanilla (40), Affordable (10), Random (0 to 95). |
 | Songs | Vanilla (songs in place), Shuffle (shuffled among the 12 song locations), Random (song locations join the pool: a song can be in a chest, and an NPC can give any item). |
-| Gifts | Minigame rewards (shooting galleries, bowling, horseback archery, diving, fishing), the five bottles (Anju, Talon, market potion shop, Ghost Shop Big Poes, Ruto's letter), Darunia, Gerudo card, Light Arrows, Fire Arrows, man on the roof, Dampé's gravedigging tour and Great Fairies give a seed item (new, not fully validated in game yet). |
+| Gifts | Minigame rewards (shooting galleries, bowling, horseback archery, diving, fishing), the five bottles (Anju, Talon, market potion shop, Ghost Shop Big Poes, Ruto's letter), Darunia, Gerudo card, Light Arrows, Fire Arrows, man on the roof, Dampé's gravedigging tour, Great Fairies and Biggoron (Claim Check) give a seed item; the Biggoron Sword is in the item pool (new, not fully validated in game yet). |
+| Adult Trade Sequence | On: the logic follows the adult trade sequence (Pocket Egg, Cojiro, Odd Mushroom, Odd Potion, Poacher's Saw, Broken Goron's Sword, Prescription, Eyeball Frog, Eyedrops, Claim Check) and Biggoron can give any item. Off: Biggoron only gives an item you never need to finish. |
 | Logic | Glitchless (default: the seed can always be finished without glitches) or No Logic (items anywhere, only the placement rules are kept: the seed is very likely impossible to finish without glitches, for players who want that). The spoiler log says when a seed is not beatable. |
 
 Always on in the menu: cutscenes with no effect on the game, and the cutscenes the game lets you skip with + / X,

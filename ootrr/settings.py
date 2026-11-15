@@ -70,6 +70,11 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "shuffle_gifts": (True, bool,
                       "Cadeaux mélangés : récompenses de mini-jeux (tirs, bowling, tir à cheval, plongée, pêche), "
                       "Anju, Darunia, carte Gerudo, Flèches de lumière et Grandes Fées donnent un objet de la seed"),
+    "adult_trade_sequence": (False, bool,
+                             "Adult trade sequence in the logic: the vanilla quest (Pocket Egg -> Cojiro -> Odd "
+                             "Mushroom -> ... -> Claim Check) is followed by the logic and Biggoron's gift can be "
+                             "any item; off: Biggoron only gives an item that is never needed (the Biggoron Sword "
+                             "is in the item pool either way)"),
     "start_with_consumables": (False, bool,
                                "Bâtons Mojo et noix Mojo au maximum du premier sac (10 bâtons, 20 noix) dès le départ"),
     "starting_age": ("child", ("child", "adult", "random"),
@@ -88,6 +93,15 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "big_poe_count": (5, int,
                       "Number of Big Poes the Poe buyer (Ghost Shop, adult market) needs before he gives his "
                       "reward (1 to 5; the remake gives it at 500 points = 5 Big Poes)"),
+    "complete_mask_quest": (False, bool,
+                            "Happy Mask Shop quest completed from the new game: no mask to sell or pay for, the "
+                            "shop lends every mask, Mask of Truth included (the Keaton Mask still needs the "
+                            "Kakariko gate opened, as in the original game)"),
+    "fast_bunny_hood": (False, bool,
+                        "Bunny Hood as in Majora's Mask: Link runs 1.5 times faster while he wears it"),
+    "blue_fire_arrows": (False, bool,
+                         "Ice Arrows act as Blue Fire: shooting one at red ice melts it (Ice Cavern, King Zora); "
+                         "the logic then accepts Ice Arrows instead of a bottle of Blue Fire"),
 }
 
 
