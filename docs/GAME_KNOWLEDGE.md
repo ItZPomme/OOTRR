@@ -316,6 +316,40 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
     `PouchData.Item_Arrow_Normal.StockNum`; a start in a banc without an `_Adult` variant (IceCavern) makes Link a
     child even with `starting_age=adult` (use `ZoraFountain_Adult=ZoraFountain_FromIceCavern`).
 
+## Dungeon keys **[files]** (2026-11-15, not validated in game)
+
+- Per dungeon, saved GameData members (SaveFileIndex 0) `DungeonInfo.<game>.SmallKeyNum` (Int) and
+  `DungeonInfo.<game>.IsGetBossKey` (Bool), beside `IsGetMap` / `IsGetCompass`; they exist for the 8 dungeons with
+  keys (`ForestTemple`, `FireTemple`, `WaterTemple`, `ShadowTemple`, `SpiritTemple`, `BottomOfTheWell`,
+  `GerudoTrainingGround`, `InsideGanonCastle`) and `GerudoFortress`. The struct has 4 more members, names unknown.
+- Key chests (`tools.inventory`): `Drop__DropActor` = `Item_Dungeon_SmallKey` (37 chests) or `Item_Dungeon_BossKey`
+  (6 chests, Ganon's Castle included). Ground keys `Obj_Dungeon_SmallKey`: one in Bottom of the Well (room 3), one in
+  the Shadow Temple (room 13). Gerudo Fortress carpenters drop `Obj_Dungeon_SmallKey_GerudoFortress_0N` (untouched).
+  Hashes and rooms (`DefaultDungeonRoomIndex`) are in `data/keys.json`.
+- A chest gives a key through `Dm_SY_Treasurebox` (`Success_AddContent`): `EventQueryTreasureBoxIsDungeonCommonItemInside`
+  (0 map, 1 compass, 2 boss key, 3 small key, 4 other) -> `GameSystemActor.EventGetDungeonSmallKey` /
+  `EventGetDungeonBossKey`, **without a dungeon parameter**: the key goes to the dungeon of the current map. Hence a
+  key of dungeon A found elsewhere needs another way:
+  - the chest drops `Obj_MiniGame_SmallKey` (the Treasure Chest Shop's key: "You got a door key!", PouchSpecialDeal
+    `NotPushToPouch`, so it is not counted anywhere by itself);
+  - its `GetEventName` names a new RSDB `EventSetting` row (+ `GameAnalyzedEventInfo` row), copy of
+    `ForesetTemple_GetBossKey` (the event of every vanilla boss key chest, flow `ForestTemple_Gimmick`, entry
+    `TreasureBoxDM_NaviChat_ForestTemple_BossKey`: `EventTransition Dm_SY_Treasurebox`, then Navi's line, step 101).
+    A chest event replaces the default opening and plays `Dm_SY_Treasurebox` itself; the vanilla row is used in
+    Fire / Water / Shadow / Spirit, whose maps have none of the flow's other actors (Stalfos...), so missing actors
+    of unused steps are fine;
+  - the row's `FlowchartFileName` points to a copy of `ForestTemple_Gimmick` (`OoTRR_SmallKey_<game>.bfevfl`, new
+    RESTBL entry) where step 101 becomes `GameDataActor.EventTriggerAddOrSubGameDataInt`
+    (`DungeonInfo.<game>.SmallKeyNum`, Value 1; template step 33 of `MiniGame_SequentialChoiceTreasure`, which counts
+    the shop's keys the same way in `MiniGame_SmallKeyNum`) or `EventTriggerSetGameDataBool` (`IsGetBossKey`, True;
+    template step 195). To check in game: the new script file is found, the counter goes up, the HUD count follows.
+- `removed`: the counters start at the dungeon's total of keys (chests + ground) and `IsGetBossKey` at true
+  (DefaultValue). Not known yet whether the boss door only reads `IsGetBossKey`.
+- Locked doors: `Obj_DoorChainLock_A_01` (one per side, e.g. 10 in the Forest Temple = 5 doors, `_A_02` = boss
+  door, Fire Temple `_A_04`, Spirit Temple `Obj_SpiritTemple_DoorChainLock_A_01`), driven by logic modules
+  `DungeonDoorSingleWithChainLockSet_*` (`ActorLogicDoorChainLock` input `OpenKey`, output `IsKeyOpen`). No room
+  connection table was found (RSDB `DungeonParam` only lists rooms), so the logic does not know the door layout.
+
 ## Messages (Mals)
 
 - `Mals/<language>.Product.110.sarc.zs`: 16 languages, MSBT in **UTF-8** (byte 0x0C = 0).

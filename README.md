@@ -12,8 +12,9 @@ Contributors and AI agents: start with [`AGENTS.md`](AGENTS.md), then
 
 ## Status
 
-- All chests are shuffled (114, or 134 with maps and compasses), except small keys, boss keys, minigame chests and
-  the Boss Rush chests.
+- All chests are shuffled (114, or 134 with maps and compasses), except minigame chests and the Boss Rush chests.
+  The 37 small key chests and 6 boss key chests join them with `small_keys` / `boss_keys` (PC-built mod only,
+  **not validated in game yet**).
 - Freestanding Pieces of Heart, boss Heart Containers, stones and medallions can be shuffled.
 - Open forest, open Door of Time, free time travel, bridge conditions, starting items, many skipped cutscenes.
 - In progress: Deku Scrub salesmen, Skulltulas, shops (mechanisms validated, logic to write), in-game setting
@@ -34,6 +35,18 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 - `output\OoTRR_<seed>_<hash>_patch.json`: everything the mod applies.
 - Without `--romfs`, only the seed is generated (spoiler + patch).
 - Settings: `--set name=value` (repeatable) or `--settings file.json` (see `settings.example.json`).
+
+### Desktop app and races
+
+`python -m ootrr.tools.longshot_app` (or `OoTRR-App.exe`, built by `python -m ootrr.tools.build_longshot_app`)
+installs a seed for Longshot or Eden with the settings on pages. **Copy Settings** / **Copy with Seed** put a short,
+versioned settings string on the clipboard (`R2-<settings><check>[-<seed>[-H<seed hash>]]`, `ootrr/race.py`; format 2 since the key settings), **Paste Settings**
+applies one: the same string with the same seed and OoTRR version builds exactly the same seed. After an install the
+app draws the seed's 5 **hash symbols** (32 items of the game, drawn by the app, no game file); the spoiler log and
+the command line name them (`Hash symbols: ...`) so racers can compare. **Join Race** applies a host's string with
+its seed and locks the settings and the seed until **Leave Race**; once the host has installed the seed, their
+**Copy with Seed** also carries the seed hash, and a guest's app then says after the install whether they got the
+same seed. See [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## Settings
 
@@ -60,6 +73,8 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `shuffle_rewards` | `vanilla`, `shuffled` | Stones and medallions shuffled between bosses and Link's pocket |
 | `shuffle_hearts` | `none`, `freestanding`, `all` (default) | Freestanding Pieces of Heart (and boss Heart Containers) shuffled |
 | `maps_compasses` | `vanilla`, `start_with`, `shuffle`, `removed` | Maps and compasses |
+| `small_keys` | `vanilla` (default), `own_dungeon`, `any_dungeon`, `removed`, `random` | Small keys of the 8 dungeons with keys (Forest, Fire, Water, Shadow, Spirit, Bottom of the Well, Gerudo Training Ground, Ganon's Castle). `own_dungeon`: a key only moves to another chest of the same room (prudent logic, see below); `removed`: no key in the chests, each dungeon's key counter starts full; `random`: any chest of the world. PC-built mod only, **not validated in game** |
+| `boss_keys` | same values | Boss keys (6 dungeons, Ganon's Castle included). `removed`: owned from the start. PC-built mod only, **not validated in game** |
 | `skip_cutscenes` | `none`, `safe` | Cutscenes without effect marked as seen, cutscenes the game lets you skip (+ / X) never played (their effects kept), Rauru and Saria skipped, interrupting Kokiri disabled |
 | `logic` | `glitchless`, `none` | `glitchless`: the seed can always be finished without glitches; `none`: no logic, items placed at random (placement constraints kept), the seed is very likely impossible to finish without glitches |
 | `logic_lens_required`, `accessibility` | | Logic options |
@@ -91,6 +106,7 @@ python -m ootrr.tools.ingame_spoiler --seed 727557 --set shuffle_shops=4   # ...
 | `ootrr/rules.py`, `search.py`, `fill.py` | Rules, reachability, placement |
 | `ootrr/world.py`, `settings.py` | World data and settings -> what the mod must do |
 | `ootrr/spoiler.py`, `patch.py` | Spoiler log, JSON patch |
+| `ootrr/race.py` | Settings string (copy / paste for races) and hash symbols |
 | `ootrr/modbuild.py` | Mod building and installation |
 | `ootrr/formats/` | Zstd, SARC, BYML, RESTBL, GameData, BFEVFL scripts, MSBT messages |
 | `ootrr/tools/` | Verification, inspection, saves, test mods |
@@ -99,8 +115,12 @@ python -m ootrr.tools.ingame_spoiler --seed 727557 --set shuffle_shops=4   # ...
 ## Current limitations
 
 - Rules marked `prudent` in `chests.json`: the exact chest location is not confirmed.
-- Not shuffled: NPCs, songs, fairies, small keys, chests with conditional content, minigame chests and 4 story-event
-  chests.
+- Not shuffled: NPCs, songs, fairies, chests with conditional content, minigame chests and 4 story-event chests.
+- Dungeon keys (`small_keys`, `boss_keys`): the dungeons have no door layout in the data, so the logic is prudent:
+  with shuffled small keys, every location of a dungeon needs all its small keys, except (with `own_dungeon`) the
+  chests of the rooms that hold keys in the original game. A key of another dungeon is shown as the Treasure Chest
+  Shop's "door key" (also for boss keys); the chest event adds it to the right dungeon (see GAME_KNOWLEDGE,
+  "Dungeon keys"). Not available with the in-game menu.
 - Upgrades are not yet progressive in chests.
 - The rainbow bridge with conditions has not been tested in game yet.
 - See [`docs/ROADMAP.md`](docs/ROADMAP.md).

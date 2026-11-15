@@ -205,7 +205,40 @@ python -m ootrr --seed 1234 --romfs "ROMFS" --install --set open_forest=open --s
 - the mod is installed as `OoTRR`; the spoiler and patch are in `output\`;
 - without `--romfs`, only the seed is generated (spoiler + patch), no mod.
 
-Shuffled shops are only available with the in-game menu.
+Shuffled shops are only available with the in-game menu. The other way round, the dungeon key settings
+(`small_keys`, `boss_keys`, "Dungeons" page of the desktop app) only exist for the PC-built mod:
+
+- `own_dungeon`: small keys stay in their dungeon (a key may move to another chest of the same room); boss keys go
+  anywhere in their dungeon;
+- `any_dungeon`: in any dungeon; `random`: in any chest of the world;
+- `removed`: small keys: no key in the chests, every dungeon starts with all its keys (go and open the locked doors);
+  boss keys: owned from the start;
+- a key found outside its dungeon says "You got a door key!" (the key of the Treasure Chest Shop): it still counts
+  for its own dungeon (the spoiler log tells which one, e.g. `OoTRR_SmallKey_ForestTemple`).
+
+These settings are **not validated in game yet** (feedback welcome).
+
+### Desktop app (`OoTRR-App.exe`) and races
+
+The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
+for Longshot or Eden, with the settings on pages instead of `--set`. For a race:
+
+1. The host sets the options, presses **Install Seed**, then **Copy with Seed** (bottom left): a short string such
+   as `R2-0VZV0RT00T4-999-HE668CBE6F0` goes to the clipboard (settings + seed + the host's seed hash; copied before
+   installing, it has no `-H...` part). **Copy Settings** copies the settings only, each racer then rolls their own
+   seed.
+2. The guests copy that string and press **Join Race**: every option and the seed are set and **locked** (the rows,
+   presets, seed and dice no longer change; the banner says "Race: settings locked"). The race is kept if the app is
+   closed; **Leave Race** unlocks everything. **Paste Settings** applies a string without locking (and also takes a
+   string without seed). A damaged string, or one from another string format, is refused with a message in the log.
+3. Everyone presses **Install Seed**. In race mode, when the string has the host's seed hash, the app then says
+   "same seed as the host" or, in red, that the seed differs (another OoTRR version). Five item symbols then appear above the log (the seed's hash, as in OoT
+   Randomizer; hover one to read its name). Same 5 symbols in the same order = same seed. The spoiler log names them
+   on its `Hash symbols` line, and the command line prints them too.
+
+Everyone must use the same OoTRR version: the same string and seed give the same placement only with the same
+generator (a different version gives different symbols, which shows the mismatch). Text seeds are shared as the
+number the generator uses (same seed).
 
 ---
 
@@ -246,5 +279,6 @@ Features **not validated in game yet** (feedback welcome): adult start, bombs fr
 instead), shuffled Ocarina of Time (moat), high random Deku Scrub prices, some gifts (man on the roof, Dampé's
 tour, Fire Arrows).
 
-Not shuffled: NPCs (except Saria, songs and gifts), small keys, boss keys, minigame chests. Remaining work:
+Not shuffled: NPCs (except Saria, songs and gifts), minigame chests (keys: see the `small_keys` and `boss_keys`
+settings of the PC-built mod). Remaining work:
 [`ROADMAP.md`](ROADMAP.md).

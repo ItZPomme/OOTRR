@@ -162,7 +162,9 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 questions=patch.get("ingame_questions") or None,
                                 rsdb_changes=patch.get("rsdb_changes") or None,
                                 pack_changes=patch.get("pack_changes") or None,
-                                ainb_edits=patch.get("ainb_edits") or None)
+                                ainb_edits=patch.get("ainb_edits") or None,
+                                key_events={e: tuple(k) for e, k in (patch.get("key_events") or {}).items()}
+                                or None)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():
@@ -278,6 +280,7 @@ def main(argv: list[str] | None = None) -> int:
         (out_dir / f"{stem}_spoiler.txt").write_text(spoiler_mod.to_text(spoiler), encoding="utf-8")
     print(f"Seed {seed}  hash {spoiler['hash']}  {len(spoiler['playthrough'])} sphères  "
           f"({result.attempts} essai(s), {time.perf_counter() - t0:.2f}s) -> {out_dir / stem}_*")
+    print("Hash symbols: " + " · ".join(spoiler["hash_symbols"]))
     if not spoiler["beatable"]:
         print("Warning: this seed cannot be finished according to the logic (logic = none).")
 

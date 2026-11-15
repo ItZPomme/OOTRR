@@ -44,6 +44,7 @@ PRESETS = {
     "départ adulte": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 17},
     "adulte, apparition aléatoire": {"starting_age": "adult", "open_door_of_time": True, "spawn_point": 30, "free_time_travel": True},
     "départ enfant ailleurs": {"spawn_point": 12, "start_with_consumables": True},
+    "clés retirées": {"small_keys": "removed", "boss_keys": "removed", "maps_compasses": "shuffle"},
 }
 
 
@@ -208,7 +209,8 @@ class GenerationTests(unittest.TestCase):
             if mode in ("removed", "start_with"):
                 self.assertNotIn("Item_Dungeon_Map", result.placements.values())
             flags = world.start_flags()
-            self.assertEqual(any(k.startswith("DungeonInfo.") for k in flags), mode == "start_with")
+            self.assertEqual(any(k.startswith("DungeonInfo.") and k.endswith(("IsGetMap", "IsGetCompass"))
+                                 for k in flags), mode == "start_with")
             # porte du temps ouverte / scène de Rauru sautée : leurs scènes sont « déjà vues »
             door = {"HavePlayedEvent.Dm_TimeTemple_0010", "HavePlayedEvent.Dm_TimeTemple_0040"}
             self.assertEqual(any(k.startswith("HavePlayedEvent.") and k not in door for k in flags),

@@ -9,6 +9,8 @@ from typing import Any
 # Réglages qui décrivent le comportement du jeu. Le patcher ne sait pas encore
 # modifier ces comportements : pour jouer, garde les valeurs du jeu d'origine.
 GAME_LOCKED = {"open_kakariko": False}
+# values of small_keys and boss_keys (see data/keys.json and World key methods)
+KEY_MODES = ("vanilla", "own_dungeon", "any_dungeon", "removed", "random")
 
 # nom -> (valeur par défaut, valeurs autorisées ou type, description)
 SETTINGS: dict[str, tuple[Any, Any, str]] = {
@@ -102,6 +104,16 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "blue_fire_arrows": (False, bool,
                          "Ice Arrows act as Blue Fire: shooting one at red ice melts it (Ice Cavern, King Zora); "
                          "the logic then accepts Ice Arrows instead of a bottle of Blue Fire"),
+    # dungeon keys (data/keys.json); PC-built mod only. Added last: the native menu numbers settings in this order
+    "small_keys": ("vanilla", KEY_MODES,
+                   "Small keys: vanilla = in their original chests; own_dungeon = shuffled in their own dungeon "
+                   "(prudent logic: a key may only move to another chest of the same room); any_dungeon = in any "
+                   "dungeon; removed = no small key in the chests, each dungeon's counter starts with all its "
+                   "keys (locked doors can be opened from the start); random = anywhere in the world"),
+    "boss_keys": ("vanilla", KEY_MODES,
+                  "Boss keys: vanilla = in their original chest; own_dungeon = anywhere in their own dungeon; "
+                  "any_dungeon = in any dungeon; removed = owned from the start (boss doors open); "
+                  "random = anywhere in the world (Ganon's Castle included)"),
 }
 
 

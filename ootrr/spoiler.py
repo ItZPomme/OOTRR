@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 from . import __version__
+from .race import hash_symbols
 from .fill import Result
 from .search import EVENT_PREFIX, State, is_beatable
 from .world import World
@@ -45,6 +46,7 @@ def required_items(world: World, result: Result, spheres) -> list[tuple[str, str
 
 
 def build(world: World, result: Result) -> dict[str, Any]:
+    seed_id = seed_hash(world, result)
     spheres = playthrough(world, result)
     # logic = none: the seed may be impossible to finish; then no item is "required"
     beatable = is_beatable(world, result.placements, result.starting_items)
@@ -58,7 +60,8 @@ def build(world: World, result: Result) -> dict[str, Any]:
     return {
         "version": __version__,
         "seed": result.seed,
-        "hash": seed_hash(world, result),
+        "hash": seed_id,
+        "hash_symbols": hash_symbols(seed_id),  # the 5 symbols the desktop app draws
         "settings": world.settings,
         "attempts": result.attempts,
         "beatable": beatable,
@@ -72,6 +75,7 @@ def to_text(spoiler: dict[str, Any]) -> str:
     out = [
         f"Ocarina of Time Remake Randomizer v{spoiler['version']}",
         f"Seed : {spoiler['seed']}    Hash : {spoiler['hash']}",
+        "Hash symbols : " + "  ·  ".join(spoiler.get("hash_symbols") or hash_symbols(spoiler["hash"])),
         "",
         "== Réglages ==",
     ]

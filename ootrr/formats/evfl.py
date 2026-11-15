@@ -674,6 +674,14 @@ def replace_strings(d: bytes, mapping: dict[str, str]) -> tuple[bytes, int]:
     return _redirect_slots(d, [(mapping[old], slots) for old, slots in refs.items() if old in mapping])
 
 
+def event_params(d: bytes, event: int) -> int:
+    """Address of the parameter container of step n° `event` (an insert_flow template); 0 if it has none."""
+    fc = _flowchart_full(d)
+    if not 0 <= event < fc["n_events"]:
+        raise IndexError(f"step {event} out of the file ({fc['n_events']} steps)")
+    return _q(d, fc["events"] + event * EVENT_SIZE + 0x10)
+
+
 def event_param_slot(d: bytes, event: int, param: str) -> tuple[int, str | None] | None:
     """(emplacement du pointeur, texte actuel) du paramètre texte `param` de l'événement n° `event`
     (action, condition ou sous-séquence) ; None s'il n'existe pas ou n'est pas un texte."""

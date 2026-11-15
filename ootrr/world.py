@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import keys as keys_mod
 from .rules import Rule, RuleCompiler, RuleError
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -358,6 +359,9 @@ class Location:
     ocarina: bool = False  # ocarina donné par une scène (Saria, douves) : mélangé avec shuffle_ocarinas
     gift: bool = False  # cadeau donné par une scène ou un PNJ (data/gifts.json) : mélangé avec shuffle_gifts
     trade: bool = False  # end of the adult trade sequence (Biggoron): no progression without adult_trade_sequence
+    key_dungeon: str | None = None  # dungeon with keys (data/keys.json) the location belongs to, if keys are on
+    key_spot: bool = False  # small_keys=own_dungeon: chest of a small key room that may hold a small key
+    key_room: int | None = None  # room of the chest in the dungeon map (DefaultDungeonRoomIndex), if known
 
     @property
     def is_chest(self) -> bool:
@@ -424,6 +428,14 @@ class World:
                     raise DataError(f"{path.name} : lieu « {name} » défini deux fois")
                 extra_locations[name] = body
 
+        # dungeon keys: only loaded when small_keys or boss_keys is not vanilla (vanilla = keys out of the logic)
+        self.key_dungeons: dict[str, keys_mod.KeyDungeon] = keys_mod.load(data_dir) if keys_mod.active(settings) else {}
+        self.key_rooms: dict[str, int] = keys_mod.load_rooms(data_dir) if self.key_dungeons else {}
+        self._key_region = {r: kd for kd in self.key_dungeons.values() for r in kd.regions}
+        self._key_game = {kd.game: kd for kd in self.key_dungeons.values()}
+        self._key_events: set[str] = set()  # events added by data/keys.json (no key requirement)
+        self._add_key_data(regions_raw, extra_locations)
+
         self.gift_edits: dict[str, list[tuple[str, int, str, str]]] = {
             name: [tuple(e) for e in edits]
             for name, edits in _read_json(data_dir / "gifts.json")["gifts"].items()}
@@ -440,6 +452,13 @@ class World:
             if body.get("trade") and not settings.get("adult_trade_sequence"):
                 logic = None  # adult trade sequence items only count with adult_trade_sequence
             self.items[name] = Item(name, logic, body.get("level"))
+        for kd in self.key_dungeons.values():  # one key item per dungeon (data/keys.json)
+            for kind in (keys_mod.SMALL, keys_mod.BOSS):
+                if kind == keys_mod.BOSS and not kd.boss_key:
+                    continue
+                logic_name = keys_mod.logic_name(kind, kd.name)
+                self.logic_items[logic_name] = {}
+                self.items[keys_mod.item_name(kind, kd.game)] = Item(keys_mod.item_name(kind, kd.game), logic_name, None)
         self.ground: set[str] = set(items_raw.get("ground", []))
         self.ground_native: dict[str, str] = dict(items_raw.get("ground_native", {}))
         for name in self.ground | set(self.ground_native):
@@ -467,6 +486,97 @@ class World:
             raise DataError(str(exc)) from None
         self._validate()
 
+    # ------------------------------------------------------------------ dungeon keys (data/keys.json)
+    def key_mode(self, kind: str) -> str:
+        return keys_mod.mode(self.settings, kind) if self.key_dungeons else "vanilla"
+
+    def _add_key_data(self, regions_raw: dict[str, dict], extra_locations: dict[str, dict]) -> None:
+        """Key chests become locations (vanilla item: the dungeon's key item) when their setting is not
+        vanilla; the events of data/keys.json are added to their regions."""
+        for kd in self.key_dungeons.values():
+            for rname, events in kd.events.items():
+                body = dict(regions_raw[rname])
+                body["events"] = {**body.get("events", {}), **events}
+                regions_raw[rname] = body
+                self._key_events |= set(events)
+            if self.key_mode(keys_mod.SMALL) != "vanilla":
+                for i, chest in enumerate(kd.small):
+                    extra_locations[kd.small_location(i)] = {
+                        "region": kd.region, "rule": kd.rule, "hashes": [chest["hash"]],
+                        "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game), "key_room": chest["room"]}
+            if self.key_mode(keys_mod.BOSS) != "vanilla" and kd.boss_key:
+                # the chest's event (Navi's line, ForesetTemple_GetBossKey) belongs to the boss key: "drop"
+                extra_locations[kd.boss_location] = {
+                    "region": kd.region, "rule": kd.rule, "hashes": [kd.boss_key["hash"]],
+                    "vanilla": keys_mod.item_name(keys_mod.BOSS, kd.game), "event": "drop",
+                    "key_room": kd.boss_key["room"]}
+
+    def _is_key_spot(self, lname: str, rname: str, lbody: dict, src: str, kd: keys_mod.KeyDungeon) -> bool:
+        """small_keys=own_dungeon: may this chest hold one of the dungeon's small keys?
+
+        Prudent rule without the door layout: a key only moves to a chest of the same room as a vanilla key
+        chest (the number of keys per room stays the vanilla one, so the doors open in the vanilla order),
+        in the key chests' region, whose rule asks nothing more than the key chests' rule. Then every key can
+        be collected with that rule, and only the other locations of the dungeon need its keys."""
+        if self.key_mode(keys_mod.SMALL) != "own_dungeon" or rname != kd.region:
+            return False
+        room = lbody.get("key_room", self.key_rooms.get(lname))
+        if room is None or room not in kd.key_rooms:
+            return False
+        if not lbody.get("hashes") or lbody.get("kind", "general") != "general" or any(
+                lbody.get(f) for f in ("pickup", "scrub", "skulltula", "shop", "gift", "ocarina")):
+            return False
+        return src.strip() == "True" or keys_mod.conjuncts(src) <= keys_mod.conjuncts(kd.rule)
+
+    def _key_rule(self, kd: keys_mod.KeyDungeon, key_spot: bool, boss: bool) -> str:
+        """Extra requirement of a location or event of a dungeon with keys (prudent: no door layout).
+
+        Small keys placed by the fill: every location needs all the dungeon's small keys, except the key spots
+        of own_dungeon (they need the key chests' rule instead). Boss keys placed by the fill: the locations
+        behind the boss door need the boss key."""
+        parts = []
+        small = self.key_mode(keys_mod.SMALL)
+        if small in keys_mod.SHUFFLED:
+            if key_spot:
+                parts.append(f"({kd.rule})")
+            else:
+                parts.append(f"has({keys_mod.logic_name(keys_mod.SMALL, kd.name)}, {self.small_key_count(kd)})")
+        if boss and kd.boss_key and self.key_mode(keys_mod.BOSS) in keys_mod.SHUFFLED:
+            parts.append(keys_mod.logic_name(keys_mod.BOSS, kd.name))
+        return " and ".join(parts)
+
+    def small_key_count(self, kd: keys_mod.KeyDungeon) -> int:
+        """Small keys of the dungeon in the logic: the chests', plus the ground keys when those leave the map
+        (any_dungeon, random: their keys join the item pool)."""
+        moved = self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random")
+        return len(kd.small) + (len(kd.freestanding) if moved else 0)
+
+    def location_game_dungeon(self, loc: Location) -> str | None:
+        """Game dungeon (DungeonInfo / Banc name) of a location, for the keys given by its chest."""
+        if loc.key_dungeon:
+            return self.key_dungeons[loc.key_dungeon].game
+        return GAME_DUNGEONS.get(loc.dungeon) if loc.dungeon else None
+
+    def _can_hold_key(self, item: str, loc: Location) -> bool | None:
+        """Placement rule of a key item (None: not a key). Keys only go to chests (the PC-built mod gives a key
+        of another dungeon through the chest's event, so not to a chest whose event is kept)."""
+        key = keys_mod.parse_item(item)
+        if key is None:
+            return None
+        kind, game = key
+        if not loc.is_chest or loc.kind != "general" or loc.gift or loc.ocarina:
+            return False
+        kd = self._key_game[game]
+        mode = self.key_mode(kind)
+        if mode == "own_dungeon":
+            if loc.key_dungeon != kd.name or (kind == keys_mod.SMALL and not loc.key_spot):
+                return False
+        elif mode == "any_dungeon" and loc.dungeon is None and loc.key_dungeon is None:
+            return False
+        if self.location_game_dungeon(loc) != game and loc.event == "keep":
+            return False
+        return True
+
     # ------------------------------------------------------------------
     def _add_location(self, lname: str, rname: str, lbody: dict | str) -> None:
         if lname in self.locations:
@@ -487,6 +597,12 @@ class World:
             # objet donné dès la nouvelle partie : le lieu est atteint d'office
             rname, src = self.ROOT, "True"
         region = self.regions[rname]
+        kd = self._key_region.get(rname)
+        key_spot = bool(kd) and self._is_key_spot(lname, rname, lbody, str(src), kd)
+        if kd:
+            extra = self._key_rule(kd, key_spot, boss=lname in kd.boss)
+            if extra:
+                src = f"({src}) and {extra}"
         loc = Location(
             name=lname,
             region=rname,
@@ -511,6 +627,9 @@ class World:
             ocarina=bool(lbody.get("ocarina", False)),
             gift=bool(lbody.get("gift", False)),
             trade=bool(lbody.get("trade", False)),
+            key_dungeon=kd.name if kd else None,
+            key_spot=key_spot,
+            key_room=lbody.get("key_room", self.key_rooms.get(lname)),
         )
         if loc.trade and not self.settings.get("adult_trade_sequence"):
             loc.no_progression = True  # the trade sequence is out of the logic: never an item needed to finish
@@ -548,6 +667,11 @@ class World:
             for target, src in body.get("exits", {}).items():
                 region.exits.append(Exit(rname, target, c.compile(src, f"sortie {rname} -> {target}"), str(src)))
             for ename, src in body.get("events", {}).items():
+                kd = self._key_region.get(rname)
+                if kd and ename not in self._key_events:
+                    extra = self._key_rule(kd, False, boss=ename in kd.boss_events)
+                    if extra:
+                        src = f"({src}) and {extra}"
                 ev = Event(ename, rname, c.compile(src, f"événement {ename}"), str(src))
                 region.events.append(ev)
                 self.events.append(ev)
@@ -614,12 +738,24 @@ class World:
         mode = self.settings.get("maps_compasses", "vanilla")
         out: list[tuple[str, str | None]] = []
         for loc in self.shuffled_locations():
+            key = keys_mod.parse_item(loc.vanilla)
             if loc.dungeon_item and mode == "shuffle":
                 out.append((loc.vanilla, loc.dungeon))
-            elif loc.dungeon_item:
-                out.append((JUNK_REPLACEMENT, None))
+            elif loc.dungeon_item or (key and self.key_mode(key[0]) == "removed"):
+                out.append((JUNK_REPLACEMENT, None))  # removed keys: the counters start full (start_flags)
             else:
                 out.append((loc.vanilla, None))
+        if self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random"):
+            # the ground keys leave the map (removed_actors): their keys replace rupees of the pool
+            extra = [keys_mod.item_name(keys_mod.SMALL, kd.game)
+                     for kd in self.key_dungeons.values() for _ in kd.freestanding]
+            for i, (item, dungeon) in enumerate(out):
+                if not extra:
+                    break
+                if dungeon is None and item.startswith("TBox_Rupee_"):
+                    out[i] = (extra.pop(0), None)
+            if extra:
+                raise DataError("not enough rupees in the pool for the ground small keys")
         return out
 
     def start_flags(self) -> dict[str, bool]:
@@ -634,6 +770,12 @@ class World:
                 if loc.dungeon_item:
                     field_name = "IsGetMap" if loc.dungeon_item == "map" else "IsGetCompass"
                     flags[f"DungeonInfo.{GAME_DUNGEONS[loc.dungeon]}.{field_name}"] = True
+        # removed keys: each dungeon's counter starts with all its small keys (chests and ground), boss keys owned
+        for kd in self.key_dungeons.values():
+            if self.key_mode(keys_mod.SMALL) == "removed":
+                flags[keys_mod.COUNTER[keys_mod.SMALL].format(game=kd.game)] = len(kd.small) + len(kd.freestanding)
+            if self.key_mode(keys_mod.BOSS) == "removed" and kd.boss_key:
+                flags[keys_mod.COUNTER[keys_mod.BOSS].format(game=kd.game)] = True
         # forêt ouverte : ces drapeaux font apparaître les murs invisibles devant les passages
         forest = self.settings.get("open_forest", "closed")
         if forest in ("closed_deku", "open"):
@@ -680,6 +822,8 @@ class World:
             out += OPEN_FOREST_REMOVALS["exit"]
         if mode == "open":
             out += OPEN_FOREST_REMOVALS["deku"]
+        if self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random"):
+            out += [k["hash"] for kd in self.key_dungeons.values() for k in kd.freestanding]  # keys in the pool
         return out
 
     def skip_rauru(self) -> bool:
@@ -890,6 +1034,9 @@ class World:
 
     def can_place(self, item: str, loc: Location) -> bool:
         """Contraintes d'emplacement : objets au sol limités, emplacements incertains sans progression."""
+        key = self._can_hold_key(item, loc)
+        if key is not None:
+            return key and not (loc.no_progression and self.is_progression(item))
         if loc.pickup and item not in self.ground and item not in self.ground_native:
             return False
         if loc.skulltula and item not in self.ground and item not in self.ground_native:

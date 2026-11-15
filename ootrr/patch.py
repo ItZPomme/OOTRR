@@ -6,6 +6,7 @@ from typing import Any
 
 from . import __version__
 from .fill import Result
+from . import keys as keys_mod
 from .world import World
 
 PATCH_FORMAT = "ootrr-patch"
@@ -47,7 +48,12 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
             "price": loc.price,
             "ocarina": loc.ocarina,
             "gift": loc.gift,
+            "key_dungeon": world.location_game_dungeon(loc),
         })
+    key_events = keys_mod.foreign_events(chests)
+    rsdb = world.rsdb_changes()
+    for table, rows in keys_mod.rsdb_rows(key_events).items():
+        rsdb.setdefault(table, {}).update(rows)
     return {
         "format": PATCH_FORMAT,
         "format_version": PATCH_VERSION,
@@ -60,7 +66,8 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "event_skips": world.event_skips(),
         "timeline_skips": world.timeline_skips()[0],
         "timeline_fade_in": world.timeline_skips()[1],
-        "rsdb_changes": world.rsdb_changes(),
+        "rsdb_changes": rsdb,
+        "key_events": {event: list(key) for event, key in key_events.items()},
         "pack_changes": world.pack_changes(),
         "start_items": world.start_items(result.placements),
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
@@ -99,6 +106,9 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
         change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
         if chest["event"] == "drop":
             change["GetEventName"] = None
+        key = keys_mod.chest_change(chest["item"], chest.get("key_dungeon"))
+        if key:  # dungeon key: the game's key in its own dungeon, otherwise a "door key" + the chest event
+            change.update(key)
         if chest.get("conditional"):
             # sinon le jeu donnerait l'objet de remplacement d'origine si le joueur a déjà l'objet testé
             change["Drop__CheckActor"] = None

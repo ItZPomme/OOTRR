@@ -18,7 +18,8 @@ PAGES: list[tuple[str, list[str]]] = [
     ("World", ["starting_age", "open_forest", "open_door_of_time", "free_time_travel",
                "bridge", "bridge_count"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
-                 "shuffle_skulltulas", "maps_compasses", "adult_trade_sequence"]),
+                 "shuffle_skulltulas", "adult_trade_sequence"]),
+    ("Dungeons", ["maps_compasses", "small_keys", "boss_keys"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
                  "complete_mask_quest", "fast_bunny_hood", "blue_fire_arrows"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
@@ -57,6 +58,13 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
     # PC-only: nodes added to the arrow and red ice AIs (the native menu's mod is built once and has no row)
     "blue_fire_arrows": ("Blue Fire Arrows", "Ice Arrows act as Blue Fire: shoot one at red ice to melt it (Ice "
                          "Cavern, King Zora). The logic accepts them instead of a bottle.", {}),
+    # PC-only: key chests, start counters and chest events in the game files (the native menu's mod is built
+    # once and its generator has no key logic)
+    "small_keys": ("Small Keys", "Vanilla: in their chests. Own Dungeon: shuffled in their dungeon (a key only "
+                   "moves to a chest of the same room). Any Dungeon: in any dungeon. Removed: none in the chests, "
+                   "every dungeon starts with all its keys. Random: anywhere.", {}),
+    "boss_keys": ("Boss Keys", "Vanilla: in their chest. Own Dungeon: anywhere in their dungeon. Any Dungeon: in "
+                  "any dungeon. Removed: owned from the start. Random: anywhere, Ganon's Castle included.", {}),
     "accessibility": ("Accessibility", "All: every location can be reached. Beatable: only Ganon has to be "
                       "reachable, some items may be locked away.", {"all": "All", "beatable": "Beatable"}),
 }

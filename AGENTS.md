@@ -63,8 +63,10 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 | `ootrr/world.py` | Data loading, settings -> locations, start flags, removed actors, expressions, etc. |
 | `ootrr/rules.py` | Rule compiler (vocabulary at the top of the file) |
 | `ootrr/search.py` | Child / adult reachability, spheres (the child only uses adult items after going back) |
-| `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards |
+| `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards, dungeon keys first |
+| `ootrr/keys.py` | Dungeon keys (`small_keys`, `boss_keys`, data in `data/keys.json`): names, chest changes, key events |
 | `ootrr/patch.py` | Result -> JSON patch (everything the builder must apply) |
+| `ootrr/race.py` | Races: settings string (format 2, frozen field order: bump `FORMAT` when the shown settings change) and the 5 hash symbols; `tools/seed_icons.py` draws them |
 | `ootrr/modbuild.py` | Mod building: maps, GameData, scripts, RSDB, actor archives, messages, AINB modules |
 | `ootrr/ainb_graph.py` | Nodes added to actor AI modules (fast Bunny Hood, Ice Arrows as Blue Fire); inner RESTBL entries, see GAME_KNOWLEDGE |
 | `ootrr/ingame_menu.py` | In-game menu: GameData structures, option tables, texts, title sequence |

@@ -156,6 +156,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - First-obtain animation of consumables: not removed (decided by the engine).
 - Progressive upgrades in chests (mechanism of the A_06 chests with conditional content).
 - Shuffled NPCs and songs (replacing the item name in their scenes — validated for one NPC).
-- Small keys / boss keys: currently in their original location.
+- Small keys / boss keys (`small_keys`, `boss_keys`): done in the generator and the PC-built mod, verified in the
+  files (tools `verify`, `events`), **to validate in game**: a key in its own dungeon's chest (counter), a key of
+  another dungeon (door key + chest event `OoTRR_GetSmallKey_<dungeon>`, new script files), `removed` (counters and
+  `IsGetBossKey` at the start: do the locked doors and the boss doors open?), the ground keys removed from the maps.
+  Next: map the door layout of each dungeon (locked doors per room) to replace the prudent logic, a proper text for
+  a boss key found elsewhere, the native menu.
 - Settings window on PC (simple alternative to the in-game menu).
 - Native in-game menu (injected code, exlaunch): injection validated in game, see `native/README.md`.

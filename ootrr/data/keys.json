@@ -1,0 +1,164 @@
+{
+  "_doc": [
+    "Small keys and boss keys (settings small_keys and boss_keys). Only loaded when one of them is not vanilla: with vanilla keys the key chests stay out of the world and the logic ignores keys (as before).",
+    "Per dungeon: game = DungeonInfo.<game> (GameData counter SmallKeyNum, flag IsGetBossKey) and the Banc folder; regions = logic regions of the dungeon (Ganon's Castle is an overworld region); region = region of the key chests; rule = prudent rule of every key chest (everything the dungeon may need, as the boss rules); small = small key chests (hash, room = DefaultDungeonRoomIndex in the map); freestanding = small keys lying on the ground (Obj_Dungeon_SmallKey: they stay with own_dungeon and removed, and are removed from the map with any_dungeon and random, their keys going to the item pool); boss_key = boss key chest; boss = locations behind the boss door; boss_events = events behind it.",
+    "rooms: room of the other chests of these dungeons (own_dungeon: a small key may move to a chest of the same room, see World._key_spots).",
+    "Hashes and rooms read in the maps (tools.inventory, Banc/<game>/*.bcett.byml.zs); rules are prudent, not checked in game."
+  ],
+  "dungeons": {
+    "Forest Temple": {
+      "game": "ForestTemple",
+      "regions": ["Forest Temple"],
+      "region": "Forest Temple",
+      "rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has_explosives",
+      "small": [
+        {"hash": 1171460703078800858, "room": 0},
+        {"hash": 14776684749746592758, "room": 4},
+        {"hash": 6449977980406424425, "room": 15},
+        {"hash": 3433400840978782007, "room": 16},
+        {"hash": 7535137041266964235, "room": 22}
+      ],
+      "freestanding": [],
+      "boss_key": {"hash": 5306318520835485827, "room": null},
+      "boss": ["Forest Temple Phantom Ganon Heart", "Phantom Ganon"]
+    },
+    "Fire Temple": {
+      "game": "FireTemple",
+      "regions": ["Fire Temple Lower", "Fire Temple Upper"],
+      "region": "Fire Temple Upper",
+      "rule": "can_use(Megaton_Hammer) and can_use(Progressive_Hookshot) and has_explosives and can_use(Bow) and can_play(Song_of_Time)",
+      "small": [
+        {"hash": 3949488292768750868, "room": 1},
+        {"hash": 5634724236470386190, "room": 2},
+        {"hash": 16785682308850448108, "room": 4},
+        {"hash": 9634924691849556346, "room": 5},
+        {"hash": 12567412825200613393, "room": 5},
+        {"hash": 12945617941305968586, "room": 10},
+        {"hash": 10521366928524045067, "room": 11},
+        {"hash": 1705064956286753527, "room": 22}
+      ],
+      "freestanding": [],
+      "boss_key": {"hash": 14060099092170010696, "room": 17},
+      "boss": ["Fire Temple Volvagia Heart", "Volvagia"]
+    },
+    "Water Temple": {
+      "game": "WaterTemple",
+      "regions": ["Water Temple"],
+      "region": "Water Temple",
+      "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength",
+      "small": [
+        {"hash": 16490222392193949581, "room": 4},
+        {"hash": 2503861086004941173, "room": 8},
+        {"hash": 18099019250896853049, "room": 18},
+        {"hash": 3693930347660122883, "room": 20}
+      ],
+      "freestanding": [],
+      "boss_key": {"hash": 10378828369334876242, "room": 15},
+      "boss": ["Water Temple Morpha Heart", "Morpha"]
+    },
+    "Shadow Temple": {
+      "game": "ShadowTemple",
+      "regions": ["Shadow Temple"],
+      "region": "Shadow Temple",
+      "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives",
+      "small": [
+        {"hash": 1111717451118505545, "room": 6},
+        {"hash": 5781953901224064730, "room": 11},
+        {"hash": 169081039115821925, "room": 16},
+        {"hash": 17902550525792072472, "room": 21}
+      ],
+      "freestanding": [{"hash": 12562389953863361839, "room": 13}],
+      "boss_key": {"hash": 9221365632831348137, "room": 19},
+      "boss": ["Shadow Temple Bongo Bongo Heart", "Bongo Bongo"]
+    },
+    "Spirit Temple": {
+      "game": "SpiritTemple",
+      "regions": ["Spirit Temple Lobby", "Spirit Temple Child", "Spirit Temple Adult"],
+      "region": "Spirit Temple Adult",
+      "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side",
+      "events": {"Spirit Temple Child": {"Spirit_Child_Side": "child_ranged"}},
+      "small": [
+        {"hash": 5703423643219134246, "room": 4},
+        {"hash": 2203243501006528435, "room": 7},
+        {"hash": 17407066694905911064, "room": 9},
+        {"hash": 4277978357934400600, "room": 16},
+        {"hash": 12042193296697281461, "room": 26}
+      ],
+      "freestanding": [],
+      "boss_key": {"hash": 16272168033146555902, "room": 29},
+      "boss": ["Spirit Temple Twinrova Heart", "Twinrova"]
+    },
+    "Bottom of the Well": {
+      "game": "BottomOfTheWell",
+      "regions": ["Bottom of the Well"],
+      "region": "Bottom of the Well",
+      "rule": "can_play(Zeldas_Lullaby) and can_see_invisible and has_explosives",
+      "small": [
+        {"hash": 8397646530660039355, "room": 1}
+      ],
+      "freestanding": [{"hash": 17649154319341333603, "room": 3}],
+      "boss_key": null,
+      "boss": []
+    },
+    "Gerudo Training Ground": {
+      "game": "GerudoTrainingGround",
+      "regions": ["Gerudo Training Ground"],
+      "region": "Gerudo Training Ground",
+      "rule": "gtg_chests",
+      "small": [
+        {"hash": 13501407288943710656, "room": 1},
+        {"hash": 11563468890171962383, "room": 4},
+        {"hash": 4372363658229299619, "room": 5},
+        {"hash": 4709724720801091788, "room": 7},
+        {"hash": 1883068192328530224, "room": 8},
+        {"hash": 4320448574091221496, "room": 8},
+        {"hash": 9911316961118170383, "room": 8},
+        {"hash": 3717705376223508790, "room": 9},
+        {"hash": 5329807728555596183, "room": 10}
+      ],
+      "freestanding": [],
+      "boss_key": null,
+      "boss": []
+    },
+    "Ganons Castle": {
+      "game": "InsideGanonCastle",
+      "regions": ["Ganons Castle"],
+      "region": "Ganons Castle",
+      "rule": "ganon_castle_chests and can_use(Light_Arrows)",
+      "small": [
+        {"hash": 15320975652699461295, "room": 13}
+      ],
+      "freestanding": [],
+      "boss_key": {"hash": 17092385671602176550, "room": 24},
+      "boss": [],
+      "boss_events": ["Triforce"]
+    }
+  },
+  "rooms": {
+    "Forest Temple Purple Rupee Chest": 8, "Forest Temple Bow Chest": 17, "Forest Temple Arrow Chest": 27,
+    "Forest Temple Map Chest": 14, "Forest Temple Compass Chest": 18,
+    "Fire Temple Red Rupee Chest": 3, "Fire Temple High Chest 1": 8, "Fire Temple High Chest 2": 8,
+    "Fire Temple High Chest 3": 8, "Fire Temple Megaton Hammer Chest": 13, "Fire Temple Map Chest": 5,
+    "Fire Temple Compass Chest": 16,
+    "Water Temple Red Rupee Chest": 2, "Water Temple Longshot Chest": 7, "Water Temple Map Chest": 17,
+    "Water Temple Compass Chest": 3,
+    "Shadow Temple Hover Boots Chest": 4, "Shadow Temple Red Rupee Chest 1": 11, "Shadow Temple Scrub Seed Chest": 15,
+    "Shadow Temple Green Rupee Chest": 16, "Shadow Temple Magic Jar Chest": 19, "Shadow Temple Red Rupee Chest 2": 31,
+    "Shadow Temple Red Rupee Chest 3": 31, "Shadow Temple Map Chest": 3, "Shadow Temple Compass Chest": 7,
+    "Spirit Temple Bombchu Chest": 6, "Spirit Temple Bomb Chest 1": 18, "Spirit Temple Lens Chest 1": 23,
+    "Spirit Temple Lens Chest 2": 23, "Spirit Temple Bomb Chest 2": 31, "Spirit Temple Map Chest": 7,
+    "Spirit Temple Compass Chest": 14, "Spirit Temple Deku Shield Chest": 2,
+    "Bottom of the Well Red Rupee Chest 1": 1, "Bottom of the Well Red Rupee Chest 2": 1,
+    "Bottom of the Well Blue Rupee Chest 1": 1, "Bottom of the Well Blue Rupee Chest 2": 1,
+    "Bottom of the Well Blue Rupee Chest 3": 1, "Bottom of the Well Purple Rupee Chest": 2,
+    "Bottom of the Well Lens of Truth Chest": 8, "Bottom of the Well Scrub Seed Chest": 11,
+    "Bottom of the Well Map Chest": 9, "Bottom of the Well Compass Chest": 1, "Bottom of the Well Deku Shield Chest": 6,
+    "GTG Blue Rupee Chest 1": 0, "GTG Blue Rupee Chest 2": 3, "GTG Purple Rupee Chest": 8, "GTG Red Rupee Chest 1": 8,
+    "GTG Ice Arrows Chest": 8, "GTG Bombchu Chest": 8, "GTG Arrow Chest 2": 8, "GTG Scrub Seed Chest": 10,
+    "GTG Red Rupee Chest 2": 10, "GTG Bomb Chest": 10,
+    "Ganons Castle Golden Gauntlets Chest": 8, "Ganons Castle Arrow Chest 1": 2, "Ganons Castle Bombchu Chest": 5,
+    "Ganons Castle Arrow Chest 2": 8, "Ganons Castle Rupee Chest 1": 12, "Ganons Castle Rupee Chest 2": 12,
+    "Ganons Castle Rupee Chest 3": 12, "Ganons Castle Rupee Chest 4": 12, "Ganons Castle Rupee Chest 5": 13,
+    "Ganons Castle Scrub Seed Chest": 17
+  }
+}

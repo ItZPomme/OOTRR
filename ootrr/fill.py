@@ -13,6 +13,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+from . import keys as keys_mod
 from .search import State
 from .world import Location, World
 
@@ -40,12 +41,13 @@ def _candidates(world: World, item: str, locations: list[Location], placements: 
 
 
 def _assumed_fill(world: World, rng: random.Random, items: list[str], locations: list[Location],
-                  placements: dict[str, str]) -> None:
+                  placements: dict[str, str], others: list[str] = ()) -> None:
     """Place les objets de progression, en commençant à chaque étape par celui
-    qui a le moins de lieux possibles (évite les impasses)."""
+    qui a le moins de lieux possibles (évite les impasses). `others`: progression items placed later,
+    assumed owned meanwhile (dungeon keys are placed first)."""
     items = list(items)
     rng.shuffle(items)
-    assumed = list(items)
+    assumed = list(items) + list(others)
     while items:
         options = {name: _candidates(world, name, locations, placements, assumed)
                    for name in dict.fromkeys(items)}
@@ -56,6 +58,37 @@ def _assumed_fill(world: World, rng: random.Random, items: list[str], locations:
         items.remove(item)
         assumed.remove(item)
         placements[rng.choice(candidates).name] = item
+
+
+def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | None]], shuffled: list[Location],
+                placements: dict[str, str], no_logic: bool) -> list[tuple[str, str | None]]:
+    """Dungeon keys first (data/keys.json), returns the rest of the pool.
+
+    small_keys=own_dungeon: in each vanilla small key room, as many keys as in the vanilla game, among the room's
+    key spots (no logic needed, see World._is_key_spot). Other placed keys: assumed fill, all the other
+    progression items assumed owned. Without keys in the pool, nothing is drawn (same draws as before)."""
+    keys = [item for item, _ in pool if keys_mod.parse_item(item)]
+    if not keys:
+        return pool
+    rest = [(item, d) for item, d in pool if not keys_mod.parse_item(item)]
+    own_small = world.key_mode(keys_mod.SMALL) == "own_dungeon"
+    for kd in world.key_dungeons.values():
+        item = keys_mod.item_name(keys_mod.SMALL, kd.game)
+        if not own_small or item not in keys:
+            continue
+        for room, count in sorted(kd.key_rooms.items()):
+            free = [l for l in shuffled if l.key_dungeon == kd.name and l.key_spot and l.key_room == room
+                    and l.name not in placements and world.can_place(item, l)]
+            if len(free) < count:
+                raise FillError(f"{kd.name}: not enough chests in room {room} for its small keys")
+            for loc in rng.sample(free, count):
+                placements[loc.name] = item
+                keys.remove(item)
+    if no_logic:
+        return rest + [(item, None) for item in keys]  # placed with the rest, placement rules kept
+    others = [item for item, d in rest if d is None and world.is_progression(item)]
+    _assumed_fill(world, rng, keys, shuffled, placements, others)
+    return rest
 
 
 def _attempt(world: World, rng: random.Random) -> dict[str, str]:
@@ -91,6 +124,7 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             placements[loc.name] = item
     shuffled = world.shuffled_locations()
     pool = world.pool()
+    pool = _place_keys(world, rng, pool, shuffled, placements, no_logic)
 
     # 1. objets liés à un donjon (cartes, boussoles) : dans un coffre de ce donjon
     for item, dungeon in pool:
