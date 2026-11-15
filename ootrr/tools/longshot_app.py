@@ -37,7 +37,7 @@ CONFIG = APP_DIR / "longshot_app.json"
 SEEDS_DIR = APP_DIR / "seeds"
 MOD_NAME = "OoTRR"
 TARGETS = {"longshot": "Longshot", "eden": "Eden"}
-# exact image names: our own "OoTRR-Longshot.exe" must not count as the game
+# exact image names: our own "OoTRR-App.exe" must not count as the game
 GAME_PROCESSES = {"longshot": ("longshot.exe",),
                   "eden": ("eden.exe", "fritchii.exe", "yuzu.exe", "suyu.exe", "citron.exe", "sudachi.exe")}
 

@@ -1,4 +1,4 @@
-"""Builds the standalone Longshot seed installer (output/OoTRR-Longshot.exe) with PyInstaller.
+"""Builds the standalone seed installer for Longshot and Eden (output/OoTRR-App.exe) with PyInstaller.
 
     python -m pip install pyinstaller
     python -m ootrr.tools.build_longshot_app
@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ICON = ROOT / "ootrr" / "assets" / "longshot.ico"
 LAUNCHER = "from ootrr.tools.longshot_app import main\nraise SystemExit(main())\n"
-NAME = "OoTRR-Longshot"
+NAME = "OoTRR-App"
 
 
 def main(argv=None) -> int:
