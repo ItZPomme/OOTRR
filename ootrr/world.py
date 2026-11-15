@@ -191,6 +191,28 @@ POE_FLOW = "Npc_Hylia_048_BottleShop"
 POE_FLOW_EVENTS = (242, 243, 244, 246, 248, 250, 252)  # "Value" = 400
 POE_POINTS = 100
 BIG_POES_VANILLA = 5
+# Happy Mask Shop quest (complete_mask_quest). GameData Enum without a known name (hash found in
+# SubEvent_MaskSalesman_IsCompleted_Exp), values NotReady, Ready, UntilRentMaskOfKeaton, Step01_Hint, Step01,
+# Step02, UntilRentMaskOfSkull ... Step08, Complete. The shop (Npc_Hylia_023_Shop_Child, ShopParam GoodsList)
+# shows each mask while its BoolExp HappyMaskShop_HasMask_<mask> is true: quest after Step01 (Skull), Step03
+# (Spooky), Step05 (Bunny), Step07 (Zora, Goron, Gerudo, Truth), mask not owned and not the one being lent;
+# Keaton needs Npc_Hylia_Soldier_003_GateOpen (Kakariko gate) instead. At Complete the shopkeeper's talk goes
+# to TalkWithoutMask_Complete (no payment asked) and the buyers' scripts (SubEvent_MaskSalesman: guard, Skull
+# Kid, Running Man) only react at their own steps [files].
+MASK_QUEST = ("Enum", 3925934864, "Complete")
+# Fast Bunny Hood (fast_bunny_hood), validated in game (Longshot, 2026-11-14). Link's walk module
+# (Player.action.walk.module, shared by Player_Child / Player_Adult / Player_Base) multiplies his forward speed
+# while the hood is worn. "Worn" = an unnamed saved PlayerStatus Bool (member key 3947362076, flag hash
+# 3262939387: 0 without, 1 with the hood, seen in progress.sav) AND PlayerStatus.EquipHeadArmor ==
+# Armor_Child_Mask_Bunny (that String64 keeps the last mask after it is taken off). The Bool has no known name, so
+# a new BoolExp names it for the AI query. The hood's own AI only runs for a moment when it is created.
+BUNNY_WORN_EXP = "OoTRR_HoodWorn_Exp"
+BUNNY_WORN_FLAG = "#3262939387"
+BUNNY_HOOD = "Armor_Child_Mask_Bunny"
+BUNNY_HEAD_FLAG = "PlayerStatus.EquipHeadArmor"
+BUNNY_SPEED = 1.5  # Majora's Mask: the Bunny Hood makes Link about 1.5 times faster
+PLAYER_PACKS = ("Player_Child", "Player_Adult", "Player_Base")
+PLAYER_WALK_MODULE = "AI/Player.action.walk.module.ainb"
 STONE_FLAGS = [f"IsGet.Item_Stone_{x}" for x in ("Forest", "Fire", "Water")]
 MEDAL_FLAGS = [f"IsGet.Item_Medal_{x}" for x in ("Forest", "Fire", "Water", "Spirit", "Shadow", "Light")]
 MAX_LIFE = "PlayerStatus.MaxLife"  # en quarts de cœur (12 = 3 cœurs)
@@ -613,6 +635,8 @@ class World:
         if self.settings.get("start_with_consumables"):
             for name, count in START_CONSUMABLES:
                 flags[f"PouchData.{name}.StockNum"] = count
+        if self.settings.get("complete_mask_quest"):
+            flags[f"#{MASK_QUEST[1]}"] = MASK_QUEST[2]
         if self.settings.get("starting_age") == "adult":
             # comme Market_Child_Field_ChildToAdult (l'âge suit ce drapeau et la carte d'arrivée)
             flags[ADULT_FLAG] = False
@@ -748,7 +772,16 @@ class World:
         """Expressions booléennes ajoutées aux données de sauvegarde (non sauvegardées)."""
         out = dict(BOOL_EXPS) if self.settings.get("open_door_of_time") else {}
         out.update(bridge_exps(self.settings.get("bridge", "vanilla"), self.settings.get("bridge_count", 0)))
+        if self.settings.get("fast_bunny_hood"):
+            out[BUNNY_WORN_EXP] = [("Bool", BUNNY_WORN_FLAG)]
         return out
+
+    def ainb_edits(self) -> dict[str, dict]:
+        """Nodes added to AI modules of actor packs (ModBuilder._write_ainb_edits)."""
+        if not self.settings.get("fast_bunny_hood"):
+            return {}
+        return {"fast_walk": {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
+                              "head_flag": BUNNY_HEAD_FLAG, "head_actor": BUNNY_HOOD, "factor": BUNNY_SPEED}}
 
     def actor_changes(self) -> dict[int, dict]:
         """Modifications d'acteurs liées aux réglages (hors contenu des coffres)."""

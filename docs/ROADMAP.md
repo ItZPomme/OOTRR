@@ -145,6 +145,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   that read an answer flag), starting items. Translate the questions.
 
 ## Miscellaneous
+- Ice Arrows act as Blue Fire (red ice, King Zora): red ice only melts on a Blue Fire message. Retry the red ice
+  graft (Life / SensorHit components + an element check in its AI) now that inner RESTBL entries are known (see
+  GAME_KNOWLEDGE, "Adding nodes to actor AI modules"). The logic would then change (`Blue_Fire` event, Ice Cavern
+  and King Zora rules: `has_bottle or can_use(Ice_Arrows)`).
+- `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).
 - First-obtain animation of consumables: not removed (decided by the engine).
 - Progressive upgrades in chests (mechanism of the A_06 chests with conditional content).
 - Shuffled NPCs and songs (replacing the item name in their scenes — validated for one NPC).

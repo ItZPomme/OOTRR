@@ -19,7 +19,8 @@ PAGES: list[tuple[str, list[str]]] = [
                "bridge", "bridge_count"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
                  "shuffle_skulltulas", "maps_compasses"]),
-    ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count"]),
+    ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
+                 "complete_mask_quest", "fast_bunny_hood"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
 ]
 MAX_ROWS = 8
@@ -47,6 +48,12 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
                     "Original game: 7.", {}),
     "big_poe_count": ("Big Poes", "Number of Big Poes the Poe buyer in the adult market needs before he gives "
                       "his reward. Original game: 5 (500 points).", {}),
+    # PC-only: a start flag (quest Enum at Complete), which the native menu's mod (built once) does not set
+    "complete_mask_quest": ("Mask Quest Done", "The Happy Mask Shop quest is completed from the start: nothing "
+                            "to sell or pay, the shop lends every mask, Mask of Truth included.", {}),
+    # PC-only: nodes added to Link's walk module (the native menu's mod is built once and has no row)
+    "fast_bunny_hood": ("Fast Bunny Hood", "As in Majora's Mask: Link runs 1.5 times faster while he wears the "
+                        "Bunny Hood.", {}),
     "accessibility": ("Accessibility", "All: every location can be reached. Beatable: only Ganon has to be "
                       "reachable, some items may be locked away.", {"all": "All", "beatable": "Beatable"}),
 }

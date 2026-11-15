@@ -194,6 +194,67 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   `Obj_BrokenBox_A_*` crate at the same position, `DefaultDungeonRoomIndex`. Rules in `skulltulas.json` (9 uncertain
   ones keep `no_progression`): **verified in the files**, not yet validated in game one by one.
 
+## Masks, Blue Fire, player movement **[files]** (2026-11-14)
+
+- **Happy Mask Shop quest**: GameData Enum without a known name, hash `3925934864` (found in
+  `SubEvent_MaskSalesman_IsCompleted_Exp`): NotReady, Ready, UntilRentMaskOfKeaton, Step01_Hint, Step01, Step02,
+  UntilRentMaskOfSkull, Step03_Hint, Step03, Step04, UntilRentMaskOfSpooky, Step05_Hint, Step05, Step06,
+  UntilRentMaskOfBunny, Step07_Hint, Step07, Step08, Complete. Buyers in `SubEvent_MaskSalesman` (Kakariko guard
+  `Npc_Hylia_Soldier_003` Step01/02, Skull Kid Step03/04, Running Man Step07/08; the Spooky Mask buyer is not in
+  this flow), payments in `Npc_Hylia_023_Shop_Child` (`Pay_ki-tan`, `Pay_dokuro`, `Pay_kowaso`, `Pay_usagi`; at
+  Complete the talk goes to `TalkWithoutMask_Complete`). The shop's `ShopParam` (`Npc_Hylia_023_Shop_Child`) shows
+  each mask while the BoolExp `HappyMaskShop_HasMask_<mask>` is true: quest after Step01 (Skull), Step03 (Spooky),
+  Step05 (Bunny), Step07 (Zora, Goron, Gerudo, Truth; Truth also needs `IsPlayingFirstTruthMaskGetDemo` false),
+  `PouchData.Armor_Child_Mask_<mask>.StockNum` = 0 and the lent-mask integer (hash 3472691999, -1 at the start)
+  not equal to the mask's rank in the list (Spooky 0, Keaton 1, Bunny 2, Skull 3, Zora 4, Goron 5, Gerudo 6,
+  Truth 7). Keaton needs `Npc_Hylia_Soldier_003_GateOpen` (Kakariko gate) instead of a step. Setting
+  `complete_mask_quest`: the Enum starts at Complete (start flag, PC-built mod only). The Lost Woods Skull Kid
+  only disappears with `NPC_SkullKid_Delete` (set when he buys the mask), not with the quest step. **To test in
+  game.**
+- **Red ice and Blue Fire**: `Obj_RedIce_A_*` has no Chemical or Life component: its AI (`Obj_RedIce_A_01.root`)
+  only melts on a message `QueryMessageBlueFireReceiveMessage` (MessageType 890699779), then relays it to its
+  linked actors. The poured Blue Fire (`Obj_BlueFire_A_03`, ActorHolder of `Weapon_Bottle_BlueFire`) finds the
+  target with `QueryBlueFireFindTarget` (attention client `Obj_RedIce_A_01_BlueFireTarget`, range 4 m), flies to
+  it (`ExecuteBlueFireMove`) and sends that message (`OneShotMessageBlueFireSendMessage`). King Zora has his own
+  Blue Fire handling in `Npc_Zora_KingZora_adult.event.root`.
+- **Ice Arrows**: every arrow is the actor `NormalArrow` (`AssginableItemParam.ShootableActor`), without AI; the
+  arrow type picks an entry of `GameBalance/AttackParam/NormalArrow` by `AttackType` (Ice Arrow = 3740198074 =
+  `AssignableItem` of `Item_Arrow_Ice`, `DamageElements` [2817341698], multiplier 2). The element only reaches
+  actors with a damage receiver (Life / DamageCalculator, e.g. `QueryGetLastDamageIsOnDamageElementFromExternal...`),
+  which red ice does not have. **"Ice Arrows act as Blue Fire" is not possible from the data alone**: it needs
+  either a native hook (on an arrow hit with the ice attack type on an `Obj_RedIce_*` actor, send it the Blue Fire
+  message 890699779, as `OneShotMessageBlueFireSendMessage` does; King Zora separately) or new Life / damage
+  components in the red ice packs plus new AINB nodes in its root module (an element check OR the Blue Fire
+  message), both untested.
+- **Fast Bunny Hood (`fast_bunny_hood`) [game]** (Longshot, 2026-11-14, PC-built mod): nodes added to Link's
+  `Player.action.walk.module` (`ootrr/ainb_graph.py`). `ExecutePlayerMove` has no parameter and masks have no
+  movement data, but `QueryPhysicsCctGetForwardSpeedMps` x factor -> `ExecutePhysicsCctSetForwardSpeedMps` after it
+  scales Link's speed and follows the stick (a constant forward speed or `ExecutePhysicsCctSetForwardAndSide...Rate`
+  do not: the side rate pushed Link sideways). Condition: BoolExp `OoTRR_HoodWorn_Exp` = the unnamed saved
+  `PlayerStatus` Bool (member key 3947362076, flag hash 3262939387: 0 without the hood, 1 with it, read in
+  progress.sav) AND `PlayerStatus.EquipHeadArmor` == `Armor_Child_Mask_Bunny` (that String64 keeps the last mask
+  after it is taken off). Tested in game with x1.6; the setting uses x1.5.
+
+- **Adding nodes to actor AI modules [game]** (Longshot, 2026-11-14; experiment scripts in `output/essai/`):
+  - **Each file inside a pack has its own RESTBL entry**, only ~0x190 bytes over its size. A bigger `.ainb`
+    without a bigger entry overwrites memory: black screen when Link is created, Bunny Hood that no longer equips.
+    Raising the pack's entry or RSDB `InstanceHeapSize` does not help. With the inner entry raised, nodes copied
+    from other packs work (`ainb_graph.inner_size_entry`).
+  - A file shared by several packs (the walk module: `Player_Child`, `Player_Adult`, `Player_Base`) is edited in
+    each of them.
+  - `Element_BoolSelector` with `CalculateTiming` 1 re-evaluates its input every frame (0 keeps its choice while
+    the child runs). `QueryGetNonStructGameDataBool` reads flags correctly (control test).
+  - The AI of `Armor_Child_Mask_Bunny` only runs for a moment when the actor is created (a saved frame counter
+    written by it stopped at 96): it cannot report "worn" every frame. Wrapping its root in a `SplitTiming` broke
+    the hood (before the RESTBL fix).
+  - **Logging**: an AI can write saved GameData Ints (`OneShotSetNonStructGameDataInt`, new entries saved with
+    `ingame_menu.add_saved_entries`); the values are read back from `user/save/*/slot_*/progress.sav` (pairs hash,
+    value after a 0x20 header; String64 values are offsets in the file). Longshot saves in rotating slots.
+  - Red ice + `LifeRef` / `SensorHitRef` components copied from `Obj_LakeHrl_SwitchHit_A_01`: **crash** when
+    Zora's Domain (adult) creates `Obj_RedIce_A_02` (heap corruption in the engine's allocator), also with the
+    original AI and with `InstanceHeapSize` + 256 KB; tried before the RESTBL fix above, so **to retry** with the
+    inner entries raised. `DamageElement` 1 = Frozen is only deduced from other actors, never tested.
+
 ## Messages (Mals)
 
 - `Mals/<language>.Product.110.sarc.zs`: 16 languages, MSBT in **UTF-8** (byte 0x0C = 0).

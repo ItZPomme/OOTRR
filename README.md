@@ -48,6 +48,8 @@ python -m ootrr --seed 1234 --romfs "PATH\TO\updates\<version>\romfs" --install
 | `start_with_consumables` | yes / no | 10 Deku Sticks and 20 Deku Nuts at the start |
 | `cucco_count` | 1 to 7 (default 7) | Cuccos Anju needs in her pen before her reward (PC-built mod only; verified in the files, **to validate in game**) |
 | `big_poe_count` | 1 to 5 (default 5) | Big Poes the Poe buyer needs before his reward; the remake gives the bottle at 500 points = 5 Big Poes (PC-built mod only; verified in the files, **to validate in game**) |
+| `fast_bunny_hood` | yes / no (default no) | Link runs 1.5 times faster while he wears the Bunny Hood, as in Majora's Mask (PC-built mod only; **validated in game** in Longshot) |
+| `complete_mask_quest` | yes / no (default no) | Happy Mask Shop quest completed from the start: nothing to sell or pay, every mask can be borrowed, Mask of Truth included; Keaton still after the Kakariko gate (PC-built mod only; verified in the files, **to validate in game**) |
 | `shuffle_songs` | `vanilla`, `shuffle`, `random` | Songs in place, shuffled among themselves, or in the pool |
 | `shuffle_ocarinas` | yes / no | Fairy Ocarina (Saria) and Ocarina of Time (moat) shuffled; no = in place |
 | `shuffle_gifts` | yes (default) / no | 25 shuffled gifts: Fire Arrows (Lake Hylia), the 5 bottles (Anju, Talon, market potion shop, 5 Big Poes, Ruto's letter), adult Anju's Pocket Egg, man on the roof (Kakariko), Dampé's gravedigging tour, shooting gallery, bowling, horseback archery, diving, adult fishing, Darunia, Gerudo card, Light Arrows, 6 Great Fairies (verified in the files, **to validate in game**; tokens with the native menu) |

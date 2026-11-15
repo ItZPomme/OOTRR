@@ -190,6 +190,45 @@ class ModBuilder:
                 report.append(f"{flow}: {mapping} ({count} références)")
         return report
 
+    def _write_ainb_edits(self, ainb_edits: dict[str, dict], out_romfs: Path,
+                          pack_changes: dict[str, dict[str, dict]] | None = None) -> list[str]:
+        """Adds nodes to AI modules inside actor packs (ootrr.ainb_graph).
+
+        ainb_edits : {"fast_walk": {"actors": [...], "file": inner path, "bool_exp": ..., "head_flag": ...,
+        "head_actor": ..., "factor": ...}}. The edited file is the same in every listed pack; its own RESTBL entry
+        is raised too (see ainb_graph)."""
+        from . import ainb_graph
+        from .formats.sarc import Sarc
+
+        report = []
+        templates = ainb_graph.Templates(self.romfs, self.codec)
+        for kind, edit in sorted(ainb_edits.items()):
+            if kind != "fast_walk":
+                raise KeyError(f"unknown AINB edit: {kind}")
+            clash = set(edit["actors"]) & set(pack_changes or {})
+            if clash:
+                raise ValueError(f"packs edited twice: {sorted(clash)}")
+            inner, new_inner = edit["file"], None
+            for actor in edit["actors"]:
+                path = self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+                raw = self.codec.decompress(path)
+                sarc = Sarc(raw)
+                if new_inner is None:
+                    new_inner = ainb_graph.fast_walk(sarc.files[inner], templates, edit["bool_exp"],
+                                                     edit["head_flag"], edit["head_actor"], edit["factor"])
+                    ainb_graph.inner_size_entry(self.restbl, inner, len(new_inner))
+                    report.append(f"{inner}: x{edit['factor']} forward speed while {edit['head_actor']} is worn "
+                                  f"({len(sarc.files[inner])} -> {len(new_inner)} bytes)")
+                sarc.files[inner] = new_inner
+                new = sarc.to_bytes()
+                rel = path.relative_to(self.romfs).as_posix()
+                self.restbl.resize_like(rel[:-3], len(raw), len(new) + ainb_graph.INNER_MARGIN)
+                dest = out_romfs / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(self.codec.compress(path.name, new))
+                report.append(f"  pack {actor}")
+        return report
+
     def _write_packs(self, pack_changes: dict[str, dict[str, dict]], out_romfs: Path) -> list[str]:
         """Modifie des paramètres BYML à l'intérieur d'archives d'acteurs (Pack/Actor/<acteur>.pack.zs).
 
@@ -914,7 +953,8 @@ class ModBuilder:
               scrub_sales: dict[str, int] | None = None,
               questions: list[str] | None = None,
               timeline_skips: dict[str, list[str]] | None = None,
-              timeline_fade_in: list[str] | None = None) -> list[str]:
+              timeline_fade_in: list[str] | None = None,
+              ainb_edits: dict[str, dict] | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -1031,6 +1071,8 @@ class ModBuilder:
             report += self._write_messages(items, out_romfs, questions or [])
         if pack_changes:
             report += self._write_packs(pack_changes, out_romfs)
+        if ainb_edits:
+            report += self._write_ainb_edits(ainb_edits, out_romfs, pack_changes)
         rsdb_all: dict[str, dict[str, dict]] = {t: dict(rows) for t, rows in (rsdb_changes or {}).items()}
         if pickups:
             for table, rows in self._write_pickups(pickups, out_romfs).items():
