@@ -7,6 +7,7 @@ from ootrr import settings
 from ootrr.fill import generate
 from ootrr.patch import build_patch, scrub_changes
 from ootrr.world import SCRUB_PRICE, World, shop_price
+from seed_pool import submit_cases
 
 N_SEEDS = int(os.environ.get("OOTRR_TEST_SEEDS", "100"))
 
@@ -15,11 +16,11 @@ class ScrubItemsTest(unittest.TestCase):
     def test_scrubs_sell_different_items(self):
         # the PC-built mod recognises a sale by its item name in the shared scrub script: two scrubs with the same
         # item would share one sale; items sold by the other (consumable) scrubs are never placed there
-        world = World(settings.build({"shuffle_scrubs": True, "logic": "none"}))
+        overrides = {"shuffle_scrubs": True, "logic": "none"}
+        world = World(settings.build(overrides))
         scrubs = [n for n, loc in world.locations.items() if loc.scrub]
         self.assertEqual(len(scrubs), 5)
-        for seed in range(1, N_SEEDS + 1):
-            result = generate(world, seed)
+        for seed, result in submit_cases({"scrubs": overrides}, range(1, N_SEEDS + 1))["scrubs"]:
             items = [result.placements[n] for n in scrubs]
             self.assertEqual(len(set(items)), len(items), f"seed {seed}: {items}")
             for item in items:

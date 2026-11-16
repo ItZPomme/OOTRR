@@ -14,6 +14,7 @@ from ootrr.rules import RuleCompiler, RuleError  # noqa: E402
 from ootrr.search import State, is_beatable  # noqa: E402
 from ootrr.spoiler import build as build_spoiler  # noqa: E402
 from ootrr.world import World  # noqa: E402
+from seed_pool import submit_cases  # noqa: E402
 
 N_SEEDS = int(os.environ.get("OOTRR_TEST_SEEDS", "100"))
 
@@ -167,12 +168,11 @@ class WorldTests(unittest.TestCase):
 
 
 class GenerationTests(unittest.TestCase):
-    def _check(self, overrides, seeds):
+    def _check(self, overrides, results):
         world = World(settings_mod.build(overrides))
         pool = Counter(item for item, _ in world.pool())
         mode = world.settings["maps_compasses"]
-        for seed in seeds:
-            result = generate(world, seed)
+        for seed, result in results:
             self.assertEqual(set(result.placements), set(world.locations), f"seed {seed}")
             self.assertTrue(is_beatable(world, result.placements), f"seed {seed}")
             if world.settings["accessibility"] == "all":
@@ -219,9 +219,10 @@ class GenerationTests(unittest.TestCase):
                              world.settings["open_door_of_time"])
 
     def test_presets(self):
+        results = submit_cases(PRESETS, range(1, N_SEEDS + 1))
         for name, overrides in PRESETS.items():
             with self.subTest(preset=name):
-                self._check(overrides, range(1, N_SEEDS + 1))
+                self._check(overrides, results[name])
 
     def test_gifts(self):
         """shuffle_gifts: the 24 gifts are shuffled, without bombs or rupees; the scene edits name the

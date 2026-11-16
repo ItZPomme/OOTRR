@@ -21,7 +21,8 @@ Then read, in this order:
   "Pitfalls" in GAME_KNOWLEDGE). In messages and docs, distinguish **verified in the files** (tools `verify`,
   `events`, `lookup`) from **validated in game**.
 - Any logic change must keep the tests green:
-  `python -m unittest discover -s tests` (100 seeds per preset; `OOTRR_TEST_SEEDS=20` to go faster).
+  `python -m unittest discover -s tests` (100 seeds per preset; `OOTRR_TEST_SEEDS=20` to go faster). Seeds are
+  generated in worker processes (`tests/seed_pool.py`, one per CPU; `OOTRR_TEST_JOBS=1` for sequential).
 - Rule files are data (`ootrr/data/**.json`); rules are compiled from Python-like expressions by
   `ootrr/rules.py` (never `eval`).
 - For an in-game experiment, use the `--test-*` options (outside the logic) rather than changing the generator,

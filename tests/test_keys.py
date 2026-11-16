@@ -5,10 +5,10 @@ import unittest
 
 from ootrr import keys as keys_mod
 from ootrr import settings
-from ootrr.fill import generate
 from ootrr.patch import build_patch, chest_changes
 from ootrr.search import State
 from ootrr.world import World
+from seed_pool import submit_cases
 
 N_SEEDS = max(3, int(os.environ.get("OOTRR_TEST_SEEDS", "100")) // 5)
 
@@ -83,10 +83,9 @@ class KeysTest(unittest.TestCase):
         self.assertFalse([i for i, _ in world.pool() if keys_mod.parse_item(i)])
         self.assertNotIn("Small_Key", world.locations["Forest Temple Bow Chest"].rule_src)
 
-    def _check(self, overrides, seeds):
+    def _check(self, overrides, results):
         world = World(settings.build(overrides))
-        for seed in seeds:
-            result = generate(world, seed)
+        for seed, result in results:
             if overrides.get("logic") != "none":
                 self.assertTrue(State(world).sweep(result.placements).beaten(), seed)
             for name, item in result.placements.items():
@@ -130,9 +129,10 @@ class KeysTest(unittest.TestCase):
                     self.assertIn(event, patch["rsdb_changes"]["EventSetting"])
 
     def test_presets(self):
+        results = submit_cases(PRESETS, range(1, N_SEEDS + 1))
         for name, overrides in PRESETS.items():
             with self.subTest(preset=name):
-                self._check(overrides, range(1, N_SEEDS + 1))
+                self._check(overrides, results[name])
 
 
 if __name__ == "__main__":
