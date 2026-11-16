@@ -118,6 +118,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "gerudo_card": ("random", ("random", "vanilla"),
                     "Gerudo Membership Card: random = in the item pool, the Gerudo who gives it gives a seed item "
                     "(with the other gifts); vanilla = given by that Gerudo, as in the original game"),
+    # PC-built mod only (start flags of the mod; the native menu's mod is built once)
+    "gerudo_fortress": ("normal", ("normal", "fast"),
+                        "Gerudo Fortress carpenters: normal = free the 4 carpenters to get the Gerudo Membership "
+                        "Card check; fast = the first carpenter freed is enough (the rescue counter starts at 3)"),
 }
 
 

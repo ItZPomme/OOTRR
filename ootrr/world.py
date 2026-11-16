@@ -58,6 +58,11 @@ DOOR_OF_TIME_STEP = ("Enum", 931730378, "Step06")  # état de la quête (enum Ga
 MEET_ZELDA_QUEST = ("Enum", 3683238313, "Complete")
 # départ adulte : drapeau de l'époque (vrai = enfance), épée donnée (elle sert à redevenir enfant)
 ADULT_FLAG = "Sequence_IsChildhood"
+# gerudo_fortress = fast: when a carpenter is freed, SageOfSpirit_RescueCarpenter:StepCheck_Clear reads this rescue
+# counter (Check_NumOfCarpenterHelped adds 1 first; _02 counts down from 4) and at 4 starts
+# Meet_FourCarpenter_ClearEvent (scene Dm_Gerudo_0025, the membership card); starting at 3 = one carpenter is enough
+CARPENTER_COUNTERS = {"GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped": 3,
+                      "GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped_02": 1}
 ADULT_START_ITEMS = ("Weapon_Sword_Master",)
 # start_with_consumables : premier sac plein (10 bâtons, 20 noix). L'ajout à l'inventaire crée l'objet mais
 # laisse son stock à 0 (constaté en jeu) : le stock est l'entier PouchData.<objet>.StockNum
@@ -798,6 +803,8 @@ class World:
                 flags[f"PouchData.{name}.StockNum"] = count
         if self.settings.get("complete_mask_quest"):
             flags[f"#{MASK_QUEST[1]}"] = MASK_QUEST[2]
+        if self.settings.get("gerudo_fortress") == "fast":
+            flags.update(CARPENTER_COUNTERS)
         if self.settings.get("starting_age") == "adult":
             # comme Market_Child_Field_ChildToAdult (l'âge suit ce drapeau et la carte d'arrivée)
             flags[ADULT_FLAG] = False

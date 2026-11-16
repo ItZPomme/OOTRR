@@ -222,6 +222,11 @@ Also PC-only: `gerudo_card` ("Gerudo Card" on the app's "Shuffle" page). `random
 Card is in the item pool and the Gerudo who gives it gives a seed item; `vanilla`: she gives the card, as in the
 original game. The in-game menu always shuffles it with the gifts.
 
+Also PC-only: `gerudo_fortress` ("Carpenters" on the "World" page). `normal` (default): free the 4 carpenters of
+the Gerudo Fortress to get the Gerudo Membership Card check; `fast`: the first carpenter you free is enough (the
+other three stay in their cells). Validated in game. Coming from Gerudo Valley, let the carpenter boss stop you in
+front of the fortress first: he starts the rescue quest.
+
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod

@@ -1,10 +1,10 @@
 """Race helpers: a short settings string to share, and the seed hash shown as 5 item symbols.
 
-Settings string (format 3), e.g. ``R3-1QZP1HM00HS``, ``R3-1QZP1HM00SF-727557`` with the seed, or
-``R3-1QZP1HM00AY-727557-HE668CBE6F0`` with the seed and the host's seed hash:
+Settings string (format 3), e.g. ``R3-3FZC33800HV``, ``R3-3FZC33800V0-727557`` with the seed, or
+``R3-3FZC33800BZ-727557-HE668CBE6F0`` with the seed and the host's seed hash:
 
 - ``R3``: format version. Format 2 strings (OoTRR 0.3.0 to 0.4.0) are still read, their missing settings
-  (`gerudo_card`) at the default; another format is refused (`SettingsStringError`).
+  (`gerudo_card`, `gerudo_fortress`) at the default; another format is refused (`SettingsStringError`).
 - then the settings the desktop app shows (`settings_ui.SHOWN`), packed as one mixed-radix number in a fixed
   order (`FIELDS`, frozen for format 3, independent of the app's pages) and written in Crockford base 32;
 - two check characters (10 bits of SHA-256 over everything else, seed included), so a typo is refused;
@@ -19,7 +19,8 @@ Settings the app does not show (`settings_ui.HIDDEN`, `NATIVE_ONLY`) are not in 
 generator's defaults, as in the app. Same string + same OoTRR version = same generated seed (the generator's
 version changes the placement, see the hash symbols). Changing `FIELDS`, a setting's values or an integer range
 means a new format number (`tests/test_race.py` pins format 3, and format 2 reading). Format 1 (OoTRR before the
-dungeon key settings) had the same fields without `small_keys` and `boss_keys`, format 2 without `gerudo_card`.
+dungeon key settings) had the same fields without `small_keys` and `boss_keys`, format 2 without `gerudo_card` and
+`gerudo_fortress`.
 
 Hash symbols: the first 25 bits of the seed hash (`spoiler.seed_hash`, 10 hex digits, which covers the settings,
 the placement and the version) pick 5 of the 32 `SYMBOLS`. The desktop app draws them, the spoiler log names them.
@@ -39,7 +40,8 @@ ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # Crockford base 32 (no I, L, O, 
 _READ_AS = {"I": "1", "L": "1", "O": "0"}
 
 # every setting the app shows, in a fixed order; never reorder. Format 1 = the fields up to starting_age
-# (alphabetical when frozen); format 2 added small_keys and boss_keys at the end; format 3 added gerudo_card
+# (alphabetical when frozen); format 2 added small_keys and boss_keys at the end; format 3 added gerudo_card and
+# gerudo_fortress
 FIELDS: tuple[str, ...] = (
     "accessibility", "adult_trade_sequence", "big_poe_count", "blue_fire_arrows", "bridge", "bridge_count",
     "complete_mask_quest", "cucco_count", "fast_bunny_hood", "free_time_travel", "logic", "logic_lens_required",
@@ -47,7 +49,7 @@ FIELDS: tuple[str, ...] = (
     "shuffle_scrubs", "shuffle_skulltulas", "shuffle_songs", "skip_child_zelda", "skip_cutscenes",
     "start_with_consumables", "starting_age",
     "small_keys", "boss_keys",
-    "gerudo_card",
+    "gerudo_card", "gerudo_fortress",
 )
 # older formats still read (their missing settings keep the generator's defaults): format -> its fields
 OLD_FIELDS: dict[int, tuple[str, ...]] = {2: FIELDS[:FIELDS.index("gerudo_card")]}

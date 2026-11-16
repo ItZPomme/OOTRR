@@ -30,10 +30,11 @@ class SettingsStringTest(unittest.TestCase):
     def test_format_3_is_frozen(self):
         # changing FIELDS, a setting's values or a range breaks shared strings: bump race.FORMAT instead
         self.assertEqual(race.FORMAT, 3)
-        self.assertEqual(race.encode(settings.defaults()), "R3-1QZP1HM00HS")
-        self.assertEqual(race.encode(settings.defaults(), 727557), "R3-1QZP1HM00SF-727557")
-        self.assertEqual(race.encode({"small_keys": "random", "boss_keys": "own_dungeon"}), "R3-1QZP1HM1AYT")
-        self.assertEqual(race.encode({"gerudo_card": "vanilla"}), "R3-1QZP1HM01YS")
+        self.assertEqual(race.encode(settings.defaults()), "R3-3FZC33800HV")
+        self.assertEqual(race.encode(settings.defaults(), 727557), "R3-3FZC33800V0-727557")
+        self.assertEqual(race.encode({"small_keys": "random", "boss_keys": "own_dungeon"}), "R3-3FZC3382M6Q")
+        self.assertEqual(race.encode({"gerudo_card": "vanilla"}), "R3-3FZC338021C")
+        self.assertEqual(race.encode({"gerudo_fortress": "fast"}), "R3-3FZC33801KT")
 
     def test_format_2_still_read(self):
         # strings shared with OoTRR 0.3.0 - 0.4.0: same settings, gerudo_card at its default
@@ -83,14 +84,14 @@ class SettingsStringTest(unittest.TestCase):
     def test_host_seed_hash(self):
         # optional -H<hash> after the seed: covered by the check letters, strings without it are unchanged
         s = race.encode(settings.defaults(), 727557, "e668cbe6f0")
-        self.assertEqual(s, "R3-1QZP1HM00AY-727557-HE668CBE6F0")
+        self.assertEqual(s, "R3-3FZC33800BZ-727557-HE668CBE6F0")
         self.assertEqual(race.decode_full(s), (settings.defaults(), "727557", "E668CBE6F0"))
         self.assertEqual(race.decode(s), (settings.defaults(), "727557"))
         self.assertEqual(race.decode_full(race.encode({}, 5)).seed_hash, None)
         self.assertEqual(race.decode_full(s.lower()).seed_hash, "E668CBE6F0")
         for bad in (s[:-1] + "1",  # hash changed: check fails
                     s[:-1],  # wrong length
-                    "R3-1QZP1HM00AY-HE668CBE6F0"):  # hash without seed
+                    "R3-3FZC33800BZ-HE668CBE6F0"):  # hash without seed
             with self.assertRaises(race.SettingsStringError, msg=bad):
                 race.decode_full(bad)
         with self.assertRaises(race.SettingsStringError):
@@ -113,7 +114,7 @@ class SettingsStringTest(unittest.TestCase):
         bad = ["", "hello", "R1-0VZV0RT00AJ", "R1-13TNSA00PC", "R2-0VZV0RT00A", "R2-0VZV0RT00AJX",
                "R2-0VZV0RT00A!",
                "R2-0VZV0RT01AJ",  # one letter changed: check fails
-               "R3-1QZP1HM00H", "R3-1QZP1HM00HSX", "R3-1QZP1HM01HS",
+               "R3-3FZC33800H", "R3-3FZC33800HVX", "R3-3FZC33801HV",
                "R3-0VZV0RT00AJ",  # a format 2 payload under the format 3 prefix
                good[:-1] + "3",  # seed changed: check fails
                good + "-1",
@@ -122,7 +123,7 @@ class SettingsStringTest(unittest.TestCase):
             with self.assertRaises(race.SettingsStringError, msg=s):
                 race.decode(s)
         with self.assertRaisesRegex(race.SettingsStringError, "format 4"):
-            race.decode("R4-1QZP1HM00HS")  # a string of a newer OoTRR version
+            race.decode("R4-3FZC33800HV")  # a string of a newer OoTRR version
         for s in bad:
             with self.assertRaises(race.SettingsStringError, msg=s):
                 race.decode(s)

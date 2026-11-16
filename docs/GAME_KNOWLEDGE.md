@@ -424,6 +424,28 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   requests ignored (Sun's Song: visual night only). The flag comes from the owl (`Goto_HyruleCastle_Kaepora_00`): set
   at the start, **validated in game** (2026-11-12). Observed speed: about 2 game minutes per second.
 
+## Gerudo Fortress carpenters **[files]** (2026-11-16)
+
+- The 4 carpenters are `Npc_Hylia_013_Adult` .. `016_Adult` (GerudoFortress_Adult_Static), each in a cell behind
+  `Obj_Gerudo_SwitchShutter_A_03` and guarded by a `Enemy_MiddleBoss_GerudoThief*` that drops
+  `Obj_Dungeon_SmallKey_GerudoFortress_0N`. Per carpenter: Bool `GerudoFortress_Saved_Npc_Hylia_0NN_Adult` (set by
+  `Common_Dungeon_OpenDoorChainLockMove`, read by the `Logic/GerudoFortress_Common_Level_CarpenterSet_*` AINB
+  modules), `GerudoFortress_DestroyGerudoThief_Npc_Hylia_0NN_Adult` (thief defeated).
+- Opening a cell: `SageOfSpirit_RescueCarpenter:Check_NumOfCarpenterHelped` adds 1 to the Int
+  `GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped` (default 0) and -1 to `..._02` (default 4), then
+  `StepCheck_Clear` reads the first: 1, 2, 3 = Navi says how many are left; 4 = `Meet_FourCarpenter_ClearEvent`
+  (SageOfSpirit: scene `Dm_Gerudo_0025`, which gives `Item_Token_Gerudo`, then quest `SageOfSpirit` Step02).
+  The counter is also read by `Npc_Hylia_012_Adult` (the carpenter boss, Gerudo Valley) and `Dm_Gerudo_0020`.
+- Setting `gerudo_fortress = fast`: both counters start at 3 / 1 (start flags), so the first cell opened gives the
+  card. **Validated in game** (2026-11-16, test mod OoTRR-essai: one carpenter freed, then the card scene gave the
+  seed's item, `Item_ScrubBusinessSeed` with `gerudo_card = random`).
+- The rescue needs quest `SageOfSpirit` at `Step01`, set by the carpenter boss (`Npc_Hylia_012_Adult`,
+  entry `GerudoValley_StopInFrontOfGerudoFortress`: he stops Link in front of the fortress, coming from the
+  valley). **[game]** (2026-11-16, test mod started inside the fortress): without it a carpenter only says his
+  after-rescue lines (`Npc_Hylia_016_Adult` Talk_104 / 105, horseback archery) and no thief appears. So the adult
+  start point "Gerudo Fortress" (`data/spawns.json`, `GerudoFortress_FromGerudoValley`) may leave the card
+  unobtainable until Link walks back through the valley; not handled by the logic yet.
+
 ## Age and starting point
 
 - Changing era (`Market_Child_Field_ChildToAdult` / `Market_Adult_Field_AdultToChild`) = sub-flow

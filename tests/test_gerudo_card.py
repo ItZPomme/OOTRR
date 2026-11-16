@@ -28,5 +28,19 @@ class GerudoCardTest(unittest.TestCase):
             self.assertEqual(unreachable, [])
 
 
+class FastCarpentersTest(unittest.TestCase):
+    COUNTER = "GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped"
+
+    def test_counter_starts_at_3(self):
+        flags = World(settings.build({"gerudo_fortress": "fast"})).start_flags()
+        self.assertEqual(flags[self.COUNTER], 3)
+        self.assertEqual(flags[self.COUNTER + "_02"], 1)
+
+    def test_normal_leaves_the_counter(self):
+        flags = World(settings.build({})).start_flags()
+        self.assertNotIn(self.COUNTER, flags)
+        self.assertNotIn(self.COUNTER + "_02", flags)
+
+
 if __name__ == "__main__":
     unittest.main()

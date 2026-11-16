@@ -16,7 +16,7 @@ from . import settings as settings_mod
 # (page title, settings shown on that page, in order); at most 8 rows per page
 PAGES: list[tuple[str, list[str]]] = [
     ("World", ["starting_age", "open_forest", "open_door_of_time", "free_time_travel",
-               "bridge", "bridge_count"]),
+               "bridge", "bridge_count", "gerudo_fortress"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
                  "shuffle_skulltulas", "adult_trade_sequence", "gerudo_card"]),
     ("Dungeons", ["maps_compasses", "small_keys", "boss_keys"]),
@@ -69,6 +69,10 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
     "gerudo_card": ("Gerudo Card", "Random: the Gerudo Membership Card is in the item pool and the Gerudo who gives "
                     "it gives a seed item. Vanilla: she gives the card, as in the original game.",
                     {"random": "Random", "vanilla": "Vanilla"}),
+    # PC-only: start flags (the native menu's mod is built once and has no row)
+    "gerudo_fortress": ("Carpenters", "Gerudo Fortress. Normal: free the 4 carpenters to get the Gerudo Membership "
+                        "Card check. Fast: the first carpenter you free is enough.",
+                        {"normal": "Normal", "fast": "Fast"}),
     "accessibility": ("Accessibility", "All: every location can be reached. Beatable: only Ganon has to be "
                       "reachable, some items may be locked away.", {"all": "All", "beatable": "Beatable"}),
 }
