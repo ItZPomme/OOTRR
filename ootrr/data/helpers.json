@@ -33,6 +33,7 @@
     "ganon_castle_chests":   "can_use(Fire_Arrows) and can_use(Progressive_Hookshot) and can_use(Megaton_Hammer) and can_see_invisible and has_explosives and can_use(Hover_Boots) and has_strength2",
     "shadow_boss":           "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_play(Zeldas_Lullaby)",
     "spirit_boss":           "can_use(Mirror_Shield) and can_use(Progressive_Hookshot) and has_explosives",
+    "water_boss":            "can_use(Iron_Boots) and can_use(Progressive_Hookshot) and has_explosives",
 
     "rainbow_bridge": "setting_is(bridge, 'open') or (setting_is(bridge, 'vanilla') and Shadow_Medallion and Spirit_Medallion and can_use(Light_Arrows)) or (setting_is(bridge, 'stones') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire) >= setting_value(bridge_count)) or (setting_is(bridge, 'medallions') and count(Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'dungeons') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire, Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'hearts') and hearts() >= setting_value(bridge_count))"
   }

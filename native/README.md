@@ -210,6 +210,19 @@ The generator (identical to Python) is not modified; a menu seed therefore does 
 - Enum comparison in an expression: `[12, flag]` then `[2, value]` (`encode_bool_exp`, `EnumEq`).
 - Bridge in game: `bridge_menu_exps`, one expression per combination of choices ("rows equal … AND at least N").
 
+### Player position in the log (verified in the code, to validate in game)
+
+- `SeqGetPlayerPos` (execution `0x32ed7a0`, found through its vtable `0x4bc3960`, name method `0x32ed840`) copies
+  three floats from `*(global 0x4e7cfa8) + 0x590 / 0x594 / 0x598`. The same global (+0x520) is used by other `Seq`
+  nodes.
+- `rando/coords.cpp`: a thread (`nn::os::CreateThread` imported from sdk, started with the first layout load, not in
+  `exl_main`) reads it every 250 ms and logs `OoTRR: position x y z` when Link has stood still for one second, at
+  least 1 unit from the last logged position. `python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField
+  --filter Obj_TBox` reads these lines and names the nearest actors (and their location in `ootrr/data`).
+- Live mode for test mods: `menutest --live-coords` writes `rando/coords_config.hpp` with `kLive = true` (a normal
+  `menutest` run writes it back to false): a line every 250 ms as soon as Link moved 0.3 unit; `tools.coords --live`
+  shows it on one line updated in place. Not an on-screen display: the text stays in the emulator log / terminal.
+
 ## Ghidra
 
 Installed outside the repository (`C:\Users\<you>\Tools`: Ghidra 12.2 + JDK 25, the analysis project contains game

@@ -8,111 +8,169 @@
         "Warp Songs": "(is_child and child_access) or adult_access"
       }
     },
-    "Warp Songs": {
-      "exits": {
-        "Sacred Forest Meadow": "can_play(Minuet_of_Forest)",
-        "DMC Central": "can_play(Bolero_of_Fire)",
-        "Lake Hylia": "can_play(Serenade_of_Water)",
-        "Desert Colossus": "can_play(Requiem_of_Spirit)",
-        "Graveyard Warp Pad": "can_play(Nocturne_of_Shadow)",
-        "Temple of Time": "can_play(Prelude_of_Light)"
-      }
-    },
 
-    "Kokiri Forest": {
+    "Beyond Door of Time": {
       "locations": {
-        "KF Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Medium", "hashes": [182031956235860994, 7488448334396031424], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
-      },
-      "exits": {
-        "Lost Woods": "True",
-        "Lost Woods Bridge": "is_adult or forest_exit_open",
-        "Deku Tree": "is_child and deku_tree_open"
-      }
-    },
-    "Lost Woods Bridge": {
-      "locations": {
-        "LW Gift from Saria": {"rule": "is_child and Deku_Tree_Clear", "vanilla": "Item_Ocarina_Fairy", "ocarina": true, "_note": "prudent : Saria attend peut-être la fin de l'Arbre Mojo (forêt ouverte)"}
-      },
-      "exits": {
-        "Kokiri Forest": "True",
-        "Hyrule Field": "True"
-      }
-    },
-    "Lost Woods": {
-      "locations": {
-        "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
-        "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
-        "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium", "gift": true},
-        "LW Deku Scrub Stick Upgrade": {"rule": "True", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
+        "Links Pocket": {"kind": "reward", "rule": "True", "vanilla": "Item_Medal_Light"}
       },
       "events": {
-        "Trade_Odd_Mushroom": "is_adult and Trade_Cojiro",
-        "Trade_Poachers_Saw": "is_adult and Trade_Odd_Potion"
+        "Time_Travel": "True"
       },
       "exits": {
-        "Kokiri Forest": "True",
-        "Goron City": "can_blast_or_smash",
-        "Zora River": "can_dive",
-        "LW Beyond Mido": "is_child or can_play(Sarias_Song)"
+        "Temple of Time": "True"
       }
     },
-    "LW Beyond Mido": {
+    "Death Mountain Summit": {
       "locations": {
-        "LW Deku Scrub Nut Upgrade": {"rule": "True", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
-      },
-      "exits": {
-        "Lost Woods": "True",
-        "Sacred Forest Meadow": "True"
+        "DMT Great Fairy Reward": {"rule": "can_blast_or_smash and great_fairy", "vanilla": "Item_FairyBless_MP", "gift": true},
+        "DMT Biggoron":           {"rule": "is_adult and (not adult_trade_sequence or Trade_Eyedrops)", "vanilla": "Item_Sword_Biggoron", "gift": true, "trade": true, "_note": "Biggoron gives the Biggoron Sword for the Claim Check (Npc_Goron_Biggoron_Adult, event 95). Without adult_trade_sequence the trade quest is out of the logic: the location only holds an item that is never needed (trade: true)"}
       },
       "events": {
-        "LW_Bean_Planted": "is_child and Magic_Bean"
-      }
-    },
-    "Sacred Forest Meadow": {
-      "locations": {
-        "Song from Saria": {"kind": "song", "rule": "is_child and Zeldas_Letter", "vanilla": "Item_Melody_SariaSong"},
-        "Sheik in Forest": {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_ForestMinuet"}
+        "Trade_Prescription": "is_adult and Trade_Broken_Sword"
       },
       "exits": {
-        "LW Beyond Mido": "True",
-        "Forest Temple": "can_use(Progressive_Hookshot)"
+        "Death Mountain Trail": "True",
+        "DMC Upper": "True"
       }
     },
-
-    "Hyrule Field": {
+    "Death Mountain Trail": {
       "locations": {
-        "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time", "ocarina": true},
-        "HF Deku Scrub Heart Piece": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
-        "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and has_all_stones", "vanilla": "Item_Melody_TimeSong"},
-        "HF Tektite Grotto Freestanding PoH": {"rule": "can_open_grotto and (can_use(Iron_Boots) or has_gold_scale)", "vanilla": "Obj_Heart_Piece"},
-        "HF Child Freestanding PoH": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [9814903750835309225], "pickup": "freestanding", "no_progression": true, "_note": "près des ruines côté Lon Lon, carte enfant seulement ; accès exact à confirmer"}
+        "DMT Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [715147239509454487], "pickup": "freestanding"}
       },
       "exits": {
-        "Lost Woods Bridge": "True",
-        "Market": "True",
         "Kakariko Village": "True",
-        "Lon Lon Ranch": "True",
-        "Lake Hylia": "True",
-        "Gerudo Valley": "True",
-        "ZR Front": "True"
+        "Goron City": "True",
+        "Dodongos Cavern": "has_explosives or Progressive_Strength or can_use(Megaton_Hammer)",
+        "Death Mountain Summit": "is_adult or can_blast_or_smash"
       }
     },
-
-    "Market": {
+    "Desert Colossus": {
       "locations": {
-        "Market Treasure Chest Game":          {"rule": "is_child and can_use(Lens_of_Truth)", "vanilla": "Obj_Heart_Piece"},
-        "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large", "gift": true},
-        "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece"},
-        "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large", "gift": true},
-        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
-        "Market Potion Shop Bottle":           {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true, "_note": "child potion shop keeper (Npc_Hylia_020_Shop_Child), bottle tutorial on first talk"},
-        "Market 5 Big Poes":                   {"rule": "is_adult and can_ride_epona and can_use(Bow) and has_bottle", "vanilla": "Item_Bottle", "gift": true, "_note": "Ghost Shop (Npc_Hylia_048_BottleShop, adult market): bottle at 500 points = 5 Big Poes; rule taken from OoT (Epona, bow), not checked in game"}
+        "Sheik at Colossus":           {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_SpiritRequiem"},
+        "Colossus Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_NayruLove", "gift": true},
+        "Colossus Freestanding PoH":   {"rule": "is_adult and Colossus_Bean_Planted", "vanilla": "Obj_Heart_Piece", "hashes": [10592092054086534681], "pickup": "freestanding"}
+      },
+      "events": {
+        "Colossus_Bean_Planted": "is_child and Magic_Bean"
+      },
+      "exits": {
+        "Haunted Wasteland": "True",
+        "Spirit Temple Lobby": "True"
+      }
+    },
+    "DMC Central": {
+      "locations": {
+        "DMC Volcano Freestanding PoH": {"rule": "is_adult and DMC_Bean_Planted", "vanilla": "Obj_Heart_Piece", "hashes": [10331043360028932045], "pickup": "freestanding"},
+        "Sheik in Crater":              {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_FireBolero"}
+      },
+      "events": {
+        "DMC_Bean_Planted": "is_child and Magic_Bean"
+      },
+      "exits": {
+        "DMC Lower": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)",
+        "Fire Temple Lower": "is_adult and can_use(Goron_Tunic)"
+      }
+    },
+    "DMC Lower": {
+      "locations": {
+        "DMC Great Fairy Reward": {"rule": "can_use(Megaton_Hammer) and great_fairy", "vanilla": "Item_FairyBless_MPDouble", "gift": true}
+      },
+      "exits": {
+        "Goron City": "True",
+        "DMC Upper": "is_adult",
+        "DMC Central": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)"
+      }
+    },
+    "DMC Upper": {
+      "locations": {
+        "DMC Wall Freestanding PoH": {"rule": "has_explosives", "vanilla": "Obj_Heart_Piece", "hashes": [744856631664786545], "pickup": "freestanding", "_note": "prudent : mur ou volcan à confirmer"},
+        "DMC Deku Scrub Heart Piece": {"rule": "is_child and has_explosives", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "price": 40}
+      },
+      "exits": {
+        "Death Mountain Summit": "True",
+        "DMC Lower": "is_adult"
+      }
+    },
+    "Ganons Castle": {
+      "_doc": "Les épreuves et l'intérieur du château ne sont pas encore randomisés.",
+      "events": {
+        "Triforce": "can_use(Light_Arrows)"
+      },
+      "exits": {
+        "Ganons Castle Grounds": "True"
+      }
+    },
+    "Ganons Castle Grounds": {
+      "locations": {
+        "OGC Great Fairy Reward": {"rule": "has_strength3 and great_fairy", "vanilla": "Item_FairyBless_DefenseDouble", "gift": true}
+      },
+      "exits": {
+        "Market": "True",
+        "Ganons Castle": "rainbow_bridge"
+      }
+    },
+    "Gerudo Fortress": {
+      "locations": {
+        "GF HBA 1000 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Obj_Heart_Piece"},
+        "GF HBA 1500 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Item_Quiver_Large", "gift": true},
+        "GF Gerudo Membership Card": {"rule": "is_adult and (can_use(Bow) or can_use(Progressive_Hookshot))", "vanilla": "Item_Token_Gerudo", "gift": true}
+      },
+      "events": {
+        "Trade_Broken_Sword": "is_adult and Trade_Poachers_Saw"
+      },
+      "exits": {
+        "Gerudo Valley": "True",
+        "Gerudo Training Ground": "is_adult and Gerudo_Membership_Card",
+        "Haunted Wasteland": "is_adult and Gerudo_Membership_Card and (can_use(Hover_Boots) or can_use_longshot)"
+      }
+    },
+    "Gerudo Valley": {
+      "locations": {
+        "GV Waterfall Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece"}
       },
       "exits": {
         "Hyrule Field": "True",
-        "Hyrule Castle": "is_child",
-        "Ganons Castle Grounds": "is_adult",
-        "Temple of Time": "True"
+        "Lake Hylia": "True",
+        "Gerudo Fortress": "can_cross_gerudo_bridge"
+      }
+    },
+    "Goron City": {
+      "locations": {
+        "GC Darunias Joy":           {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
+        "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium"},
+        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or can_use(Bow) or Progressive_Strength)", "vanilla": "Goron_Tunic"},
+        "GC Pot Freestanding PoH":   {"rule": "is_child and has_explosives and has_fire_or_sticks", "vanilla": "Obj_Heart_Piece", "_note": "spinning pot (flag GoronLargePot_IsGetHeartPiece set by Npc_Goron_005_Child, scene Dm_Goron_0045, map icon in GoronCity_Child_Dynamic); rule taken from OoT (bomb in the pot, torches lit), not checked in game"}
+      },
+      "exits": {
+        "Death Mountain Trail": "True",
+        "Lost Woods": "True",
+        "DMC Lower": "can_play(Zeldas_Lullaby) or (is_adult and (has_explosives or can_use(Bow) or Progressive_Strength))"
+      }
+    },
+    "Graveyard": {
+      "locations": {
+        "Graveyard Dampe Gravedigging Tour": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
+        "Graveyard Freestanding PoH":        {"rule": "is_adult and Graveyard_Bean_Planted", "vanilla": "Obj_Heart_Piece", "hashes": [2157466067026784951], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu : jamais d'objet nécessaire"},
+        "Song from Royal Familys Tomb":      {"kind": "song", "rule": "can_play(Zeldas_Lullaby)", "vanilla": "Item_Melody_SunSong"}
+      },
+      "events": {
+        "Graveyard_Bean_Planted": "is_child and Magic_Bean"
+      },
+      "exits": {
+        "Kakariko Village": "True",
+        "Graveyard Warp Pad": "can_use_longshot"
+      }
+    },
+    "Graveyard Warp Pad": {
+      "exits": {
+        "Graveyard": "True",
+        "Shadow Temple": "is_adult and can_use(Dins_Fire) and can_see_invisible"
+      }
+    },
+    "Haunted Wasteland": {
+      "exits": {
+        "Gerudo Fortress": "True",
+        "Desert Colossus": "can_see_invisible"
       }
     },
     "Hyrule Castle": {
@@ -125,46 +183,22 @@
         "Market": "True"
       }
     },
-    "Ganons Castle Grounds": {
+    "Hyrule Field": {
       "locations": {
-        "OGC Great Fairy Reward": {"rule": "has_strength3 and great_fairy", "vanilla": "Item_FairyBless_DefenseDouble", "gift": true}
+        "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time", "ocarina": true},
+        "HF Deku Scrub Heart Piece": {"rule": "is_child and can_open_grotto", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
+        "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and has_all_stones", "vanilla": "Item_Melody_TimeSong"}
       },
       "exits": {
+        "Lost Woods Bridge": "True",
         "Market": "True",
-        "Ganons Castle": "rainbow_bridge"
+        "Kakariko Village": "True",
+        "Lon Lon Ranch": "True",
+        "Lake Hylia": "True",
+        "Gerudo Valley": "True",
+        "ZR Front": "True"
       }
     },
-    "Ganons Castle": {
-      "_doc": "Les épreuves et l'intérieur du château ne sont pas encore randomisés.",
-      "events": {
-        "Triforce": "can_use(Light_Arrows)"
-      },
-      "exits": {
-        "Ganons Castle Grounds": "True"
-      }
-    },
-    "Temple of Time": {
-      "locations": {
-        "ToT Light Arrows Cutscene": {"rule": "is_adult and Shadow_Medallion and Spirit_Medallion", "vanilla": "Item_Arrow_Light", "gift": true},
-        "Sheik at Temple":           {"kind": "song", "rule": "is_adult and Forest_Medallion", "vanilla": "Item_Melody_LightPrelude"}
-      },
-      "exits": {
-        "Market": "True",
-        "Beyond Door of Time": "can_open_door_of_time"
-      }
-    },
-    "Beyond Door of Time": {
-      "locations": {
-        "Links Pocket": {"kind": "reward", "rule": "True", "vanilla": "Item_Medal_Light"}
-      },
-      "events": {
-        "Time_Travel": "True"
-      },
-      "exits": {
-        "Temple of Time": "True"
-      }
-    },
-
     "Kakariko Village": {
       "locations": {
         "Kak Anju as Child":             {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true},
@@ -188,141 +222,16 @@
         "Bottom of the Well": "is_child and Drain_Well"
       }
     },
-    "Graveyard": {
+    "Kokiri Forest": {
       "locations": {
-        "Graveyard Dampe Gravedigging Tour": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
-        "Graveyard Freestanding PoH":        {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [2157466067026784951], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu : jamais d'objet nécessaire"},
-        "Song from Royal Familys Tomb":      {"kind": "song", "rule": "can_play(Zeldas_Lullaby)", "vanilla": "Item_Melody_SunSong"}
+        "KF Deku Scrub Stick Upgrade": {"rule": "has_explosives", "vanilla": "Item_StickBag_Medium", "hashes": [182031956235860994, 7488448334396031424], "scrub": true, "price": 40}
       },
       "exits": {
-        "Kakariko Village": "True",
-        "Graveyard Warp Pad": "can_use_longshot"
-      }
-    },
-    "Graveyard Warp Pad": {
-      "exits": {
-        "Graveyard": "True",
-        "Shadow Temple": "is_adult and can_use(Dins_Fire) and can_see_invisible"
-      }
-    },
-
-    "Death Mountain Trail": {
-      "locations": {
-        "DMT Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [715147239509454487], "pickup": "freestanding"}
-      },
-      "exits": {
-        "Kakariko Village": "True",
-        "Goron City": "True",
-        "Dodongos Cavern": "has_explosives or Progressive_Strength or can_use(Megaton_Hammer)",
-        "Death Mountain Summit": "is_adult or can_blast_or_smash"
-      }
-    },
-    "Death Mountain Summit": {
-      "locations": {
-        "DMT Great Fairy Reward": {"rule": "can_blast_or_smash and great_fairy", "vanilla": "Item_FairyBless_MP", "gift": true},
-        "DMT Biggoron":           {"rule": "is_adult and (not adult_trade_sequence or Trade_Eyedrops)", "vanilla": "Item_Sword_Biggoron", "gift": true, "trade": true, "_note": "Biggoron gives the Biggoron Sword for the Claim Check (Npc_Goron_Biggoron_Adult, event 95). Without adult_trade_sequence the trade quest is out of the logic: the location only holds an item that is never needed (trade: true)"}
-      },
-      "events": {
-        "Trade_Prescription": "is_adult and Trade_Broken_Sword"
-      },
-      "exits": {
-        "Death Mountain Trail": "True",
-        "DMC Upper": "True"
-      }
-    },
-    "DMC Upper": {
-      "locations": {
-        "DMC Wall Freestanding PoH": {"rule": "is_adult and can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [744856631664786545], "pickup": "freestanding", "_note": "prudent : mur ou volcan à confirmer"},
-        "Sheik in Crater":           {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_FireBolero"}
-      },
-      "exits": {
-        "Death Mountain Summit": "True",
-        "DMC Lower": "is_adult"
-      }
-    },
-    "DMC Lower": {
-      "locations": {
-        "DMC Great Fairy Reward": {"rule": "can_use(Megaton_Hammer) and great_fairy", "vanilla": "Item_FairyBless_MPDouble", "gift": true},
-        "DMC Deku Scrub Heart Piece": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"}
-      },
-      "exits": {
-        "Goron City": "True",
-        "DMC Upper": "is_adult",
-        "DMC Central": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)"
-      }
-    },
-    "DMC Central": {
-      "locations": {
-        "DMC Volcano Freestanding PoH": {"rule": "can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [10331043360028932045], "pickup": "freestanding"}
-      },
-      "exits": {
-        "DMC Lower": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)",
-        "Fire Temple Lower": "is_adult and can_use(Goron_Tunic)"
-      }
-    },
-    "Goron City": {
-      "locations": {
-        "GC Darunias Joy":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
-        "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium"},
-        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or can_use(Bow) or Progressive_Strength)", "vanilla": "Goron_Tunic"}
-      },
-      "exits": {
-        "Death Mountain Trail": "True",
         "Lost Woods": "True",
-        "DMC Lower": "can_play(Zeldas_Lullaby) or (is_adult and (has_explosives or can_use(Bow) or Progressive_Strength))"
+        "Lost Woods Bridge": "is_adult or forest_exit_open",
+        "Deku Tree": "is_child and deku_tree_open"
       }
     },
-
-    "ZR Front": {
-      "exits": {
-        "Hyrule Field": "True",
-        "Zora River": "is_adult or has_explosives"
-      }
-    },
-    "Zora River": {
-      "locations": {
-        "ZR Near Open Grotto Freestanding PoH": {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [11455676800795329345], "pickup": "freestanding"},
-        "ZR Near Domain Freestanding PoH":     {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [4189391771527808272], "pickup": "freestanding"},
-        "ZR Frogs Ocarina Game": {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song) and can_play(Suns_Song) and can_play(Eponas_Song) and can_play(Song_of_Time) and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece"}
-      },
-      "exits": {
-        "ZR Front": "True",
-        "Lost Woods": "can_dive",
-        "Zoras Domain": "can_play(Zeldas_Lullaby) or can_use(Hover_Boots)"
-      },
-      "events": {
-        "Magic_Bean": "is_child"
-      }
-    },
-    "Zoras Domain": {
-      "locations": {
-        "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver", "gift": true},
-        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic"}
-      },
-      "events": {
-        "King_Zora_Moved": "is_child and Rutos_Letter",
-        "Blue_Fire": "blue_fire_arrows_usable",
-        "Trade_Eyeball_Frog": "is_adult and Trade_Prescription and King_Zora_Moved and Blue_Fire"
-      },
-      "exits": {
-        "Zora River": "True",
-        "Lake Hylia": "is_child and can_dive",
-        "Zoras Fountain": "King_Zora_Moved"
-      }
-    },
-    "Zoras Fountain": {
-      "locations": {
-        "ZF Great Fairy Reward":       {"rule": "has_explosives and great_fairy", "vanilla": "Item_FaroreWind", "gift": true},
-        "ZF Iceberg Freestanding PoH": {"rule": "is_adult", "vanilla": "Obj_Heart_Piece", "hashes": [12406896586250888098], "pickup": "freestanding"},
-        "ZF Bottom Freestanding PoH":  {"rule": "can_use(Iron_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [8030885465575590602], "pickup": "freestanding"}
-      },
-      "exits": {
-        "Zoras Domain": "True",
-        "Jabu Jabus Belly": "is_child and has_bottle",
-        "Ice Cavern": "is_adult"
-      }
-    },
-
     "Lake Hylia": {
       "locations": {
         "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter", "hashes": [474136620438465634], "pickup": "item", "actor": "Obj_Bottle_Letter", "_note": "Ruto's letter on the lake floor (Obj_Bottle_Letter, child Hyrule Field map); shuffled with shuffle_gifts"},
@@ -345,53 +254,146 @@
       "locations": {
         "Song from Malon":      {"kind": "song", "rule": "is_child and Zeldas_Letter and Ocarina", "vanilla": "Item_Melody_EponaSong"},
         "LLR Talons Chickens":  {"rule": "is_child and Zeldas_Letter", "vanilla": "Item_Bottle_Milk", "gift": true},
-        "LLR Freestanding PoH": {"rule": "is_child", "vanilla": "Obj_Heart_Piece"}
+        "LLR Child Freestanding PoH": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "hashes": [9814903750835309225], "pickup": "freestanding"}
       },
       "exits": {
         "Hyrule Field": "True"
       }
     },
-
-    "Gerudo Valley": {
+    "Lost Woods": {
       "locations": {
-        "GV Waterfall Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece"}
+        "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
+        "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
+        "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium", "gift": true},
+        "LW Deku Scrub Stick Upgrade": {"rule": "is_child", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40}
+      },
+      "events": {
+        "Trade_Odd_Mushroom": "is_adult and Trade_Cojiro",
+        "Trade_Poachers_Saw": "is_adult and Trade_Odd_Potion"
+      },
+      "exits": {
+        "Kokiri Forest": "True",
+        "Goron City": "can_blast_or_smash",
+        "Zora River": "can_dive",
+        "LW Beyond Mido": "is_child or can_play(Sarias_Song)"
+      }
+    },
+    "Lost Woods Bridge": {
+      "locations": {
+        "LW Gift from Saria": {"rule": "is_child and (forest_exit_open or Deku_Tree_Clear)", "vanilla": "Item_Ocarina_Fairy", "ocarina": true, "_note": "prudent : Saria attend peut-être la fin de l'Arbre Mojo (forêt ouverte)"}
+      },
+      "exits": {
+        "Kokiri Forest": "is_adult or forest_exit_open",
+        "Hyrule Field": "True"
+      }
+    },
+    "LW Beyond Mido": {
+      "locations": {
+        "LW Deku Scrub Nut Upgrade": {"rule": "can_open_grotto", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "price": 40}
+      },
+      "exits": {
+        "Lost Woods": "True",
+        "Sacred Forest Meadow": "True"
+      },
+      "events": {
+        "LW_Bean_Planted": "is_child and Magic_Bean"
+      }
+    },
+    "Market": {
+      "locations": {
+        "Market Treasure Chest Game":          {"rule": "is_child and can_use(Lens_of_Truth)", "vanilla": "Obj_Heart_Piece"},
+        "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large", "gift": true},
+        "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece"},
+        "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large", "gift": true},
+        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
+        "Market Potion Shop Bottle":           {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true, "_note": "child potion shop keeper (Npc_Hylia_020_Shop_Child), bottle tutorial on first talk"},
+        "Market 5 Big Poes":                   {"rule": "is_adult and can_ride_epona and can_use(Bow) and has_bottle", "vanilla": "Item_Bottle", "gift": true, "_note": "Ghost Shop (Npc_Hylia_048_BottleShop, adult market): bottle at 500 points = 5 Big Poes; rule taken from OoT (Epona, bow), not checked in game"}
       },
       "exits": {
         "Hyrule Field": "True",
-        "Lake Hylia": "True",
-        "Gerudo Fortress": "can_cross_gerudo_bridge"
+        "Hyrule Castle": "is_child",
+        "Ganons Castle Grounds": "is_adult",
+        "Temple of Time": "True"
       }
     },
-    "Gerudo Fortress": {
+    "Sacred Forest Meadow": {
       "locations": {
-        "GF HBA 1000 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Obj_Heart_Piece"},
-        "GF HBA 1500 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Item_Quiver_Large", "gift": true},
-        "GF Gerudo Membership Card": {"rule": "is_adult", "vanilla": "Item_Token_Gerudo", "gift": true}
+        "Song from Saria": {"kind": "song", "rule": "is_child and Zeldas_Letter", "vanilla": "Item_Melody_SariaSong"},
+        "Sheik in Forest": {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_ForestMinuet"}
+      },
+      "exits": {
+        "LW Beyond Mido": "True",
+        "Forest Temple": "can_use(Progressive_Hookshot)"
+      }
+    },
+    "Temple of Time": {
+      "locations": {
+        "ToT Light Arrows Cutscene": {"rule": "is_adult and Shadow_Medallion and Spirit_Medallion", "vanilla": "Item_Arrow_Light", "gift": true},
+        "Sheik at Temple":           {"kind": "song", "rule": "is_adult and Forest_Medallion", "vanilla": "Item_Melody_LightPrelude"}
+      },
+      "exits": {
+        "Market": "True",
+        "Beyond Door of Time": "can_open_door_of_time"
+      }
+    },
+    "Warp Songs": {
+      "exits": {
+        "Sacred Forest Meadow": "can_play(Minuet_of_Forest)",
+        "DMC Central": "can_play(Bolero_of_Fire)",
+        "Lake Hylia": "can_play(Serenade_of_Water)",
+        "Desert Colossus": "can_play(Requiem_of_Spirit)",
+        "Graveyard Warp Pad": "can_play(Nocturne_of_Shadow)",
+        "Temple of Time": "can_play(Prelude_of_Light)"
+      }
+    },
+    "Zora River": {
+      "locations": {
+        "ZR Near Open Grotto Freestanding PoH": {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [11455676800795329345], "pickup": "freestanding"},
+        "ZR Near Domain Freestanding PoH":     {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [4189391771527808272], "pickup": "freestanding"},
+        "ZR Frogs Ocarina Game": {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song) and can_play(Suns_Song) and can_play(Eponas_Song) and can_play(Song_of_Time) and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece"},
+        "ZR Frogs in the Rain":  {"rule": "is_child and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece", "_note": "second frog heart piece (map icon MiniGame_FrogTenors_StormSong, script MiniGame_FrogTenors); rule taken from OoT, not checked in game"}
+      },
+      "exits": {
+        "ZR Front": "has_explosives",
+        "Lost Woods": "can_dive",
+        "Zoras Domain": "can_play(Zeldas_Lullaby)"
       },
       "events": {
-        "Trade_Broken_Sword": "is_adult and Trade_Poachers_Saw"
-      },
-      "exits": {
-        "Gerudo Valley": "True",
-        "Gerudo Training Ground": "is_adult and Gerudo_Membership_Card",
-        "Haunted Wasteland": "is_adult and Gerudo_Membership_Card and (can_use(Hover_Boots) or can_use_longshot)"
+        "Magic_Bean": "is_child and has_explosives"
       }
     },
-    "Haunted Wasteland": {
-      "exits": {
-        "Gerudo Fortress": "True",
-        "Desert Colossus": "can_see_invisible"
-      }
-    },
-    "Desert Colossus": {
+    "Zoras Domain": {
       "locations": {
-        "Sheik at Colossus":           {"kind": "song", "rule": "is_adult", "vanilla": "Item_Melody_SpiritRequiem"},
-        "Colossus Great Fairy Reward": {"rule": "has_explosives and great_fairy", "vanilla": "Item_NayruLove", "gift": true},
-        "Colossus Freestanding PoH":   {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [10592092054086534681], "pickup": "freestanding"}
+        "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver", "gift": true},
+        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic"}
+      },
+      "events": {
+        "King_Zora_Moved": "is_child and Rutos_Letter",
+        "Blue_Fire": "blue_fire_arrows_usable",
+        "Trade_Eyeball_Frog": "is_adult and Trade_Prescription and King_Zora_Moved and Blue_Fire"
       },
       "exits": {
-        "Haunted Wasteland": "True",
-        "Spirit Temple Lobby": "True"
+        "Zora River": "True",
+        "Lake Hylia": "is_child and can_dive",
+        "Zoras Fountain": "King_Zora_Moved"
+      }
+    },
+    "Zoras Fountain": {
+      "locations": {
+        "ZF Great Fairy Reward":       {"rule": "has_explosives and great_fairy", "vanilla": "Item_FaroreWind", "gift": true},
+        "ZF Iceberg Freestanding PoH": {"rule": "is_adult", "vanilla": "Obj_Heart_Piece", "hashes": [12406896586250888098], "pickup": "freestanding"},
+        "ZF Bottom Freestanding PoH":  {"rule": "can_use(Iron_Boots) and can_use(Zora_Tunic)", "vanilla": "Obj_Heart_Piece", "hashes": [8030885465575590602], "pickup": "freestanding"}
+      },
+      "exits": {
+        "Zoras Domain": "True",
+        "Jabu Jabus Belly": "is_child and has_bottle",
+        "Ice Cavern": "is_adult"
+      }
+    },
+    "ZR Front": {
+      "exits": {
+        "Hyrule Field": "True",
+        "Zora River": "is_adult or has_explosives"
       }
     }
   }

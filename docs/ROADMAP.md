@@ -100,6 +100,18 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Shuffled Great Fairy checks (fountains).
 - [ ] Shuffled Goron Bracelet.
 - [ ] Shuffled checks giving scales, adult fishing and diving (minigames).
+- [ ] House of Skulltula rewards (Kakariko): absent from the data, since Gold Skulltula tokens have no logic item
+  yet (a location must always be reachable, so `False` is refused). **[files]** Script `GatheringTokenGold`, entry
+  `TokenCheck_Reward`: 10 `Item_Wallet_Medium`, 20 `Item_AgonyStone`, 30 `Item_Wallet_Large`, 40
+  `Item_BombchuBundle_Large`, 50 `Obj_Heart_Piece` (map icon `KakarikoVillage_IsAfterSave_Npc_Hylia_025`), 100
+  `Obj_Rupee_Gold`.
+- [ ] Heart pieces given by scripts and minigames, fixed today (no hash, not shuffled), found in the files through the
+  `HeartPieceAnchor` map icons (`HeartPieceAnchor_GameDataPath` = the flag set when it is obtained): Skull Kid,
+  Skull Kid memory game, treasure chest game (chest `Obj_HrlCity_Shop_TBox_A_02`, hash 16881481538337649070),
+  bombchu bowling, lost dog, child fishing, lab dive (`Npc_Hylia_045_Child`, a **child** diving challenge: the rule
+  is probably wrong), frogs (two), horseback archery, Goron City pot. Gerudo Valley waterfall: own actor
+  `Obj_GerudoValley_Heart_Piece` (hash 16129198288828948135), not linked to its location yet. No heart piece
+  actor exists for the old HF Tektite grotto, Lon Lon Ranch and Ice Cavern locations (removed on 2026-11-16).
 - [ ] Zelda's Lullaby in the pool (starting song with skipped child Zelda and random songs): already the case in the
   generator (`Song from Impa` is a shuffled song location and the start gives the item found there; verified on 8
   Python seeds); **to validate in game with the menu**.

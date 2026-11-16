@@ -221,6 +221,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="test : objet ajouté à l'inventaire de départ (hors logique)")
     p.add_argument("--test-flag", action="append", default=[], metavar="NOM=VALEUR",
                    help="test : valeur d'un drapeau GameData au début d'une nouvelle partie")
+    p.add_argument("--plando", metavar="FILE",
+                   help="plandomizer file (ootrr/plando.py): chosen placements, start and settings; --seed and --set "
+                        "override the file")
     p.add_argument("--check", action="store_true", help="valider les données et quitter")
     p.add_argument("--list-settings", action="store_true", help="afficher les réglages disponibles")
     p.add_argument("--version", action="version", version=f"ootrr {__version__}")
@@ -234,6 +237,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.install and not args.romfs:
         p.error("--install nécessite --romfs")
 
+    plando = None
+    if args.plando:
+        from . import plando as plando_mod
+        try:
+            plando = plando_mod.load(args.plando)
+        except plando_mod.PlandoError as exc:
+            print(f"Erreur : {exc}", file=sys.stderr)
+            return 2
+        if args.seed is None and plando.get("seed"):
+            args.seed = str(plando["seed"])
+        # file settings first, then --set (the command line wins)
+        args.set = [f"{k}={json.dumps(v) if isinstance(v, bool) else v}" for k, v in plando.get("settings", {}).items()
+                    ] + list(args.set)
     try:
         settings = settings_mod.load(args.settings, args.set)
         if settings.get("shuffle_shops", "off") != "off":
@@ -261,8 +277,20 @@ def main(argv: list[str] | None = None) -> int:
     seed = seed_to_int(args.seed)
     from .starting import resolve
     resolved = settings_mod.build(resolve(settings, seed))  # âge et point d'apparition tirés par la seed
+    if plando is not None:
+        try:
+            resolved = plando_mod.apply_start(resolved, plando.get("spawn"))
+        except plando_mod.PlandoError as exc:
+            print(f"Erreur : {exc}", file=sys.stderr)
+            return 2
     if resolved != settings:
         world = World(resolved)
+    if plando is not None:
+        errors = plando_mod.validate(world, plando.get("placements", {}))
+        if errors:
+            print("Erreur : plando invalide :\n  " + "\n  ".join(errors), file=sys.stderr)
+            return 2
+        world.plando = dict(plando.get("placements", {}))
     t0 = time.perf_counter()
     try:
         result = generate(world, seed)

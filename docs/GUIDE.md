@@ -241,6 +241,28 @@ Everyone must use the same OoTRR version: the same string and seed give the same
 generator (a different version gives different symbols, which shows the mismatch). Text seeds are shared as the
 number the generator uses (same seed).
 
+### Plandomizer (choose where items are)
+
+`OoTRR-Plando.exe` from the release (or `python -m ootrr.tools.plando_app`) opens a window to build a seed by hand.
+It uses the same game, emulator and RomFS folders as the desktop app:
+
+- **Starting age** and **Start point** (top): child or adult, and where Link appears (the list of
+  `data/spawns.json` for that age; "Default" = Link's house / Temple of Time).
+- **Settings…**: the same settings as the desktop app. The list of locations follows them (scrubs, Skulltulas,
+  songs... only appear when they are shuffled).
+- **Locations** (left, by region): select one, then double-click an item on the right. "(Random)" leaves it to the
+  generator. Boss reward locations take stones and medallions (with `shuffle_rewards = shuffled`), song locations take
+  songs (with `shuffle_songs = shuffle`; with `random` they are normal locations). An item placed twice (a second
+  Hookshot) replaces a rupee.
+- **Check** generates the seed and writes its spoiler in `%APPDATA%\OoTRR\plando`; **Install** (bottom: Longshot or
+  Eden, game closed) also builds the mod `OoTRR`, like the desktop app: it replaces the installed seed. Start a new
+  game.
+
+Every other item is placed by the generator with the logic: the seed stays finishable, and a plando that cannot be
+finished (the Hammer in a chest that needs the Hammer) fails with a message. **Save** writes a JSON file you can
+reopen or generate from the command line: `python -m ootrr --plando FILE.json --romfs ROMFS --install`. The
+in-game menu generates its own seeds: plandos only work with the PC mod.
+
 ---
 
 ## 7. Saves

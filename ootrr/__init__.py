@@ -1,3 +1,3 @@
 """Randomizer pour Ocarina of Time Remake, inspiré de la logique d'OoTR."""
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"

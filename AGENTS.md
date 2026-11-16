@@ -46,9 +46,12 @@ python -m ootrr.tools.lookup --romfs ROMFS flag IsGet.Item_Hookshot             
 python -m ootrr.tools.lookup --romfs ROMFS msg EventFlowMsg/Enemy_Event 0001    # message
 python -m ootrr.tools.lookup --romfs ROMFS actor Banc/KokiriForest Npc_Kokiri   # actors of an area
 python -m ootrr.tools.saves backup NAME                  # emulator saves (emulator closed)
+python -m ootrr.tools.plando_app [FILE.json]            # plandomizer window: chosen items, start age / point, settings
+python -m ootrr --plando FILE.json --romfs ROMFS --install   # same, from the command line
+python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField --filter Obj_TBox --follow  # Link's position (menu mod) + nearest actors
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
 python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
-python -m ootrr.tools.build_longshot_app                 # output/OoTRR-App.exe (PyInstaller, windowed, with the logo)
+python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (PyInstaller, windowed)
 python -m ootrr.tools.make_icon                          # redraws the logo: ootrr/assets/longshot.png + .ico
 ```
 
@@ -66,6 +69,7 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 | `ootrr/search.py` | Child / adult reachability, spheres (the child only uses adult items after going back) |
 | `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards, dungeon keys first |
 | `ootrr/keys.py` | Dungeon keys (`small_keys`, `boss_keys`, data in `data/keys.json`): names, chest changes, key events |
+| `ootrr/plando.py` | Plandomizer files: chosen placements (pool, shuffled rewards / songs), start point, settings; used by `fill` through `World.plando` |
 | `ootrr/patch.py` | Result -> JSON patch (everything the builder must apply) |
 | `ootrr/race.py` | Races: settings string (format 2, frozen field order: bump `FORMAT` when the shown settings change) and the 5 hash symbols; `tools/seed_icons.py` draws them |
 | `ootrr/updates.py` | Update check of the desktop app: latest GitHub release vs `__version__` (bump it for every release) |

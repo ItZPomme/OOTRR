@@ -77,6 +77,7 @@ def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | No
         if not own_small or item not in keys:
             continue
         for room, count in sorted(kd.key_rooms.items()):
+            count = min(count, keys.count(item))  # fewer only when a plando placed some keys itself
             free = [l for l in shuffled if l.key_dungeon == kd.name and l.key_spot and l.key_room == room
                     and l.name not in placements and world.can_place(item, l)]
             if len(free) < count:
@@ -91,14 +92,31 @@ def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | No
     return rest
 
 
+def _plando_split(locations: list[Location], plando: dict[str, str],
+                  placements: dict[str, str]) -> tuple[list[Location], list[str]]:
+    """Plando on a group of locations (rewards, songs): the chosen ones are placed, returns the other locations and
+    the items left for them. Without a plando the lists are the original ones (same random draws)."""
+    items = [l.vanilla for l in locations]
+    if not plando:
+        return locations, items
+    free = []
+    for loc in locations:
+        if loc.name in plando:
+            placements[loc.name] = plando[loc.name]
+            items.remove(plando[loc.name])  # checked by plando.validate
+        else:
+            free.append(loc)
+    return free, items
+
+
 def _attempt(world: World, rng: random.Random) -> dict[str, str]:
     # logic = none: random placement, no reachability check (same random draws as generator.cpp)
     no_logic = world.settings.get("logic") == "none"
+    plando = getattr(world, "plando", None) or {}  # location -> item chosen by the player (ootrr/plando.py)
     placements = {l.name: l.vanilla for l in world.fixed_locations()}
     if world.settings.get("shuffle_rewards") == "shuffled":
         # pierres et médaillons mélangés entre les boss et la poche de Link
-        rewards = world.reward_locations()
-        items = [l.vanilla for l in rewards]
+        rewards, items = _plando_split(world.reward_locations(), plando, placements)
         # tirage refait tant qu'il rend la partie infinissable même avec tous les autres objets
         everything = [item for item, _ in world.pool()]
         for _ in range(200):
@@ -111,8 +129,7 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             placements[loc.name] = item
     if world.settings.get("shuffle_songs") == "shuffle":
         # chants mélangés entre les emplacements de chants (même méthode ; même ordre dans generator.cpp)
-        songs = world.song_locations()
-        items = [l.vanilla for l in songs]
+        songs, items = _plando_split(world.song_locations(), plando, placements)
         everything = [item for item, _ in world.pool()]
         for _ in range(200):
             rng.shuffle(items)
@@ -124,6 +141,13 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             placements[loc.name] = item
     shuffled = world.shuffled_locations()
     pool = world.pool()
+    if plando:
+        from .plando import take_from_pool
+        for loc in shuffled:
+            if loc.name in plando:
+                if not take_from_pool(pool, plando[loc.name]):
+                    raise FillError(f"plando: no room in the pool for {plando[loc.name]} (no rupee left to replace)")
+                placements[loc.name] = plando[loc.name]
     pool = _place_keys(world, rng, pool, shuffled, placements, no_logic)
 
     # 1. objets liés à un donjon (cartes, boussoles) : dans un coffre de ce donjon

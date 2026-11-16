@@ -16,7 +16,7 @@
     "HF Grotto Chest 1":          {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [6900843020594897860], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Grotto Chest 2":          {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [5755485285664292988], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
     "HF Scrub Seed Chest":        {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [17445672702269453589], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
-    "HF Adult Chest 1":           {"region": "Hyrule Field", "rule": "is_adult and can_open_grotto", "hashes": [17023457248274633121], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
+    "LH Adult Chest 1":           {"region": "Lake Hylia", "rule": "is_adult and water_boss", "hashes": [17023457248274633121], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Adult Chest 2":           {"region": "Hyrule Field", "rule": "is_adult and can_open_grotto", "hashes": [1163740567397714729], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Adult Chest 3":           {"region": "Hyrule Field", "rule": "is_adult and can_open_grotto", "hashes": [9891111455604007674], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
 

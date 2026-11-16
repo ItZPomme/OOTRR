@@ -3,6 +3,7 @@
 #include "rando/menu_data.hpp"
 #include "rando/logic_data.hpp"
 #include "rando/ground_models.hpp"
+#include "rando/coords.hpp"
 
 /* OoTRR : menu du randomizer dans l'écran d'options du jeu (voir native/README.md).
  *
@@ -692,6 +693,12 @@ HOOK_DEFINE_TRAMPOLINE(GetStructHandle) {
 HOOK_DEFINE_TRAMPOLINE(LoadLayout) {
     static u64 Callback(void* layout, u64 a1, u64 a2, u64 a3, const char* name, u64 a5, u64 a6, u64 a7,
                         u64 a8, u64 a9, u64 a10) {
+        // position thread: started with the first layout (title screen), once the game's SDK is up
+        static bool coords_started = false;
+        if (!coords_started) {
+            coords_started = true;
+            ootrr::coords::Start();
+        }
         if (g_menu && name && SameString(name, kGameLayout)) {
             name = kMenuLayout;
             // une ouverture de l'écran d'options par page : la première, puis +1 (bouton de fin de page) ou -1 (B)
