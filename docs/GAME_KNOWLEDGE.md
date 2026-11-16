@@ -88,6 +88,12 @@ confirmed.
   in the pool). Native menu: each gift becomes its location's token; the Song of Time is also given directly at the
   moat (duplicate ignored). Only the seed's song is given **[game]** (2026-11-12); the scene's lesson still plays the
   original song.
+- Each of the 12 song scenes (`Dm_MelodyGet_*`, Sun's Song: `Dm_MelodyGet_Sun_03`) **also** gives its own song:
+  `GetPouchContent:GetPouchContentByActorName` (get window + a real `EventTriggerAddOrRemovePouchContent`). In
+  vanilla the double gift is invisible; with shuffled songs the PC-built mod gave the original song on top of the
+  seed's one (seen at Malon: Serenade + Epona's Song). The native module blocks that add; the PC mod retargets the
+  call to `GetPouchContent:DisplayGetByActorName` (window only) naming the seed's item
+  (`ModBuilder.song_scene_display`) **[files]** (to test in game).
 
 ## Gifts (minigames, Great Fairies…) **[files]**
 

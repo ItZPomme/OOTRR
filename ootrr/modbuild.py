@@ -114,10 +114,11 @@ class ModBuilder:
         report = []
         event_skips = event_skips or {}
         timeline_skips = timeline_skips or {}
+        song_scenes = self._song_scene_flows()
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -190,6 +191,9 @@ class ModBuilder:
             if self.song_gives and flow == self.SONG_FLOW:
                 new, song_report = self._song_gives(new)
                 report += song_report
+            if flow in song_scenes:
+                new, scene_report = self._song_scene_get(new, *song_scenes[flow])
+                report += [f"{flow}: {r}" for r in scene_report]
             if self.spawn_branch and flow == self.START_FLOW:
                 new, spawn_nodes = self._spawn_nodes(new)
                 new, spawn_report = insert_flow(new, self.START_ENTRY, spawn_nodes)
@@ -708,6 +712,37 @@ class ModBuilder:
     # de la Berceuse sert aussi à tester si Link la connaît (EventQueryCheckIsGet).
     SONG_FLOW = "Dm_SY_Ocarina"
     song_gives: dict[str, str] | None = None
+    # each song scene also calls GetPouchContent:GetPouchContentByActorName with its own song, which really adds
+    # it (Malon gave Epona's Song on top of the seed's song). The PC mod turns that call into
+    # DisplayGetByActorName (same get window, no gift) naming the seed's item. The native menu blocks that
+    # add in the module instead, so it leaves the scenes alone (song_scene_display = False).
+    SONG_SCENES = {
+        "Item_Melody_ZeldaLullaby": "Dm_MelodyGet_Zelda", "Item_Melody_EponaSong": "Dm_MelodyGet_Epona",
+        "Item_Melody_SariaSong": "Dm_MelodyGet_Saria", "Item_Melody_SunSong": "Dm_MelodyGet_Sun_03",
+        "Item_Melody_TimeSong": "Dm_MelodyGet_Time", "Item_Melody_StormSong": "Dm_MelodyGet_Storm",
+        "Item_Melody_ForestMinuet": "Dm_MelodyGet_Forest", "Item_Melody_FireBolero": "Dm_MelodyGet_Fire",
+        "Item_Melody_WaterSerenade": "Dm_MelodyGet_Water", "Item_Melody_SpiritRequiem": "Dm_MelodyGet_Spilit",
+        "Item_Melody_ShadowNocturne": "Dm_MelodyGet_Shadow", "Item_Melody_LightPrelude": "Dm_MelodyGet_Shine",
+    }
+    SCENE_GET = ("GetPouchContent", "GetPouchContentByActorName", "DisplayGetByActorName")
+    song_scene_display = True
+
+    def _song_scene_flows(self) -> dict[str, tuple[str, str]]:
+        """{scene flow: (vanilla song, item given instead)} for the scenes whose song changes."""
+        if not self.song_gives or not self.song_scene_display:
+            return {}
+        return {self.SONG_SCENES[song]: (song, item) for song, item in self.song_gives.items()
+                if song in self.SONG_SCENES}
+
+    def _song_scene_get(self, flow: bytes, song: str, item: str) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_subflow_events, retarget_subflows
+
+        src, entry, display = self.SCENE_GET
+        found = find_subflow_events(flow, src, entry, "ActorName", song)
+        if not found:
+            raise KeyError(f"{src}:{entry} of {song} not found")
+        flow = retarget_subflows(flow, [(i, display, {"ActorName": item}) for i in found])
+        return flow, [f"{song}: {len(found)} scene gift(s) -> {display} {item}"]
 
     def _song_gives(self, flow: bytes) -> tuple[bytes, list[str]]:
         from .formats.evfl import find_action_event, insert_flow

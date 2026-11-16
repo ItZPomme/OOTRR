@@ -227,6 +227,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
             mb.song_gives[vanilla] = t
             tokens_actors[t] = f"SELF@{vanilla}"
         mb.moat_items = (mb.moat_items[0], mb.song_gives["Item_Melody_TimeSong"])
+        mb.song_scene_display = False  # the module blocks the scenes' own song gift (GetPouchContent)
         # cadeaux (mini-jeux, Grandes Fées, Darunia…) : les scènes nomment le jeton du lieu ; le module natif
         # donne l'objet de la seed (l'objet d'origine sans shuffle_gifts)
         from ..native_logic import gift_tokens

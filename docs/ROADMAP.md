@@ -41,8 +41,10 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   and answers inverted; fixed (template `Num` = 1, 0 = yes -> equip). **Validated in game** (2026-11-12: without the
   sword, returning to child does not give it).
 - [x] Shuffled songs: the original song also appeared in the ocarina list (observed). **Verified in the files**: the
-  12 gifts of `Dm_SY_Ocarina` (steps 26-31, 32-38) are all replaced; the other mentions of `Item_Melody_*` (scenes
-  `Dm_MelodyGet_*`, NPCs, `Dm_SY_Ocarina_SariaSong`) are not inventory actions; in the code, `Item_Melody_%s` is only
+  12 gifts of `Dm_SY_Ocarina` (steps 26-31, 32-38) are all replaced; the other mentions of `Item_Melody_*` (NPCs,
+  `Dm_SY_Ocarina_SariaSong`) are not inventory actions — **except** the scenes' `GetPouchContentByActorName`, which
+  does add the song (PC mod: Malon gave Serenade + Epona's Song; now retargeted to `DisplayGetByActorName` with the
+  seed's item, verified in the files, to test in game); in the code, `Item_Melody_%s` is only
   used for the sound (0x323f420) and the icon (0x33bff00). Native countermeasure: any direct `Item_Melody_*` add is
   ignored when `shuffle_songs` != vanilla, except starting items and **a song placed in a chest**; log lines
   "chant d'origine ignore, raison" / "chant d'un coffre accepte". **Validated in game** (2026-11-12: only the seed's

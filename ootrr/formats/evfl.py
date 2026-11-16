@@ -343,6 +343,41 @@ def find_action_events(d: bytes, actor: str, action: str, param: str, value: str
     return out
 
 
+def find_subflow_events(d: bytes, flow: str, entry: str, param: str, value: str) -> list[int]:
+    """Indices of the sub-flow calls "flow:entry" whose text parameter `param` equals value."""
+    reloc, _ = _header(d)
+    fc = _flowchart_full(d)
+    out = []
+    for i in range(fc["n_events"]):
+        o = fc["events"] + i * EVENT_SIZE
+        if d[o + 8] != EV_SUBFLOW:
+            continue
+        if _string_at(d, _q(d, o + 0x18), reloc) != flow or _string_at(d, _q(d, o + 0x20), reloc) != entry:
+            continue
+        found = event_param_slot(d, i, param)
+        if found and found[1] == value:
+            out.append(i)
+    return out
+
+
+def retarget_subflows(d: bytes, edits: list[tuple[int, str, dict[str, str]]]) -> bytes:
+    """Points sub-flow calls at another entry of the same flow and rewrites text parameters:
+    [(event, new entry, {parameter: new text})]. The flow name stays."""
+    fc = _flowchart_full(d)
+    groups: list[tuple[str, list[int]]] = []
+    for event, entry, params in edits:
+        o = fc["events"] + event * EVENT_SIZE
+        if d[o + 8] != EV_SUBFLOW:
+            raise ValueError(f"step {event} is not a sub-flow call")
+        groups.append((entry, [o + 0x20]))
+        for param, text in params.items():
+            found = event_param_slot(d, event, param)
+            if found is None:
+                raise KeyError(f"step {event}: no text parameter {param}")
+            groups.append((text, [found[0]]))
+    return _redirect_slots(d, groups)[0]
+
+
 def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | None = None) -> tuple[bytes, list[str]]:
     """Ajoute au début du point d'entrée « entry » un petit graphe d'étapes.
 
