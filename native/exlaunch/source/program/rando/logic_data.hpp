@@ -6,7 +6,7 @@ namespace ootrr::logic {
 
 enum Op : int32_t { T_TRUE, T_FALSE, T_IS_CHILD, T_IS_ADULT, T_HAS, T_HELPER, T_SET_BOOL, T_SET_IS, T_NOT, T_AND, T_OR, T_CMP, N_CONST, N_COUNT, N_HEARTS, N_SETTING };
 
-constexpr int kSettingCount = 33;
+constexpr int kSettingCount = 34;
 enum SettingKind : int32_t { S_BOOL, S_ENUM, S_INT };
 struct SettingInfo { const char* name; SettingKind kind; int32_t value_count; const char* const* values; int32_t def; };
 inline constexpr const char* kValues_bridge[] = {"open", "vanilla", "stones", "medallions", "dungeons", "hearts"};
@@ -25,6 +25,7 @@ inline constexpr const char* kValues_starting_age[] = {"child", "adult", "random
 inline constexpr const char* kValues_shuffle_songs[] = {"vanilla", "shuffle", "random"};
 inline constexpr const char* kValues_small_keys[] = {"vanilla", "own_dungeon", "any_dungeon", "removed", "random"};
 inline constexpr const char* kValues_boss_keys[] = {"vanilla", "own_dungeon", "any_dungeon", "removed", "random"};
+inline constexpr const char* kValues_gerudo_card[] = {"random", "vanilla"};
 inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"bridge", S_ENUM, 6, kValues_bridge, 1},
     {"bridge_count", S_INT, 0, nullptr, 6},
@@ -59,8 +60,9 @@ inline constexpr SettingInfo kSettings[kSettingCount] = {
     {"blue_fire_arrows", S_BOOL, 2, nullptr, 0},
     {"small_keys", S_ENUM, 5, kValues_small_keys, 0},
     {"boss_keys", S_ENUM, 5, kValues_boss_keys, 0},
+    {"gerudo_card", S_ENUM, 2, kValues_gerudo_card, 0},
 };
-enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_scrub_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic, SET_logic_lens_required, SET_accessibility, SET_shuffle_ocarinas, SET_shuffle_gifts, SET_adult_trade_sequence, SET_start_with_consumables, SET_starting_age, SET_shuffle_songs, SET_spawn_point, SET_cucco_count, SET_big_poe_count, SET_complete_mask_quest, SET_fast_bunny_hood, SET_blue_fire_arrows, SET_small_keys, SET_boss_keys };
+enum SettingId : int32_t { SET_bridge, SET_bridge_count, SET_open_forest, SET_open_door_of_time, SET_open_kakariko, SET_maps_compasses, SET_shuffle_hearts, SET_shuffle_scrubs, SET_shuffle_shops, SET_shop_prices, SET_scrub_prices, SET_shuffle_skulltulas, SET_skip_cutscenes, SET_shuffle_rewards, SET_free_time_travel, SET_skip_child_zelda, SET_logic, SET_logic_lens_required, SET_accessibility, SET_shuffle_ocarinas, SET_shuffle_gifts, SET_adult_trade_sequence, SET_start_with_consumables, SET_starting_age, SET_shuffle_songs, SET_spawn_point, SET_cucco_count, SET_big_poe_count, SET_complete_mask_quest, SET_fast_bunny_hood, SET_blue_fire_arrows, SET_small_keys, SET_boss_keys, SET_gerudo_card };
 
 constexpr int32_t kRoot = 14;
 constexpr int32_t kTempleOfTime = 41;

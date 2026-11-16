@@ -114,6 +114,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                   "Boss keys: vanilla = in their original chest; own_dungeon = anywhere in their own dungeon; "
                   "any_dungeon = in any dungeon; removed = owned from the start (boss doors open); "
                   "random = anywhere in the world (Ganon's Castle included)"),
+    # PC-built mod only (the native menu has no row: its generator always shuffles the card with the gifts)
+    "gerudo_card": ("random", ("random", "vanilla"),
+                    "Gerudo Membership Card: random = in the item pool, the Gerudo who gives it gives a seed item "
+                    "(with the other gifts); vanilla = given by that Gerudo, as in the original game"),
 }
 
 

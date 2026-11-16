@@ -218,6 +218,10 @@ Shuffled shops are only available with the in-game menu. The other way round, th
 
 These settings are **not validated in game yet** (feedback welcome).
 
+Also PC-only: `gerudo_card` ("Gerudo Card" on the app's "Shuffle" page). `random` (default): the Gerudo Membership
+Card is in the item pool and the Gerudo who gives it gives a seed item; `vanilla`: she gives the card, as in the
+original game. The in-game menu always shuffles it with the gifts.
+
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod

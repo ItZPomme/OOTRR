@@ -283,6 +283,7 @@ FREE_TIME_TRAVEL = {"Market_Adult_Prefab_89da": {"SageOfForest_IsCompleted_Exp":
 # Peste Mojo vendeuses mélangées : prix unique (les quarts de cœur coûtent 100 dans le jeu, plus que la
 # bourse d'enfant) ; le script commun vend l'objet une fois (SimpleShopSub_Scrub_Business_OneTime)
 SCRUB_PRICE = 40
+GERUDO_CARD_LOCATION = "GF Gerudo Membership Card"  # setting gerudo_card
 SCRUB_SECRET_LOCATION = "HF Deku Scrub Heart Piece"  # script à part : vente directe (entrée « Secret »)
 FOREST_FLAGS = {"exit": "KokiriForest_Npc_Kokiri_007_Child_Blocker_00", "deku": "KokiriForest_Npc_Kokiri_Mido_Child_Blocker"}
 # réglage open_forest : PNJ « bloqueurs » retirés de KokiriForest_Child_Static
@@ -653,6 +654,8 @@ class World:
             loc.shuffle = self.settings.get("shuffle_songs", "vanilla") == "random"
         if loc.gift:
             loc.shuffle = bool(self.settings.get("shuffle_gifts"))
+        if lname == GERUDO_CARD_LOCATION and self.settings.get("gerudo_card", "random") == "vanilla":
+            loc.shuffle = False  # the Gerudo gives the card itself (fixed location, vanilla script)
         region.locations.append(loc)
         self.locations[lname] = loc
 
