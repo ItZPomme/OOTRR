@@ -24,7 +24,8 @@ confirmed.
   the source and the `PouchAdd` hook) replaces any item of a chain with the step after the highest one Link owns,
   read from `IsGet.*` flags: Hookshot -> Longshot; Bow -> Quiver_Medium -> Quiver_Large; SlingShot ->
   BulletBag_Medium -> BulletBag_Large; StickBag_Medium -> Large; NutBag_Medium -> Large; BombBag_Small -> Medium ->
-  Large; ocarinas (above). There is no `IsGet.Item_Range_Bow` / `_SlingShot`: owning the bow is read from
+  Large; Gauntlet_Goron -> Silver -> Gold (`IsGet.Armor_*`); Scale_Silver -> Gold; FairyBless_MP -> MPDouble;
+  Wallet_Medium -> Large; ocarinas (above). There is no `IsGet.Item_Range_Bow` / `_SlingShot`: owning the bow is read from
   `IsGet.Weapon_Range_Bow` or `IsGet.Item_Quiver_Small` **[hypothesis]** (same for the slingshot). Logic: each
   Hookshot / Longshot adds one level (no `level` in `items.json`), which is also safe for a PC-built mod (each level
   is in the pool once). Quivers and bullet bags still give no logic item: only `Item_Range_Bow` counts as the bow,
@@ -50,7 +51,7 @@ confirmed.
   chests become visible. One condition per chest: 2-step chains are exact; 3-step chains always give step 1 first
   and always reach the last step (bow / slingshot: the medium quiver / bag only when its copy is found second;
   bomb bags: small, then big). Scrubs, ground items and Skulltulas still give the placed item, so the chains
-  whose level the logic needs (Hookshot, strength: `progressive_logic`) are progressive in a seed only when every
+  whose level the logic needs (Hookshot, strength, scales: `progressive_logic`) are progressive in a seed only when every
   copy is in a chest or a gift (`patch.progressive_chains`); otherwise a chest opened first would give step 1
   again before such a location's step 1 (two Hookshots, the logic counting a Longshot). A 3-step logic chain
   mixed with gifts: its chests give step 1, then the last step.
