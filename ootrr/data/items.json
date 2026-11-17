@@ -46,8 +46,8 @@
     "Item_BombBag_Large":     {"logic": "Bomb_Bag", "level": 3},
     "Item_Range_Bow":         {"logic": "Bow", "level": 1},
     "Item_Range_SlingShot":   {"logic": "Slingshot", "level": 1},
-    "Item_FairyBless_MP":     {"logic": "Magic_Meter", "_doc": "no level: progressive (each copy adds 1), see progressive"},
-    "Item_FairyBless_MPDouble": {"logic": "Magic_Meter"},
+    "Item_FairyBless_MP":     {"logic": "Magic_Meter", "level": 1, "_doc": "not progressive: the magic items (Din's Fire, Lens, magic arrows...) already give the first magic (PouchActorInfo MPMaxUP, MPMax 24), which a progressive chain cannot see"},
+    "Item_FairyBless_MPDouble": {"logic": "Magic_Meter", "level": 2},
     "Item_Ocarina_Fairy":     {"logic": "Ocarina", "level": 1},
     "Item_Ocarina_Time":      {"logic": "Ocarina", "level": 2},
     "Item_Bottle":            {"logic": "Bottle"},
@@ -116,7 +116,6 @@
     ["Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large"],
     ["Item_Gauntlet_Goron", "Item_Gauntlet_Silver", "Item_Gauntlet_Gold"],
     ["Item_Scale_Silver", "Item_Scale_Gold"],
-    ["Item_FairyBless_MP", "Item_FairyBless_MPDouble"],
     ["Item_Wallet_Medium", "Item_Wallet_Large"]
   ],
   "_progressive_pouch": "Name of a step in Link's pouch, when it differs (RSDB ActorInfo.ActorName): Drop__CheckActor counts this name (QueryGetPouchContentNumByActorName in the A_06 AI). Validated in game 2026-11-15: Weapon_Range_SlingShot, Item_Range_SlingShot and Pouch_Range_SlingShot all match once the slingshot is owned.",

@@ -24,8 +24,10 @@ confirmed.
   the source and the `PouchAdd` hook) replaces any item of a chain with the step after the highest one Link owns,
   read from `IsGet.*` flags: Hookshot -> Longshot; Bow -> Quiver_Medium -> Quiver_Large; SlingShot ->
   BulletBag_Medium -> BulletBag_Large; StickBag_Medium -> Large; NutBag_Medium -> Large; BombBag_Small -> Medium ->
-  Large; Gauntlet_Goron -> Silver -> Gold (`IsGet.Armor_*`); Scale_Silver -> Gold; FairyBless_MP -> MPDouble;
-  Wallet_Medium -> Large; ocarinas (above). There is no `IsGet.Item_Range_Bow` / `_SlingShot`: owning the bow is read from
+  Large; Gauntlet_Goron -> Silver -> Gold (`IsGet.Armor_*`); Scale_Silver -> Gold; Wallet_Medium -> Large;
+  ocarinas (above). Not the magic: every magic item (Din's Fire, Farore's Wind, Nayru's Love, Lens of Truth,
+  Fire / Ice / Light Arrows) has `ExpansionAvility: MPMaxUP`, `MPMax: 24` and gives the first magic itself
+  (seen in game), without `Item_FairyBless_MP` in the pouch: a chain would give the single magic again. There is no `IsGet.Item_Range_Bow` / `_SlingShot`: owning the bow is read from
   `IsGet.Weapon_Range_Bow` or `IsGet.Item_Quiver_Small` **[hypothesis]** (same for the slingshot). Logic: each
   Hookshot / Longshot adds one level (no `level` in `items.json`), which is also safe for a PC-built mod (each level
   is in the pool once). Quivers and bullet bags still give no logic item: only `Item_Range_Bow` counts as the bow,

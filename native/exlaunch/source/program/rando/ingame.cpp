@@ -336,8 +336,6 @@ constexpr Chain kChains[] = {
          {"Item_Gauntlet_Gold", {0x3ef15ec4, 0}}}},             // IsGet.Armor_Adult_Gauntlet_Gold
     {2, {{"Item_Scale_Silver", {0x1208fb3e, 0}},
          {"Item_Scale_Gold", {0xccc1909a, 0}}}},
-    {2, {{"Item_FairyBless_MP", {0xb1309073, 0}},
-         {"Item_FairyBless_MPDouble", {0x87ca4826, 0}}}},
     {2, {{"Item_Wallet_Medium", {0xd1360de8, 0}},
          {"Item_Wallet_Large", {0xb5031190, 0}}}},
 };
