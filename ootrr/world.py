@@ -466,6 +466,10 @@ class World:
                 self.logic_items[logic_name] = {}
                 self.items[keys_mod.item_name(kind, kd.game)] = Item(keys_mod.item_name(kind, kd.game), logic_name, None)
         self.ground: set[str] = set(items_raw.get("ground", []))
+        self.progressive: list[list[str]] = [list(c) for c in items_raw.get("progressive", [])]
+        self.progressive_pouch: dict[str, str] = dict(items_raw.get("progressive_pouch", {}))
+        self.progressive_kept: list[str] = list(items_raw.get("progressive_kept", []))
+        self.progressive_logic: list[str] = list(items_raw.get("progressive_logic", []))
         self.ground_native: dict[str, str] = dict(items_raw.get("ground_native", {}))
         for name in self.ground | set(self.ground_native):
             if name not in self.items:

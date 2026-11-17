@@ -34,11 +34,11 @@
     "Forest_Medallion": {}, "Fire_Medallion": {}, "Water_Medallion": {}, "Spirit_Medallion": {}, "Shadow_Medallion": {}, "Light_Medallion": {}
   },
   "actors": {
-    "Item_Hookshot":          {"logic": "Progressive_Hookshot", "level": 1},
-    "Item_Longshot":          {"logic": "Progressive_Hookshot", "level": 2},
-    "Item_Gauntlet_Goron":    {"logic": "Progressive_Strength", "level": 1},
-    "Item_Gauntlet_Silver":   {"logic": "Progressive_Strength", "level": 2},
-    "Item_Gauntlet_Gold":     {"logic": "Progressive_Strength", "level": 3},
+    "Item_Hookshot":          {"logic": "Progressive_Hookshot", "_doc": "no level: progressive in game (native module), the first one found is the Hookshot"},
+    "Item_Longshot":          {"logic": "Progressive_Hookshot"},
+    "Item_Gauntlet_Goron":    {"logic": "Progressive_Strength", "_doc": "no level: progressive (each copy adds 1), see progressive"},
+    "Item_Gauntlet_Silver":   {"logic": "Progressive_Strength"},
+    "Item_Gauntlet_Gold":     {"logic": "Progressive_Strength"},
     "Item_Scale_Silver":      {"logic": "Progressive_Scale", "level": 1},
     "Item_Scale_Gold":        {"logic": "Progressive_Scale", "level": 2},
     "Item_BombBag_Small":     {"logic": "Bomb_Bag", "level": 1},
@@ -106,6 +106,22 @@
     "Item_Dungeon_Compass": {"_doc": "la boussole appartient au donjon où le coffre est ouvert"},
     "TBox_Rupee_Green": {}, "TBox_Rupee_Blue": {}, "TBox_Rupee_Red": {}, "TBox_Rupee_Purple": {}, "TBox_Rupee_Gold": {}
   },
+  "_progressive": "Progressive items: any item of a chain gives the step after the highest one Link owns. Native menu: ingame::AdjustItem (same chains, ocarinas too). PC-built mod: chests only, as Obj_TBox_A_06 chests (\"if Link owns Drop__CheckActor, give Drop__DropActor_Substitute\", validated in game 2026-11-15: a plain A_01 chest ignores the condition, an A_06 one applies it); see patch.progressive_chest.",
+  "progressive": [
+    ["Item_Hookshot", "Item_Longshot"],
+    ["Item_Range_Bow", "Item_Quiver_Medium", "Item_Quiver_Large"],
+    ["Item_Range_SlingShot", "Item_BulletBag_Medium", "Item_BulletBag_Large"],
+    ["Item_StickBag_Medium", "Item_StickBag_Large"],
+    ["Item_NutBag_Medium", "Item_NutBag_Large"],
+    ["Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large"],
+    ["Item_Gauntlet_Goron", "Item_Gauntlet_Silver", "Item_Gauntlet_Gold"]
+  ],
+  "_progressive_pouch": "Name of a step in Link's pouch, when it differs (RSDB ActorInfo.ActorName): Drop__CheckActor counts this name (QueryGetPouchContentNumByActorName in the A_06 AI). Validated in game 2026-11-15: Weapon_Range_SlingShot, Item_Range_SlingShot and Pouch_Range_SlingShot all match once the slingshot is owned.",
+  "progressive_pouch": {"Item_Range_Bow": "Weapon_Range_Bow", "Item_Range_SlingShot": "Weapon_Range_SlingShot", "Item_Gauntlet_Goron": "Armor_Child_Gauntlet_Goron"},
+  "_progressive_kept": "First steps that stay in the pouch after the upgrades (the weapon, and the Goron Bracelet, a child armor next to the adult gauntlets [hypothesis]; bags replace each other: only the biggest is counted, validated in game 2026-11-15). Used to spread the chest conditions of 3-step chains, see patch.progressive_chest.",
+  "progressive_kept": ["Item_Range_Bow", "Item_Range_SlingShot", "Item_Gauntlet_Goron"],
+  "_progressive_logic": "Chains whose level the logic needs (has(Progressive_Hookshot, 2), has_strength2 / 3). PC-built mod: only chests are progressive, other locations give their item as placed; such a chain is progressive in a seed only when every copy is in a chest (patch.progressive_chains), otherwise its items stay fixed (the logic count never exceeds the real level).",
+  "progressive_logic": ["Item_Hookshot", "Item_Gauntlet_Goron"],
   "_ground": "Objets autorisés à la place d'un cœur posé au sol (quart de cœur libre, réceptacle de boss). Ils sont donnés par un objet ramassable sur mesure (copie du réceptacle, tables RSDB). Vérifié en jeu : objets « Material » (Grappin, Boomerang), objets clés simples (Écaille d'argent), chants (Chant du soleil). Les objets de l'onglet Équipement ne s'ajoutent pas à l'inventaire de cette façon (Arc, Lance-Pierre, bottes testés).",
   "ground": [
     "Item_Hookshot", "Item_Longshot", "Item_Boomerang", "Item_Hammer", "Item_DinFire", "Item_FaroreWind", "Item_NayruLove",

@@ -15,7 +15,7 @@ import zstandard
 from ..formats.byml import read_byml
 from ..formats.restbl import Restbl
 from ..formats.zs import ZsCodec
-from ..patch import chest_changes, pickup_changes
+from ..patch import PROGRESSIVE_CHEST, chest_changes, pickup_changes
 
 
 def main(argv=None) -> int:
@@ -54,6 +54,9 @@ def main(argv=None) -> int:
                 continue
             dyn = actor.get("Dynamic", {})
             for key, value in changes[h].items():
+                if key == PROGRESSIVE_CHEST:  # conditional chest type, chosen by the builder
+                    key, value = "Gyaml", (actor.get("Gyaml") if actor.get("Gyaml", "").startswith("Obj_TBox_A_06")
+                                           else "Obj_TBox_A_06")
                 got = actor.get("Gyaml") if key == "Gyaml" else dyn.get(key)
                 if got != value:
                     print(f"ERREUR {f.name} {h} {key}: {got!r} au lieu de {value!r}")

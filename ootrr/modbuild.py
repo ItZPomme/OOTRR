@@ -118,7 +118,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.gift_progressive) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -145,6 +145,9 @@ class ModBuilder:
                 if gift_report:
                     raise KeyError(f"{flow} : cadeau différent du relevé ({'; '.join(gift_report)})")
                 report.append(f"{flow}: {len(self.gift_edits[flow])} cadeaux")
+            if flow in self.gift_progressive:
+                new, gift_report = self._progressive_gift(new, self.gift_progressive[flow])
+                report += [f"{flow}: {r}" for r in gift_report]
             if flow in self.event_ints:
                 # minigame counts (cucco_count, big_poe_count): integer parameters of precise events
                 new, int_report = set_event_ints(new, self.event_ints[flow])
@@ -414,6 +417,39 @@ class ModBuilder:
     ocarina_guard = True
     # cadeaux : {flux: [(événement, paramètre, texte d'origine, nouveau texte)]} (World.gift_event_changes ou jetons)
     gift_edits: dict = {}
+    # progressive gifts (PC-built mod, patch.progressive_gifts): {flow: [[event, parameter, vanilla text,
+    # [[item, pouch name], ...]]]}
+    gift_progressive: dict = {}
+
+    def _progressive_gift(self, flow: bytes, entries: list) -> tuple[bytes, list[str]]:
+        """Before each gift step, questions from the last step down: "does Link own step k?" -> a copy of the gift
+        step that gives step k+1 (the last step once owned); none -> step 1. The copies go on where the gift
+        step went. Pouch question: PouchSystemActor.EventQueryIsExistInPouch (0 = yes), as at Dampe's exit."""
+        from .formats.evfl import ensure_actor_member, event_param_slot, find_query, insert_flow
+
+        template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.DAMPE_FLOW}.bfevfl.zs")
+        ask = (template, find_query(template, "PouchSystemActor", "EventQueryIsExistInPouch"))
+        if ask[1] is None:
+            raise KeyError(f"{self.DAMPE_FLOW}: no EventQueryIsExistInPouch to copy")
+        flow = ensure_actor_member(flow, "PouchSystemActor", "query", "EventQueryIsExistInPouch")
+        report = []
+        for event, param, old, steps in entries:
+            found = event_param_slot(flow, event, param)
+            if found is None or found[1] != old:
+                raise KeyError(f"gift event {event}: {param} = {found[1] if found else None!r}, expected {old!r}")
+            n = len(steps)
+            nodes: list[dict] = []
+            # node 2k: question "owns step n-1-k?"; node 2k+1: copy giving the step after it
+            for k in range(n):
+                owned = n - 1 - k
+                nodes.append({"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
+                              "set": {"Actor": steps[owned][1]}, "cases": {0: 2 * k + 1, 1: 2 * k + 2}})
+                nodes.append({"copy_event": event, "set": {param: steps[min(owned + 1, n - 1)][0]},
+                              "next": "after"})
+            nodes.append({"copy_event": event, "set": {param: steps[0][0]}, "next": "after"})
+            flow, _ = insert_flow(flow, f"ProgressiveGift{event}", nodes, before=event)  # entry: names only
+            report.append(f"progressive gift, event {event}: {' / '.join(s[0] for s in steps)}")
+        return flow, report
     event_ints: dict = {}  # {flow: [(event, parameter, vanilla value, new value)]}
     moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
     # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
@@ -1159,6 +1195,13 @@ class ModBuilder:
                     if key in ("Presence", "Rotate", "Translate"):  # champs de l'acteur lui-même
                         actor[key] = type(actor.get(key, value))(value) if key != "Presence" else dict(value)
                         report.append(f"{path.parent.name}/{path.name}: {actor['Hash']} {key}: {value}")
+                        continue
+                    if key == "__progressive_chest":  # progressive item: conditional chest (patch.progressive_chest)
+                        old = actor.get("Gyaml", "")
+                        actor["Gyaml"] = "Obj_TBox_A_06_NoBake" if old.endswith("NoBake") else "Obj_TBox_A_06"
+                        if old != actor["Gyaml"]:
+                            report.append(f"{path.parent.name}/{path.name}: {actor['Hash']} Gyaml: {old} -> "
+                                          f"{actor['Gyaml']} (progressive item)")
                         continue
                     if key == "Gyaml":  # type d'acteur (ex. remplacer un cœur par un coffre)
                         old = actor.get("Gyaml")

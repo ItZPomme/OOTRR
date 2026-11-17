@@ -68,7 +68,9 @@ int32_t HeartPieces(std::uintptr_t main_base);
 int ReadFlag(std::uintptr_t main_base, uint32_t hash);
 // objet réellement donné à la place de `item` (nullptr = inchangé) : ocarinas progressifs (le premier
 // obtenu est l'Ocarina des fées, le suivant l'Ocarina du Temps ; le jeu remplacerait sinon l'Ocarina du
-// Temps par celle des fées) ; bombes sans sac -> *rupees = 5 (le jeu donnerait le sac de bombes)
+// Temps par celle des fées) ; bombes sans sac -> *rupees = 5 (le jeu donnerait le sac de bombes) ;
+// progressive items (Hookshot / Longshot, bow and quivers, slingshot and bullet bags, stick bags, nut bags,
+// bomb bags, strength): the next step after the highest one Link owns
 const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupees);
 // ocarinas : le jeton du lieu est donné deux fois aux douves (don direct + scène) : vrai si ce jeton
 // vient d'être donné (moins d'une minute), le second don est ignoré

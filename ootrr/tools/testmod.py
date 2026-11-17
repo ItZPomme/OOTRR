@@ -110,6 +110,22 @@ TESTS["14"] = {
     16912540161937823130: {"Drop__DropActor": "Item_Arrow_Ice",
                            "Drop__CheckActor": None, "Drop__DropActor_Substitute": None},
 }
+# test 15: progressive items in a PC-built mod with the conditional content of the A_06 chests ("if Link owns
+# Drop__CheckActor, give Drop__DropActor_Substitute"). Mido's chests are plain Obj_TBox_A_01: chests 1-2 keep
+# their type (does any chest read the condition?), chests 3-4 become Obj_TBox_A_06. Open them in this order:
+# 1 -> Hookshot, 2 -> Longshot, 3 -> Bomb Bag (small), 4 -> Big Bomb Bag (medium)
+TESTS["15"] = {
+    10831981390482426294: {"Drop__DropActor": "Item_Hookshot", "Drop__CheckActor": "Item_Hookshot",
+                           "Drop__DropActor_Substitute": "Item_Longshot"},                       # Mido, open 1st
+    4555665598794293658: {"Drop__DropActor": "Item_Hookshot", "Drop__CheckActor": "Item_Hookshot",
+                          "Drop__DropActor_Substitute": "Item_Longshot"},                        # Mido, open 2nd
+    9725242744547055868: {"Gyaml": "Obj_TBox_A_06", "Drop__DropActor": "Item_BombBag_Small",
+                          "Drop__CheckActor": "Item_BombBag_Small",
+                          "Drop__DropActor_Substitute": "Item_BombBag_Medium"},                  # Mido, open 3rd
+    12786193094758345086: {"Gyaml": "Obj_TBox_A_06", "Drop__DropActor": "Item_BombBag_Small",
+                           "Drop__CheckActor": "Item_BombBag_Small",
+                           "Drop__DropActor_Substitute": "Item_BombBag_Medium"},                 # Mido, open 4th
+}
 # start point per test (banc, start position), as in ootrr/data/spawns.json
 START_WARPS = {
     "14": ("Graveyard_Child", "GraveYard_KakarikoSide"),

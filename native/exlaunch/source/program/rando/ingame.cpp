@@ -308,6 +308,54 @@ bool Prefix(const char* text, const char* prefix) {
     while (*prefix && *text == *prefix) { text++; prefix++; }
     return !*prefix;
 }
+
+// Progressive items: any item of a chain gives the step after the highest one Link owns (the last step again
+// once he has it). A step is owned when one of its IsGet flags is set (0 = unused slot). The bow and slingshot
+// have no IsGet.Item_Range_* flag: IsGet.Weapon_Range_* or the small quiver / bag stand for them [hypothesis].
+struct ChainStep { const char* item; uint32_t flags[2]; };
+struct Chain { int count; ChainStep steps[3]; };
+constexpr Chain kChains[] = {
+    {2, {{"Item_Hookshot", {0xff98ed58, 0}},                    // IsGet.Item_Hookshot
+         {"Item_Longshot", {0x38aea3bb, 0}}}},                  // IsGet.Item_Longshot
+    {3, {{"Item_Range_Bow", {0x69ec28be, 0x0a550531}},          // IsGet.Weapon_Range_Bow, IsGet.Item_Quiver_Small
+         {"Item_Quiver_Medium", {0x9d872202, 0}},
+         {"Item_Quiver_Large", {0x21985b09, 0}}}},
+    {3, {{"Item_Range_SlingShot", {0x0ec22ee1, 0x488ca1be}},    // IsGet.Weapon_Range_SlingShot, IsGet.Item_BulletBag_Small
+         {"Item_BulletBag_Medium", {0xe6cd55d2, 0}},
+         {"Item_BulletBag_Large", {0xb669f025, 0}}}},
+    {2, {{"Item_StickBag_Medium", {0xcbf00480, 0}},
+         {"Item_StickBag_Large", {0xa10f2dcf, 0}}}},
+    {2, {{"Item_NutBag_Medium", {0x960820db, 0}},
+         {"Item_NutBag_Large", {0x9a5db0b6, 0}}}},
+    {3, {{"Item_BombBag_Small", {0xa63f1e2d, 0}},
+         {"Item_BombBag_Medium", {0xb2c478da, 0}},
+         {"Item_BombBag_Large", {0x968a5a79, 0}}}},
+    // strength: the pouch holds the Armor_* actors, no IsGet.Item_Gauntlet_* flag [files]
+    {3, {{"Item_Gauntlet_Goron", {0x9880707e, 0}},              // IsGet.Armor_Child_Gauntlet_Goron
+         {"Item_Gauntlet_Silver", {0x87e58de3, 0}},             // IsGet.Armor_Adult_Gauntlet_Silver
+         {"Item_Gauntlet_Gold", {0x3ef15ec4, 0}}}},             // IsGet.Armor_Adult_Gauntlet_Gold
+};
+
+// item to give instead of `item` when it belongs to a chain; nullptr = unchanged, or a flag is unreadable
+const char* ProgressiveItem(std::uintptr_t main_base, const char* item) {
+    for (const Chain& chain : kChains) {
+        bool member = false;
+        for (int i = 0; i < chain.count; i++) member = member || Same(item, chain.steps[i].item);
+        if (!member) continue;
+        int owned = 0;  // number of steps owned (highest step + 1)
+        for (int i = 0; i < chain.count; i++) {
+            for (uint32_t hash : chain.steps[i].flags) {
+                if (!hash) continue;
+                int v = ReadFlag(main_base, hash);
+                if (v < 0) return nullptr;  // unreadable: original item
+                if (v == 1) owned = i + 1;
+            }
+        }
+        const char* wanted = chain.steps[owned < chain.count ? owned : chain.count - 1].item;
+        return Same(wanted, item) ? nullptr : wanted;
+    }
+    return nullptr;
+}
 }  // namespace
 
 const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupees) {
@@ -319,6 +367,7 @@ const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupe
         const char* wanted = (fairy == 1 || time == 1) ? "Item_Ocarina_Time" : "Item_Ocarina_Fairy";
         return Same(wanted, item) ? nullptr : wanted;
     }
+    if (const char* progressive = ProgressiveItem(main_base, item)) return progressive;
     if (Prefix(item, "Item_BombBundle")) {
         bool bag = false;
         for (uint32_t h : kIsGetBombBags) {

@@ -20,6 +20,51 @@ confirmed.
 - Any item in any chest works (`Dynamic.Drop__DropActor`) **[game]**.
 - Upgrades never downgrade (Hookshot after Longshot) **[game]**, **except the ocarina**: receiving the Fairy Ocarina
   replaces the Ocarina of Time **[game]** (guard added in Saria's script).
+- **Progressive items, native menu [files]** (2026-11-15, to test in game): `ingame::AdjustItem` (chest content at
+  the source and the `PouchAdd` hook) replaces any item of a chain with the step after the highest one Link owns,
+  read from `IsGet.*` flags: Hookshot -> Longshot; Bow -> Quiver_Medium -> Quiver_Large; SlingShot ->
+  BulletBag_Medium -> BulletBag_Large; StickBag_Medium -> Large; NutBag_Medium -> Large; BombBag_Small -> Medium ->
+  Large; ocarinas (above). There is no `IsGet.Item_Range_Bow` / `_SlingShot`: owning the bow is read from
+  `IsGet.Weapon_Range_Bow` or `IsGet.Item_Quiver_Small` **[hypothesis]** (same for the slingshot). Logic: each
+  Hookshot / Longshot adds one level (no `level` in `items.json`), which is also safe for a PC-built mod (each level
+  is in the pool once). Quivers and bullet bags still give no logic item: only `Item_Range_Bow` counts as the bow,
+  so the player may have it before the logic expects.
+- **Conditional chests [game]** (Longshot, 2026-11-15, test mods built with `--test-chest` / `--test-set`): the
+  condition `Drop__CheckActor` / `Drop__DropActor_Substitute` ("if Link owns CheckActor, give Substitute") is read
+  by the `Obj_TBox_A_06` AI (`AI/Obj_TBox_A_06.root.ainb`), not by the plain chests: an `Obj_TBox_A_01` with the
+  same fields gave the Hookshot twice; changing its `Gyaml` to `Obj_TBox_A_06` made it work (small, then medium
+  bomb bag). There is an `Obj_TBox_A_06_NoBake`, no big (`A_02`) or invisible (`GlassTruth`) conditional chest.
+  The AI counts `Drop__CheckActor` in the pouch (`QueryGetPouchContentNumByActorName` > 0, XOR the blackboard
+  bool `Drop__CheckCondition`), under the pouch name = RSDB `ActorInfo.ActorName`: `Weapon_Range_SlingShot` /
+  `Weapon_Range_Bow` for `Item_Range_SlingShot` / `Item_Range_Bow`; with the slingshot owned, `CheckActor` =
+  `Weapon_Range_SlingShot`, `Item_Range_SlingShot` and `Pouch_Range_SlingShot` all match, `Item_BulletBag_Small`
+  does not (the slingshot given at the start brings no small bag) **[game]** (Longshot, 2026-11-15). Earlier
+  "slingshot only" results came from the opening order of a 3-step chain (one condition per chest).
+  Progressive Hookshot -> Longshot in converted Mido chests **[game]** (2026-11-15).
+- **Bags and quivers [game]** (Longshot, 2026-11-15, test mod: slingshot, big bullet bag and medium bomb bag at the
+  start): a smaller bag received after a bigger one changes nothing (still 50 seeds); the pouch only counts the
+  biggest bag (`CheckActor` = the small bomb bag with the medium one, or the medium bullet bag with the big one,
+  did not match), while the bow / slingshot stays counted after its upgrades.
+- **Progressive items, PC-built mod [files]** (2026-11-15): chests only (`patch.progressive_chest`): a chest with
+  an item of a chain becomes `Obj_TBox_A_06` (`_NoBake` kept), so big chests become small ones and invisible
+  chests become visible. One condition per chest: 2-step chains are exact; 3-step chains always give step 1 first
+  and always reach the last step (bow / slingshot: the medium quiver / bag only when its copy is found second;
+  bomb bags: small, then big). Scrubs, ground items and Skulltulas still give the placed item, so the chains
+  whose level the logic needs (Hookshot, strength: `progressive_logic`) are progressive in a seed only when every
+  copy is in a chest or a gift (`patch.progressive_chains`); otherwise a chest opened first would give step 1
+  again before such a location's step 1 (two Hookshots, the logic counting a Longshot). A 3-step logic chain
+  mixed with gifts: its chests give step 1, then the last step.
+- **Progressive gifts, PC-built mod [game]** (Longshot, 2026-11-16, plando test: Mido's chests, man on the roof,
+  market shooting gallery and potion shop bottle): before each gift step of
+  `data/gifts.json`, questions `PouchSystemActor.EventQueryIsExistInPouch` from the last step down lead to copies
+  of the step (`insert_flow` `copy_event` + `set`) that give the next step (`ModBuilder._progressive_gift`,
+  `patch.progressive_gifts`). Exact for every chain. Re-read with `tools.events`: e.g. the man on the roof
+  (`Npc_Hylia_001_Adult`, entry `Get_HeartPiece`).
+- **Strength [files]**: the pouch holds `Armor_Child_Gauntlet_Goron`, `Armor_Adult_Gauntlet_Silver`,
+  `Armor_Adult_Gauntlet_Gold` (RSDB `ActorInfo.ActorName`); flags `IsGet.Armor_*` (no `IsGet.Item_Gauntlet_*`).
+  `CheckActor = Armor_Child_Gauntlet_Goron` matches once the bracelet is owned **[game]** (2026-11-16: Mido chest
+  gave the bracelet, then the Lost Woods chest the Golden Gauntlets, strength mixed with a gift). Still a
+  hypothesis: the bracelet stays counted after the adult gauntlets (matters only for all-chest seeds).
 - Bombs require the bag **and** the Goron Bracelet **[game]** (`has_explosives`).
 - A chest's "GetEventName" may belong to the item (Kokiri Sword: the sword appears on the back) -> `event: drop` when
   the item changes; or to the location (Dampé, Ruto) -> `keep`.

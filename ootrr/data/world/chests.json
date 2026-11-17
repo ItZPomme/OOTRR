@@ -8,7 +8,7 @@
     "KF Midos House Chest 4":     {"region": "Kokiri Forest", "rule": "True", "hashes": [9725242744547055868], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
     "KF Purple Rupee Chest":      {"region": "Kokiri Forest", "rule": "can_play(Song_of_Storms)", "hashes": [4349272251343787229], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
 
-    "LW Grotto Chest":            {"region": "Lost Woods", "rule": "can_open_grotto", "hashes": [17479747339356189279], "vanilla": "TBox_Rupee_Purple"},
+    "LW Grotto Chest":            {"region": "Lost Woods", "rule": "True", "hashes": [17479747339356189279], "vanilla": "TBox_Rupee_Purple", "_note": "remake: no grotto, the chest is in the open near the bridge, next to the stick upgrade Deku Scrub (seen in game 2026-11-16); name kept for the original game"},
     "SFM Grotto Chest":           {"region": "Sacred Forest Meadow", "rule": "can_open_grotto", "hashes": [7995233962349162969], "vanilla": "TBox_Rupee_Purple"},
     "SFM Scrub Seed Chest":       {"region": "Sacred Forest Meadow", "rule": "can_open_grotto", "hashes": [1764383515296652106], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
 

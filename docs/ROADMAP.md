@@ -168,7 +168,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   countdown of the timer (not validated in game).
 - `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).
 - First-obtain animation of consumables: not removed (decided by the engine).
-- Progressive upgrades in chests (mechanism of the A_06 chests with conditional content).
+- Progressive items: done in the native menu (`ingame::AdjustItem`), **to validate in game** (each chain, and the
+  bow / slingshot "owned" flags). PC-built mod: chests as `Obj_TBox_A_06` conditional chests (Hookshot chain and
+  slingshot `CheckActor` validated in game; to validate: a converted big chest, a whole seed). Gifts: questions
+  before the gift (validated in game, 2026-11-16). Not done in the PC-built mod: scrubs, ground items and
+  Skulltulas (fixed items).
 - Shuffled NPCs and songs (replacing the item name in their scenes — validated for one NPC).
 - Small keys / boss keys (`small_keys`, `boss_keys`): done in the generator and the PC-built mod, verified in the
   files (tools `verify`, `events`), **to validate in game**: a key in its own dungeon's chest (counter), a key of

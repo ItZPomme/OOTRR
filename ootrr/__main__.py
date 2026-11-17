@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import __version__, settings as settings_mod, spoiler as spoiler_mod
 from .fill import FillError, generate
-from .patch import build_patch, chest_changes, pickup_changes
+from .patch import build_patch, chest_changes, pickup_changes, progressive_chest
 from .world import DataError, World
 
 
@@ -33,8 +33,10 @@ def seed_to_int(seed: str | None) -> int:
 
 
 def _parse_value(text: str):
-    """« true » / « false » / nombre entier, sinon texte."""
+    """« true » / « false » / nombre entier, « none » (field removed), sinon texte."""
     low = text.strip().lower()
+    if low == "none":
+        return None
     if low in ("true", "false"):
         return low == "true"
     try:
@@ -64,6 +66,9 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         h, item = entry.split("=", 1)
         item, _, event = item.strip().partition("@")
         change = {"Drop__DropActor": item}
+        # an item of a progressive chain: conditional chest, as in a seed (patch.progressive_chest)
+        change.update(progressive_chest(item, patch.get("progressive") or [], patch.get("progressive_pouch"),
+                                        patch.get("progressive_kept") or ()) or {})
         if event:
             change["GetEventName"] = event
         changes[int(h)] = change
@@ -148,6 +153,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.ocarina_guard = bool(patch.get("ocarina_guard", True))
         builder.song_gives = patch.get("song_gives") or None
         builder.gift_edits = {f: [tuple(e) for e in v] for f, v in (patch.get("gift_changes") or {}).items()}
+        builder.gift_progressive = patch.get("gift_progressive") or {}
         builder.event_ints = {f: [tuple(e) for e in v] for f, v in (patch.get("event_ints") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,

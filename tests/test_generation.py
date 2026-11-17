@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from ootrr import settings as settings_mod  # noqa: E402
 from ootrr.fill import generate  # noqa: E402
 from ootrr.formats.byml import F64, I64, U32, U64, HashDict, read_byml, write_byml  # noqa: E402
-from ootrr.patch import build_patch, chest_changes  # noqa: E402
+from ootrr.patch import build_patch, chest_changes, progressive_chains  # noqa: E402
 from ootrr.rules import RuleCompiler, RuleError  # noqa: E402
 from ootrr.search import State, is_beatable  # noqa: E402
 from ootrr.spoiler import build as build_spoiler  # noqa: E402
@@ -101,6 +101,12 @@ class WorldTests(unittest.TestCase):
         self.assertEqual(inv["Progressive_Strength"], 2)
         self.world.collect(inv, "TBox_Rupee_Red")
         self.assertNotIn("TBox_Rupee_Red", inv)
+
+    def test_progressive_hookshot_counts_copies(self):
+        # progressive in game: the first one found is the Hookshot, whichever of the two it is
+        inv = Counter()
+        self.world.collect(inv, "Item_Longshot")
+        self.assertEqual(inv["Progressive_Hookshot"], 1)
 
     def test_empty_inventory_cannot_win(self):
         self.assertFalse(is_beatable(self.world, {}))
@@ -264,13 +270,17 @@ class GenerationTests(unittest.TestCase):
         result = generate(world, 7)
         spoiler = build_spoiler(world, result)
         self.assertIn("Triforce", [e["item"] for e in spoiler["playthrough"][-1]])
-        changes = chest_changes(build_patch(world, result, spoiler["hash"]))
+        patch = build_patch(world, result, spoiler["hash"])
+        changes = chest_changes(patch)
+        chain_items = {i for chain in progressive_chains(patch) for i in chain}
         for loc in world.shuffled_locations():
             item = result.placements[loc.name]
-            if loc.pickup:
+            if loc.pickup or loc.scrub or loc.skulltula or loc.shop:
                 continue
             for h in loc.hashes:
-                if item == loc.vanilla:
+                if item in chain_items:  # conditional chest (tests/test_progressive.py)
+                    self.assertIn("__progressive_chest", changes[h])
+                elif item == loc.vanilla:
                     self.assertNotIn(h, changes)
                 else:
                     self.assertEqual(changes[h]["Drop__DropActor"], item)

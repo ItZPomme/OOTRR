@@ -174,6 +174,15 @@ Always on in the menu: cutscenes with no effect on the game, and the cutscenes t
 are not played (what they do is kept: items, quest steps, world changes). The ending, the credits, the last fights
 against Ganondorf and Ganon, and a few scenes that change the time of day are still played (skip them with +).
 
+Also always on: **progressive items** (new, not fully validated in game yet). The first item of a chain you find
+is always the first step, whatever the seed put there: Hookshot then Longshot; Bow then the bigger quivers;
+Slingshot then the bigger bullet bags; Deku Stick and Deku Nut capacity upgrades; Bomb Bag then the bigger bags;
+Goron's Bracelet, Silver Gauntlets, Golden Gauntlets; Fairy Ocarina then Ocarina of Time (menu only). With the in-game menu this works everywhere. With a PC-built mod
+(desktop app, Longshot), chests and NPC gifts are progressive. Gifts are exact; a progressive chest is always a
+small chest, and you always end with the biggest quiver / bullet bag / bomb bag, but chests may skip the medium
+one. Deku Scrubs and ground items give the item as placed (for the Hookshot and strength, progressive only when the
+seed put every copy in a chest or a gift).
+
 ### Seeing your game's spoiler log
 
 Without building anything: the tool reads the seed and settings from the most recent save.

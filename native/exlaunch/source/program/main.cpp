@@ -997,7 +997,7 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
             }
         }
-        // objet donné sous son vrai nom (coffre, scène) : ocarinas progressifs, bombes sans sac
+        // item given under its real name (chest, scene): progressive items and ocarinas, bombs without a bag
         if (name && name->text) {
             s32 bomb_rupees = 0;
             const char* adjusted = ootrr::ingame::AdjustItem(Main(), name->text, &bomb_rupees);
@@ -1016,7 +1016,7 @@ HOOK_DEFINE_TRAMPOLINE(PouchAdd) {
                 replaced = {text, static_cast<s32>(sizeof(text)), 0};
                 Log(name->text);
                 Log(text);
-                Log("OoTRR: ocarina progressif (avant / apres)");
+                Log("OoTRR: progressive item (before / after)");
                 return Orig(manager, &replaced, variant, count, reason, a5, a6, is_get_event, a8);
             }
         }
