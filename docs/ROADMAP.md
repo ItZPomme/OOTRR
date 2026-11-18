@@ -133,6 +133,13 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Bridge condition: required number chosen at the top of page 2 (see "Rainbow bridge"); menu **validated in
   game**, bridge opening at the chosen number to check.
 
+## Multiworld, then coop
+See [`MULTIWORLD.md`](MULTIWORLD.md). Done (unit tests only): shared fill over several worlds (`ootrr/multiworld.py`),
+protocol and relay server (`ootrr/tools/mw_server.py`). **To do**: per-player mod with the other players' items,
+Eden client in the native module (`nn::socket` from sdk, items given on the game thread), Longshot PC bridge over
+Longshot's control pipe (`ootrr/longshot_control.py`, used live: events, GameData reads, and an item given through the
+game's write queues, saved), desktop app, then coop.
+
 ## Deku Scrub salesmen (scrubsanity)
 - Mechanism validated in game (a Deku Scrub sells any item, message in the game's language).
 - **To do**: inventory of the ~35 Deku Scrubs (`Enemy_Scrub_Business` in the child and adult maps, with their

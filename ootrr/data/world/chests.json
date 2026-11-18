@@ -8,7 +8,7 @@
     "KF Midos House Chest 4":     {"region": "Kokiri Forest", "rule": "True", "hashes": [9725242744547055868], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
     "KF Purple Rupee Chest":      {"region": "Kokiri Forest", "rule": "can_play(Song_of_Storms)", "hashes": [4349272251343787229], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
 
-    "LW Grotto Chest":            {"region": "Lost Woods", "rule": "True", "hashes": [17479747339356189279], "vanilla": "TBox_Rupee_Purple", "_note": "remake: no grotto, the chest is in the open near the bridge, next to the stick upgrade Deku Scrub (seen in game 2026-11-16); name kept for the original game"},
+    "LW Bean Chest":              {"region": "Lost Woods", "rule": "is_adult and LW_Bridge_Bean_Planted", "hashes": [17479747339356189279], "vanilla": "TBox_Rupee_Purple"},
     "SFM Grotto Chest":           {"region": "Sacred Forest Meadow", "rule": "can_open_grotto", "hashes": [7995233962349162969], "vanilla": "TBox_Rupee_Purple"},
     "SFM Scrub Seed Chest":       {"region": "Sacred Forest Meadow", "rule": "can_open_grotto", "hashes": [1764383515296652106], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
 
@@ -16,25 +16,25 @@
     "HF Grotto Chest 1":          {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [6900843020594897860], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Grotto Chest 2":          {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [5755485285664292988], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
     "HF Scrub Seed Chest":        {"region": "Hyrule Field", "rule": "can_open_grotto", "hashes": [17445672702269453589], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
-    "LH Adult Chest 1":           {"region": "Lake Hylia", "rule": "is_adult and water_boss", "hashes": [17023457248274633121], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Adult Chest 2":           {"region": "Hyrule Field", "rule": "is_adult and can_open_grotto", "hashes": [1163740567397714729], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "HF Adult Chest 3":           {"region": "Hyrule Field", "rule": "is_adult and can_open_grotto", "hashes": [9891111455604007674], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
-
+    "LH Adult Chest 1":           {"region": "Lake Hylia", "rule": "is_adult and water_boss", "hashes": [17023457248274633121], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
     "Kak Grotto Chest":           {"region": "Kakariko Village", "rule": "can_open_grotto", "hashes": [12902291359202819102], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
     "Kak Adult Grotto Chest":     {"region": "Kakariko Village", "rule": "is_adult and can_open_grotto", "hashes": [13080955777249750889, 11929552275106311978], "vanilla": "TBox_Rupee_Purple", "_note": "prudent ; deux variantes de carte"},
     "Graveyard Heart Piece Grave Chest": {"region": "Graveyard", "rule": "can_play(Suns_Song)", "hashes": [9622128545943056087], "vanilla": "Obj_Heart_Piece", "_note": "prudent"},
     "Graveyard Dampe Race Hookshot Chest": {"region": "Graveyard", "rule": "is_adult", "hashes": [16041366920820397198], "vanilla": "Item_Hookshot", "event": "keep"},
-    "Graveyard Dampe Race Heart Piece Chest": {"region": "Graveyard", "rule": "is_adult", "hashes": [5534919361313859554], "vanilla": "Obj_Heart_Piece", "event": "keep"},
+    "Graveyard Dampe Race Heart Piece Chest": {"region": "Graveyard", "rule": "is_adult and can_use(Progressive_Hookshot)", "hashes": [5534919361313859554], "vanilla": "Obj_Heart_Piece", "event": "keep"},
 
     "DMT Scrub Seed Chest":       {"region": "Death Mountain Trail", "rule": "can_blast_or_smash", "hashes": [9809508929088891725], "vanilla": "Item_ScrubBusinessSeed"},
     "DMC Grotto Chest":           {"region": "DMC Lower", "rule": "is_adult and can_open_grotto", "hashes": [9128916506605227251], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
     "DMC Scrub Seed Chest":       {"region": "DMC Lower", "rule": "is_adult and can_blast_or_smash", "hashes": [1158729434763801603], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
-    "GC Chest 1":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [10944569637726152230], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
-    "GC Chest 2":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [9159710900681116662], "vanilla": "TBox_Rupee_Green", "_note": "prudent"},
-    "GC Chest 3":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [4402942101476009858], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
-    "GC Chest 4":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [14647422914070455120], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "GC Chest 5":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [1176975953041865014], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "GC Chest 6":                 {"region": "Goron City", "rule": "gc_chests", "hashes": [3870071239709713434], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
+
+    "GC Chest 1":                 {"region": "Goron City", "rule": "can_use(Progressive_Hookshot)", "hashes": [10944569637726152230], "vanilla": "TBox_Rupee_Purple", "_note": "Sign mini game, Requieres Hookshot"},
+    "GC Chest 2":                 {"region": "Goron City", "rule": "can_use(Progressive_Hookshot)", "hashes": [9159710900681116662], "vanilla": "TBox_Rupee_Green", "_note": "Sign mini game, Requieres Hookshot"},
+    "GC Chest 3":                 {"region": "Goron City", "rule": "can_blast_or_smash and (has_strength2 or can_use(Megaton_Hammer))", "hashes": [4402942101476009858], "vanilla": "TBox_Rupee_Red", "_note": "Maze chest, Requieres Bombs, Hammer or Strength 2"},
+    "GC Chest 4":                 {"region": "Goron City", "rule": "can_blast_or_smash", "hashes": [14647422914070455120], "vanilla": "TBox_Rupee_Blue", "_note": "Maze chest, Requieres Bombs, Hammer or Strength 2"},
+    "GC Chest 5":                 {"region": "Goron City", "rule": "can_blast_or_smash", "hashes": [1176975953041865014], "vanilla": "TBox_Rupee_Blue", "_note": "Maze chest, Requieres Bombs, Hammer or Strength 2"},
+    "GC Chest 6":                 {"region": "Goron City", "rule": "can_blast_or_smash and has_strength2", "hashes": [3870071239709713434], "vanilla": "TBox_Rupee_Purple", "_note": "Maze chest, Requieres Strength 2"},
 
     "ZR Scrub Seed Chest":        {"region": "Zora River", "rule": "can_open_grotto", "hashes": [8838426083116998768], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"},
     "ZD Chest":                   {"region": "Zoras Domain", "rule": "is_child", "hashes": [3130048366421939233], "vanilla": "Obj_Heart_Piece"},

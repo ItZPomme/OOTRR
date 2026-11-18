@@ -1042,13 +1042,21 @@ class ModBuilder:
         sarc.files[param_path] = write_byml(param, byml_version(sarc.files[param_path]))
         return True
 
-    def _write_key_flows(self, key_events: dict[str, tuple[str, str]], out_romfs: Path) -> list[str]:
+    def _write_key_flows(self, key_events: dict[str, tuple[str, str]], out_romfs: Path,
+                         mw_events: dict[str, str] | None = None) -> list[str]:
         """Scripts of the chest events that give a key outside its dungeon (keys.py): copies of the boss key
         chest script (ForestTemple_Gimmick) where Navi's line after the opening sequence becomes
         "DungeonInfo.<game>.SmallKeyNum + 1" or "DungeonInfo.<game>.IsGetBossKey = true". The RSDB rows
-        (EventSetting, GameAnalyzedEventInfo) come with the patch's rsdb_changes."""
+        (EventSetting, GameAnalyzedEventInfo) come with the patch's rsdb_changes.
+        mw_events: multiworld chests holding another player's item ({event: saved Int}): same copy, the line
+        becomes "<Int> + 1" (multiworld.slot_patch); the script is named after the event."""
         from . import keys as keys_mod
-        from .formats.evfl import ensure_actor_member, event_params, insert_flow
+        from .formats.evfl import ensure_actor_member, event_params, insert_flow, replace_strings
+
+        specs = [(keys_mod.flow_name(kind, game), kind, keys_mod.COUNTER[kind].format(game=game),
+                  f"chest event {event}") for event, (kind, game) in sorted(key_events.items())]
+        specs += [(event, keys_mod.SMALL, counter, f"multiworld chest event, {counter} + 1")
+                  for event, counter in sorted((mw_events or {}).items())]
 
         folder = self.romfs / "Event" / "EventFlow"
         src = folder / f"{keys_mod.TEMPLATE_FLOW}.bfevfl.zs"
@@ -1056,20 +1064,23 @@ class ModBuilder:
         actions = self.codec.decompress(folder / f"{keys_mod.ACTION_TEMPLATE_FLOW}.bfevfl.zs")
         src_rel = src.relative_to(self.romfs).as_posix()[:-3]
         report = []
-        for event, (kind, game) in sorted(key_events.items()):
+        for flow_name, kind, counter, what in specs:
             action = keys_mod.ACTION[kind]
             flow = ensure_actor_member(raw, "GameDataActor", "action", action)
             node = {"actor": "GameDataActor", "action": action,
                     "template": (actions, event_params(actions, keys_mod.ACTION_TEMPLATE_STEP[kind])),
-                    "set": {"GameDataName": keys_mod.COUNTER[kind].format(game=game)}, "next": None}
+                    "set": {"GameDataName": counter}, "next": None}
             new, steps = insert_flow(flow, None, [node], before=keys_mod.TEMPLATE_STEP)
-            name = f"{keys_mod.flow_name(kind, game)}.bfevfl"
+            # the copy names itself (file and flowchart names, the only two references): with the template's name
+            # the chest never opened (Longshot, 2026-11-17: template event fine, copy refused)
+            new, _ = replace_strings(new, {keys_mod.TEMPLATE_FLOW: flow_name})
+            name = f"{flow_name}.bfevfl"
             rel = f"Event/EventFlow/{name}"
             self.restbl.set(rel, self.restbl.get(src_rel) + max(0, len(new) - len(raw)))
             dest = out_romfs / (rel + ".zs")
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(self.codec.compress(dest.name, new))
-            report.append(f"{name}: chest event {event} ({'; '.join(steps)})")
+            report.append(f"{name}: {what} ({'; '.join(steps)})")
         return report
 
     def _write_pickups(self, pickups: dict[str, str], out_romfs: Path) -> dict[str, dict[str, dict]]:
@@ -1141,7 +1152,8 @@ class ModBuilder:
               timeline_skips: dict[str, list[str]] | None = None,
               timeline_fade_in: list[str] | None = None,
               ainb_edits: dict[str, dict] | None = None,
-              key_events: dict[str, tuple[str, str]] | None = None) -> list[str]:
+              key_events: dict[str, tuple[str, str]] | None = None,
+              mw_events: dict[str, str] | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -1250,6 +1262,9 @@ class ModBuilder:
         if missing:
             raise KeyError(f"acteurs introuvables : {sorted(missing)}")
         saved_ints = [e["timer"] for e in (ainb_edits or {}).values() if "timer" in e]
+        if mw_events:  # multiworld: one saved Int per remote chest, and the received items counter
+            from .multiworld import RECEIVED_COUNTER
+            saved_ints += sorted(mw_events.values()) + [RECEIVED_COUNTER]
         if start_flags or bool_exps or saved_ints:
             report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps, saved_ints)
         if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
@@ -1264,8 +1279,8 @@ class ModBuilder:
         if scrub_sales or questions:
             items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items))
             report += self._write_messages(items, out_romfs, questions or [])
-        if key_events:
-            report += self._write_key_flows(key_events, out_romfs)
+        if key_events or mw_events:
+            report += self._write_key_flows(key_events or {}, out_romfs, mw_events)
         if pack_changes:
             report += self._write_packs(pack_changes, out_romfs)
         if ainb_edits:

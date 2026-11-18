@@ -112,6 +112,32 @@ def _plando_split(locations: list[Location], plando: dict[str, str],
 def _attempt(world: World, rng: random.Random) -> dict[str, str]:
     # logic = none: random placement, no reachability check (same random draws as generator.cpp)
     no_logic = world.settings.get("logic") == "none"
+    placements, shuffled, free_pool = prefill(world, rng)
+    progression = [] if no_logic else [i for i in free_pool if world.is_progression(i)]
+    rest = list(free_pool) if no_logic else [i for i in free_pool if not world.is_progression(i)]
+
+    # 2. objets de progression, 3. le reste
+    _assumed_fill(world, rng, progression, shuffled, placements)
+
+    # 3. le reste : d'abord les objets qui ont le moins de lieux possibles (pas au sol)
+    empty = [l for l in shuffled if l.name not in placements]
+    if len(empty) != len(rest):
+        raise FillError(f"incohérence du pool : {len(rest)} objets pour {len(empty)} lieux")
+    rng.shuffle(rest)
+    rest.sort(key=lambda item: sum(world.can_place(item, l) for l in empty))
+    for item in rest:
+        free = [l for l in empty if l.name not in placements and world.can_place(item, l)]
+        if not free:
+            raise FillError(f"aucun lieu restant pour {item}")
+        placements[rng.choice(free).name] = item
+    return placements
+
+
+def prefill(world: World, rng: random.Random) -> tuple[dict[str, str], list[Location], list[str]]:
+    """Everything placed before the free pool: fixed locations, shuffled rewards and songs, plando, dungeon keys,
+    maps and compasses. Returns (placements, shuffled locations, items of the pool left to place). Also used per
+    world by the multiworld fill (`ootrr.multiworld`): these items always stay in their own world."""
+    no_logic = world.settings.get("logic") == "none"
     plando = getattr(world, "plando", None) or {}  # location -> item chosen by the player (ootrr/plando.py)
     placements = {l.name: l.vanilla for l in world.fixed_locations()}
     if world.settings.get("shuffle_rewards") == "shuffled":
@@ -159,25 +185,7 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
             raise FillError(f"plus de coffre libre dans {dungeon} pour {item}")
         placements[rng.choice(free).name] = item
 
-    free_pool = [item for item, dungeon in pool if dungeon is None]
-    progression = [] if no_logic else [i for i in free_pool if world.is_progression(i)]
-    rest = list(free_pool) if no_logic else [i for i in free_pool if not world.is_progression(i)]
-
-    # 2. objets de progression, 3. le reste
-    _assumed_fill(world, rng, progression, shuffled, placements)
-
-    # 3. le reste : d'abord les objets qui ont le moins de lieux possibles (pas au sol)
-    empty = [l for l in shuffled if l.name not in placements]
-    if len(empty) != len(rest):
-        raise FillError(f"incohérence du pool : {len(rest)} objets pour {len(empty)} lieux")
-    rng.shuffle(rest)
-    rest.sort(key=lambda item: sum(world.can_place(item, l) for l in empty))
-    for item in rest:
-        free = [l for l in empty if l.name not in placements and world.can_place(item, l)]
-        if not free:
-            raise FillError(f"aucun lieu restant pour {item}")
-        placements[rng.choice(free).name] = item
-    return placements
+    return placements, shuffled, [item for item, dungeon in pool if dungeon is None]
 
 
 def check(world: World, placements: dict[str, str]) -> tuple[bool, list[str]]:

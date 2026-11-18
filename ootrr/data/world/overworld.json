@@ -92,7 +92,7 @@
       }
     },
     "Ganons Castle": {
-      "_doc": "Les épreuves et l'intérieur du château ne sont pas encore randomisés.",
+      "_doc": "Nothing randomized here",
       "events": {
         "Triforce": "can_use(Light_Arrows)"
       },
@@ -269,7 +269,8 @@
       },
       "events": {
         "Trade_Odd_Mushroom": "is_adult and Trade_Cojiro",
-        "Trade_Poachers_Saw": "is_adult and Trade_Odd_Potion"
+        "Trade_Poachers_Saw": "is_adult and Trade_Odd_Potion",
+        "LW_Bridge_Bean_Planted": "is_child and Magic_Bean"
       },
       "exits": {
         "Kokiri Forest": "True",

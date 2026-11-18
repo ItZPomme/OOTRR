@@ -71,34 +71,48 @@ class State:
     def _event_ready(self, ev) -> bool:
         return any(self._reach_as(ev.region, ev.rule, age) for age in AGES)
 
+    def reachable(self, placements: Mapping[str, object]) -> list[tuple[str, object, bool]]:
+        """Events and placed locations reachable now and not collected yet: (event or location, item, reached as
+        child). The placed value is passed through as is (the multiworld fill places (owner, item) pairs)."""
+        self.expand()
+        found: list[tuple[str, object, bool]] = []
+        for ev in self.world.events:
+            if ev.name not in self.events and self._event_ready(ev):
+                found.append((EVENT_PREFIX + ev.region, ev.name, self._reach_as(ev.region, ev.rule, "child")))
+        for name, item in placements.items():
+            loc = self.world.locations[name]
+            if name not in self.collected and self.can_reach(loc):
+                found.append((name, item, self._reach_as(loc.region, loc.rule, "child")))
+        return found
+
+    def mark(self, where: str, item: str) -> None:
+        """Records a found event or location (its item may go to another world, see `receive`)."""
+        if where.startswith(EVENT_PREFIX):
+            self.events.add(item)
+        else:
+            self.collected.add(where)
+
+    def receive(self, item: str, child: bool) -> None:
+        """Adds an item to the inventory; `child`: usable by the child before he can go back in time."""
+        self.world.collect(self.items, item)
+        if child:
+            self.world.collect(self.child_items, item)
+
+    def update_return(self) -> None:
+        if not self.can_return and self.items[RETURN_TO_CHILD] and "Temple of Time" in self.reached["adult"]:
+            self.can_return = True
+            self.reached["child"] = {self.world.ROOT}  # l'enfant profite maintenant de tout l'inventaire
+
     def step(self, placements: Mapping[str, str]) -> list[tuple[str, str]]:
         """Une « sphère » : collecte d'un coup tout ce qui est atteignable maintenant.
 
         Retourne la liste (lieu ou événement, objet) collectée ; vide = point fixe."""
-        self.expand()
-        found: list[tuple[str, str]] = []
-        as_child: list[bool] = []
-        for ev in self.world.events:
-            if ev.name not in self.events and self._event_ready(ev):
-                found.append((EVENT_PREFIX + ev.region, ev.name))
-                as_child.append(self._reach_as(ev.region, ev.rule, "child"))
-        for name, item in placements.items():
-            loc = self.world.locations[name]
-            if name not in self.collected and self.can_reach(loc):
-                found.append((name, item))
-                as_child.append(self._reach_as(loc.region, loc.rule, "child"))
-        for (where, item), child in zip(found, as_child):
-            if where.startswith(EVENT_PREFIX):
-                self.events.add(item)
-            else:
-                self.collected.add(where)
-            self.world.collect(self.items, item)
-            if child:
-                self.world.collect(self.child_items, item)
-        if not self.can_return and self.items[RETURN_TO_CHILD] and "Temple of Time" in self.reached["adult"]:
-            self.can_return = True
-            self.reached["child"] = {self.world.ROOT}  # l'enfant profite maintenant de tout l'inventaire
-        return found
+        found = self.reachable(placements)
+        for where, item, child in found:
+            self.mark(where, item)
+            self.receive(item, child)
+        self.update_return()
+        return [(where, item) for where, item, _ in found]
 
     def sweep(self, placements: Mapping[str, str]) -> "State":
         while self.step(placements):

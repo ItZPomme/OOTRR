@@ -52,6 +52,8 @@ python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField --filter Obj_
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
 python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
 python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (PyInstaller, windowed)
+python -m ootrr.multiworld --players 2 --names A,B --seed 1 -o output/mw.json   # multiworld seed (docs/MULTIWORLD.md)
+python -m ootrr.tools.mw_server output/mw.json          # multiworld item relay server (port 38300)
 python -m ootrr.tools.make_icon                          # redraws the logo: ootrr/assets/longshot.png + .ico
 ```
 
@@ -70,6 +72,8 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 | `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards, dungeon keys first |
 | `ootrr/keys.py` | Dungeon keys (`small_keys`, `boss_keys`, data in `data/keys.json`): names, chest changes, key events |
 | `ootrr/plando.py` | Plandomizer files: chosen placements (pool, shuffled rewards / songs), start point, settings; used by `fill` through `World.plando` |
+| `ootrr/multiworld.py` | Multiworld: one world per player, shared fill, multiworld file; `mw_protocol.py` + `tools/mw_server.py` relay the items (see `docs/MULTIWORLD.md`) |
+| `ootrr/longshot_control.py` | Longshot's control pipe (`HOS_CONTROL`): JSON commands, GameData events, guest memory, GameData Int lookup |
 | `ootrr/patch.py` | Result -> JSON patch (everything the builder must apply) |
 | `ootrr/race.py` | Races: settings string (format 2, frozen field order: bump `FORMAT` when the shown settings change) and the 5 hash symbols; `tools/seed_icons.py` draws them |
 | `ootrr/updates.py` | Update check of the desktop app: latest GitHub release vs `__version__` (bump it for every release) |

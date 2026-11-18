@@ -1,0 +1,420 @@
+"""Multiworld generation: one world per player, one shared fill.
+
+Each player has their own World (their own settings) and their own seed in the game; an item placed in a location
+of world A may belong to player B: when A finds it, the server sends it to B (see docs/MULTIWORLD.md). Placements
+are therefore (owner, item) pairs, `owner` = index of the player who receives the item.
+
+    python -m ootrr.multiworld --players 2 --seed 1234 -o output/mw.json
+    python -m ootrr.multiworld --config players.json --seed 1234 -o output/mw.json
+
+Fill: same method as `ootrr.fill` (assumed fill), over every world at once.
+- Per world first (`fill.prefill`): fixed locations, shuffled rewards and songs, dungeon keys, maps and compasses.
+  These stay in their own world.
+- Progression items of every world: assumed fill over the locations of every world. The reachability check sweeps
+  all worlds together (`MultiState`): an item found in world A for player B is added to B's inventory.
+- The rest: anywhere that accepts it.
+
+Child / adult (`search.State`): until Link can go back in time, the child only uses the items found as child. An item
+received from another world comes whenever the other player finds it, whatever the receiver's age: it only counts
+for the receiver's adult (and for both once he can go back). This is conservative (never a seed that needs a child
+to use an item he may receive too late).
+
+Not supported yet: plando and `logic = none` (refused by `generate`).
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import random
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterable, Mapping
+
+from . import __version__, settings as settings_mod
+from .fill import FillError, prefill
+from .search import EVENT_PREFIX, State
+from .world import DATA_DIR, Location, World
+
+FORMAT = 1  # multiworld file format; bump it when the file changes
+MAX_PLAYERS = 16
+
+Placed = tuple[int, str]  # (owner = index of the receiving player, item)
+
+# ---- game side (PC-built mod, see docs/MULTIWORLD.md) ----
+# A chest holding another player's item gives this placeholder (not put in the pouch, "door key" text) and runs its
+# own chest event (copy of the boss key chest script, like a key of another dungeon) that adds 1 to a saved Int per
+# location: the bridge sees the Int change and tells the server.
+REMOTE_PLACEHOLDER = "Obj_MiniGame_SmallKey"
+RECEIVED_COUNTER = "OoTRR.MW.Received"  # saved Int: received items applied by the bridge (protocol SYNC)
+
+
+def location_counter(rank: int) -> str:
+    """Saved Int raised when the location of rank `rank` (index in World.locations) holding a remote item is found."""
+    return f"OoTRR.MW.L{rank:04d}"
+
+
+def remote_event(rank: int) -> str:
+    """Chest event (RSDB EventSetting row and script name) of that location."""
+    return f"OoTRR_MW_L{rank:04d}"
+
+
+def can_hold_remote(loc: Location) -> bool:
+    """Locations that may hold another player's item: plain chests whose event can be replaced, as for a key of
+    another dungeon (`World._can_hold_key`), not conditional (their AI picks the item)."""
+    return (loc.is_chest and loc.kind == "general" and not loc.gift and not loc.ocarina and not loc.conditional
+            and loc.event != "keep")
+
+
+@dataclass
+class Player:
+    name: str
+    settings: dict[str, Any]
+
+
+@dataclass
+class MultiResult:
+    seed: int
+    attempts: int
+    players: list[Player]
+    placements: list[dict[str, Placed]]  # per world: location -> (owner, item)
+    unreachable: list[list[str]] = field(default_factory=list)
+
+    def own_items(self, world: int) -> dict[str, str]:
+        """Locations of `world` whose item stays in it (the rest goes to other players)."""
+        return {loc: item for loc, (owner, item) in self.placements[world].items() if owner == world}
+
+    def sent(self, world: int) -> dict[str, Placed]:
+        """Locations of `world` whose item goes to another player."""
+        return {loc: p for loc, p in self.placements[world].items() if p[0] != world}
+
+    def received(self, world: int) -> list[tuple[int, str, str]]:
+        """Items of player `world` placed in other worlds: (finder, location, item)."""
+        return [(k, loc, item) for k, places in enumerate(self.placements) if k != world
+                for loc, (owner, item) in places.items() if owner == world]
+
+
+class MultiState:
+    """One `search.State` per world, swept together: an item found anywhere goes to its owner."""
+
+    def __init__(self, worlds: list[World], assumed: Iterable[Placed] = ()) -> None:
+        self.worlds = worlds
+        self.states = [State(w) for w in worlds]
+        for owner, item in assumed:
+            self.states[owner].receive(item, True)  # assumed owned from the start, as in State(world, items)
+
+    def step(self, placements: list[Mapping[str, Placed]]) -> list[tuple[int, str, Placed]]:
+        """One sphere over every world: (world where it was found, location or event, (owner, item))."""
+        found: list[tuple[int, str, Placed]] = []
+        taken: list[tuple[int, str, Placed, bool]] = []
+        for k, state in enumerate(self.states):
+            for where, placed, child in state.reachable(placements[k]):
+                if where.startswith(EVENT_PREFIX):
+                    placed = (k, placed)  # events stay in their world
+                taken.append((k, where, placed, child))
+        for k, where, (owner, item), child in taken:
+            self.states[k].mark(where, item)
+            self.states[owner].receive(item, child and owner == k)
+            found.append((k, where, (owner, item)))
+        for state in self.states:
+            state.update_return()
+        return found
+
+    def sweep(self, placements: list[Mapping[str, Placed]]) -> "MultiState":
+        while self.step(placements):
+            pass
+        return self
+
+    def can_reach(self, world: int, loc: Location) -> bool:
+        return self.states[world].can_reach(loc)
+
+    def beaten(self) -> bool:
+        return all(s.beaten() for s in self.states)
+
+
+def _candidates(worlds: list[World], item: Placed, locations: list[tuple[int, Location]],
+                placements: list[dict[str, Placed]], assumed: list[Placed]) -> list[tuple[int, Location]]:
+    without = list(assumed)
+    without.remove(item)
+    state = MultiState(worlds, without).sweep(placements)
+    return [(k, l) for k, l in locations
+            if l.name not in placements[k] and _accepts(worlds, k, l, item) and state.can_reach(k, l)]
+
+
+def _accepts(worlds: list[World], k: int, loc: Location, item: Placed) -> bool:
+    """Location `loc` of world `k` may hold `item`: the world's own rules, and another player's item only in a
+    chest that can hold one (`can_hold_remote`)."""
+    return worlds[k].can_place(item[1], loc) and (item[0] == k or can_hold_remote(loc))
+
+
+def _assumed_fill(worlds: list[World], rng: random.Random, items: list[Placed], locations: list[tuple[int, Location]],
+                  placements: list[dict[str, Placed]]) -> None:
+    """Assumed fill over every world. Unlike `fill._assumed_fill` (the item with the fewest possible locations
+    first, one sweep per remaining item and per step), items are placed in random order with one sweep each, as
+    Archipelago does: the single-world way grows as N^3 with N players (minutes for 4). A dead end raises
+    FillError and `generate` starts a new attempt."""
+    items = list(items)
+    rng.shuffle(items)
+    assumed = list(items)
+    while items:
+        item = items.pop()
+        candidates = _candidates(worlds, item, locations, placements, assumed)
+        if not candidates:
+            raise FillError(f"no location left for {item[1]} (player {item[0] + 1})")
+        assumed.remove(item)
+        k, loc = rng.choice(candidates)
+        placements[k][loc.name] = item
+
+
+def _attempt(worlds: list[World], rng: random.Random) -> list[dict[str, Placed]]:
+    placements: list[dict[str, Placed]] = []
+    locations: list[tuple[int, Location]] = []
+    progression: list[Placed] = []
+    rest: list[Placed] = []
+    for k, world in enumerate(worlds):
+        own, shuffled, free_pool = prefill(world, rng)
+        placements.append({loc: (k, item) for loc, item in own.items()})
+        locations += [(k, l) for l in shuffled]
+        progression += [(k, i) for i in free_pool if world.is_progression(i)]
+        rest += [(k, i) for i in free_pool if not world.is_progression(i)]
+
+    _assumed_fill(worlds, rng, progression, locations, placements)
+
+    empty = [(k, l) for k, l in locations if l.name not in placements[k]]
+    if len(empty) != len(rest):
+        raise FillError(f"pool mismatch: {len(rest)} items for {len(empty)} locations")
+    rng.shuffle(rest)
+    # locations that only take their own world's items (not plain chests) first, from their world's rest:
+    # otherwise the last ones may only find other players' items left
+    for k in range(len(worlds)):
+        own_only = [l for kk, l in empty if kk == k and not can_hold_remote(l)]
+        own_only.sort(key=lambda l: sum(p[0] == k and worlds[k].can_place(p[1], l) for p in rest))
+        for loc in own_only:
+            fits = [p for p in rest if p[0] == k and worlds[k].can_place(p[1], loc)]
+            if not fits:
+                raise FillError(f"no item of player {k + 1} left for {loc.name}")
+            p = rng.choice(fits)
+            rest.remove(p)
+            placements[k][loc.name] = p
+    empty = [(k, l) for k, l in empty if l.name not in placements[k]]
+    rest.sort(key=lambda p: sum(_accepts(worlds, k, l, p) for k, l in empty))
+    for p in rest:
+        free = [(k, l) for k, l in empty if l.name not in placements[k] and _accepts(worlds, k, l, p)]
+        if not free:
+            raise FillError(f"no location left for {p[1]} (player {p[0] + 1})")
+        k, loc = rng.choice(free)
+        placements[k][loc.name] = p
+    return placements
+
+
+def check(worlds: list[World], placements: list[dict[str, Placed]]) -> tuple[bool, list[list[str]]]:
+    state = MultiState(worlds).sweep(placements)
+    unreachable = [sorted(set(w.locations) - s.collected) for w, s in zip(worlds, state.states)]
+    return state.beaten(), unreachable
+
+
+def build_worlds(players: list[Player], data_dir: Path | str = DATA_DIR) -> list[World]:
+    if not 2 <= len(players) <= MAX_PLAYERS:
+        raise ValueError(f"a multiworld needs 2 to {MAX_PLAYERS} players")
+    names = [p.name for p in players]
+    if len(set(names)) != len(names) or any(not n.strip() for n in names):
+        raise ValueError("player names must be unique and not empty")
+    worlds = []
+    for p in players:
+        if p.settings.get("logic") == "none":
+            raise ValueError(f"{p.name}: logic = none is not supported in a multiworld")
+        worlds.append(World(p.settings, data_dir))
+    return worlds
+
+
+def generate(players: list[Player], seed: int, max_attempts: int = 20,
+             data_dir: Path | str = DATA_DIR, worlds: list[World] | None = None) -> MultiResult:
+    worlds = worlds or build_worlds(players, data_dir)
+    rng = random.Random(seed)
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            placements = _attempt(worlds, rng)
+        except FillError as exc:
+            last_error = exc
+            continue
+        beaten, unreachable = check(worlds, placements)
+        if not beaten:
+            last_error = FillError("multiworld not beatable")
+            continue
+        bad = [(p.name, u) for p, w, u in zip(players, worlds, unreachable)
+               if w.settings["accessibility"] == "all" and u]
+        if bad:
+            last_error = FillError(f"{bad[0][0]}: {len(bad[0][1])} unreachable locations, e.g. {bad[0][1][0]}")
+            continue
+        return MultiResult(seed, attempt, players, placements, unreachable)
+    raise FillError(f"failed after {max_attempts} attempts: {last_error}")
+
+
+# ---- file -------------------------------------------------------------------------------------------------------
+
+def room_hash(result: MultiResult) -> str:
+    """Identifies the multiworld: the server refuses a game whose seed has another hash."""
+    blob = json.dumps({"p": [[p.name, p.settings] for p in result.players],
+                       "l": [sorted(([loc, o, i] for loc, (o, i) in places.items())) for places in result.placements],
+                       "v": __version__}, sort_keys=True)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:10].upper()
+
+
+def playthrough(worlds: list[World], result: MultiResult) -> list[list[dict[str, Any]]]:
+    """Spheres over every world (progression items and events only)."""
+    state = MultiState(worlds)
+    spheres = []
+    while not state.beaten():
+        found = state.step(result.placements)
+        if not found:
+            break
+        spheres.append([{"world": k, "location": where, "owner": owner, "item": item}
+                        for k, where, (owner, item) in found
+                        if worlds[owner].is_progression(item) or where.startswith(EVENT_PREFIX)])
+    return spheres
+
+
+def to_json(result: MultiResult, worlds: list[World] | None = None) -> dict[str, Any]:
+    worlds = worlds or [World(p.settings) for p in result.players]
+    return {
+        "format": FORMAT,
+        "version": __version__,
+        "seed": result.seed,
+        "hash": room_hash(result),
+        "attempts": result.attempts,
+        "players": [{"name": p.name, "settings": p.settings,
+                     "placements": {loc: [owner, item] for loc, (owner, item) in sorted(places.items())}}
+                    for p, places in zip(result.players, result.placements)],
+        "playthrough": playthrough(worlds, result),
+    }
+
+
+def from_json(data: dict[str, Any]) -> MultiResult:
+    if data.get("format") != FORMAT:
+        raise ValueError(f"multiworld file format {data.get('format')}, expected {FORMAT}")
+    players = [Player(p["name"], p["settings"]) for p in data["players"]]
+    placements = [{loc: (int(o), item) for loc, (o, item) in p["placements"].items()} for p in data["players"]]
+    return MultiResult(int(data["seed"]), int(data.get("attempts", 1)), players, placements)
+
+
+def load(path: str | Path) -> MultiResult:
+    with Path(path).open(encoding="utf-8") as fh:
+        return from_json(json.load(fh))
+
+
+def to_text(data: dict[str, Any]) -> str:
+    names = [p["name"] for p in data["players"]]
+    out = [f"Ocarina of Time Remake Randomizer v{data['version']} - multiworld",
+           f"Seed: {data['seed']}    Hash: {data['hash']}    Players: {', '.join(names)}", ""]
+    width = max(len(n) for n in names) + 2
+    for i, sphere in enumerate(data["playthrough"], 1):
+        out.append(f"Sphere {i}")
+        for e in sphere:
+            to = "" if e["owner"] == e["world"] else f" -> {names[e['owner']]}"
+            out.append(f"  {'[' + names[e['world']] + ']':<{width}} {e['location']:<46} {e['item']}{to}")
+    for k, p in enumerate(data["players"]):
+        out += ["", f"== {p['name']}'s world =="]
+        for loc, (owner, item) in p["placements"].items():
+            to = "" if owner == k else f"   -> {names[owner]}"
+            out.append(f"  {loc:<46} {item}{to}")
+    return "\n".join(out) + "\n"
+
+
+# ---- per-player mod ---------------------------------------------------------------------------------------------
+
+def slot_patch(result: MultiResult, slot: int, world: World | None = None) -> dict[str, Any]:
+    """The build patch (`patch.build_patch`) of player `slot`'s world: own items as in a solo seed; a location
+    holding another player's item gets the placeholder and its own chest event (`chests[i]["remote"]`,
+    `patch["mw_events"]`); `patch["multiworld"]` tells the bridge what to watch."""
+    from .fill import Result
+    from .patch import build_patch
+
+    world = world or World(result.players[slot].settings)
+    placements = {loc: (item if owner == slot else REMOTE_PLACEHOLDER)
+                  for loc, (owner, item) in result.placements[slot].items()}
+    patch = build_patch(world, Result(result.seed, result.attempts, placements), f"{room_hash(result)}-{slot + 1}")
+    remote = result.sent(slot)
+    events: dict[str, str] = {}
+    watch = remote_watch(result, slot, world)
+    for chest in patch["chests"]:
+        placed = remote.get(chest["location"])
+        if placed is None:
+            continue
+        rank = chest["index"]
+        chest["remote"] = {"owner": placed[0], "item": placed[1], "event": remote_event(rank)}
+        events[remote_event(rank)] = location_counter(rank)
+    if len(events) != len(remote):
+        raise ValueError(f"player {slot + 1}: {len(remote) - len(watch)} remote items outside the chests")
+    patch["mw_events"] = events
+    for table, rows in mw_rsdb_rows(events).items():
+        patch["rsdb_changes"].setdefault(table, {}).update(rows)
+    patch["multiworld"] = {"hash": room_hash(result), "slot": slot + 1, "players": [p.name for p in result.players],
+                           "received_counter": RECEIVED_COUNTER, "locations": watch}
+    return patch
+
+
+def remote_watch(result: MultiResult, slot: int, world: World | None = None) -> dict[str, str]:
+    """{saved Int raised by the mod: location} for the locations of `slot`'s world holding another player's item
+    (rank = index in World.locations, as patch.build_patch)."""
+    world = world or World(result.players[slot].settings)
+    rank = {name: i for i, name in enumerate(world.locations)}
+    return {location_counter(rank[loc]): loc for loc in sorted(result.sent(slot))}
+
+
+def mw_rsdb_rows(events: dict[str, str]) -> dict[str, dict[str, dict]]:
+    """RSDB rows of the remote chest events: copies of the boss key chest event, own script (as `keys.rsdb_rows`)."""
+    from . import keys as keys_mod
+    if not events:
+        return {}
+    setting = {e: {"__new": True, "__copy_from": keys_mod.TEMPLATE_EVENT,
+                   "FlowchartFileName": f"Work/Event/EventFlow/{e}.evfc"} for e in events}
+    analyzed = {e: {"__new": True, "__copy_from": keys_mod.TEMPLATE_EVENT} for e in events}
+    return {"EventSetting": setting, "GameAnalyzedEventInfo": analyzed}
+
+
+# ---- command line -----------------------------------------------------------------------------------------------
+
+def _players_from_args(args) -> list[Player]:
+    if args.config:
+        with Path(args.config).open(encoding="utf-8") as fh:
+            raw = json.load(fh)
+        return [Player(str(p["name"]), settings_mod.build(p.get("settings") or {})) for p in raw["players"]]
+    names = args.names.split(",") if args.names else [f"Player {i + 1}" for i in range(args.players)]
+    if args.names and args.players and len(names) != args.players:
+        raise ValueError("--names must give one name per player")
+    return [Player(n.strip(), settings_mod.build({})) for n in names]
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="python -m ootrr.multiworld", description="Generate a multiworld seed.")
+    ap.add_argument("--players", type=int, default=2, help="number of players (default settings for everyone)")
+    ap.add_argument("--names", help="player names, comma separated")
+    ap.add_argument("--config", help='JSON file: {"players": [{"name": ..., "settings": {...}}, ...]}')
+    ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("-o", "--output", default=None, help="multiworld file to write (default output/mw_<seed>.json)")
+    args = ap.parse_args(argv)
+    seed = args.seed if args.seed is not None else random.SystemRandom().randrange(1, 10**9)
+    try:
+        players = _players_from_args(args)
+        worlds = build_worlds(players)
+        result = generate(players, seed, worlds=worlds)
+    except (ValueError, FillError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    data = to_json(result, worlds)
+    out = Path(args.output or f"output/mw_{seed}.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    out.with_suffix(".txt").write_text(to_text(data), encoding="utf-8")
+    sent = [len(result.sent(k)) for k in range(len(players))]
+    print(f"multiworld {data['hash']} (seed {seed}, attempt {result.attempts}): "
+          + ", ".join(f"{p.name} sends {n}" for p, n in zip(players, sent)))
+    print(f"written: {out} (+ .txt spoiler)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

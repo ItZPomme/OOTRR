@@ -170,7 +170,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 pack_changes=patch.get("pack_changes") or None,
                                 ainb_edits=patch.get("ainb_edits") or None,
                                 key_events={e: tuple(k) for e, k in (patch.get("key_events") or {}).items()}
-                                or None)
+                                or None,
+                                mw_events=patch.get("mw_events") or None)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():
