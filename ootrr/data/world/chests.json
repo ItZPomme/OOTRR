@@ -2,9 +2,9 @@
   "_doc": "Coffres réels du remake, identifiés par leur Hash (le même dans les cartes enfant et adulte ; plusieurs hash = variantes d'un même coffre). event : keep = l'événement appartient au lieu (histoire, mini-jeu) ; drop = il appartient à l'objet d'origine et est retiré si l'objet change. shuffle false = coffre laissé tel quel (événement d'histoire non encore maîtrisé). Les règles marquées (prudent) exigent plus que nécessaire tant que l'emplacement exact n'est pas confirmé en jeu.",
   "locations": {
     "KF Kokiri Sword Chest":      {"region": "Kokiri Forest", "rule": "is_child", "hashes": [16757992849254467386], "vanilla": "Item_Sword_Kokiri", "event": "drop"},
-    "KF Midos House Chest 1":     {"region": "Kokiri Forest", "rule": "True", "hashes": [10831981390482426294], "vanilla": "TBox_Rupee_Green", "event": "keep"},
-    "KF Midos House Chest 2":     {"region": "Kokiri Forest", "rule": "True", "hashes": [4555665598794293658], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
-    "KF Midos House Chest 3":     {"region": "Kokiri Forest", "rule": "True", "hashes": [12786193094758345086], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
+    "KF Midos House Chest 3":     {"region": "Kokiri Forest", "rule": "True", "hashes": [10831981390482426294], "vanilla": "TBox_Rupee_Green", "event": "keep"},
+    "KF Midos House Chest 1":     {"region": "Kokiri Forest", "rule": "True", "hashes": [4555665598794293658], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
+    "KF Midos House Chest 2":     {"region": "Kokiri Forest", "rule": "True", "hashes": [12786193094758345086], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
     "KF Midos House Chest 4":     {"region": "Kokiri Forest", "rule": "True", "hashes": [9725242744547055868], "vanilla": "TBox_Rupee_Blue", "event": "keep"},
     "KF Purple Rupee Chest":      {"region": "Kokiri Forest", "rule": "can_play(Song_of_Storms)", "hashes": [4349272251343787229], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
 
