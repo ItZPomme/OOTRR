@@ -627,8 +627,10 @@ not change) **[game]**.
 - A **copy of a chest item actor with its own texts** works **[game]** (Longshot, 2026-11-21): renamed copy of
   `Obj_MiniGame_SmallKey`'s archive (ActorParam renamed) + RSDB rows `ActorInfo` (ActorName = the copy),
   `GameActorInfo`, `PouchActorInfo` copied from the key; the chest's get window shows the copy's
-  `ActorMsg/PouchContent` texts `<copy>_GetMessage` / `_GetCaption` (`_Name` added too). Used by the multiworld
-  chests (one copy per chest, "You found Bot's Purple Rupee!").
+  `ActorMsg/PouchContent` texts `<copy>_GetMessage` / `_GetCaption` (`_Name` added too). The copy can also take
+  another item's model as the ground items do (`ModelInfo` / `AnimationParam` copied under the copy's name): Link
+  holds that model when the chest opens (Hookshot seen, 2026-11-21). Used by the multiworld chests (one copy per
+  chest, "You found Bot's Hookshot!").
 - PowerShell 5 adds a UTF-8 BOM with `Set-Content -Encoding utf8`: breaks JSON files.
 - Windows paths too long: build in a temporary folder then copy.
 

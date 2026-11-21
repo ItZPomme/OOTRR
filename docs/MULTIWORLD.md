@@ -12,7 +12,7 @@ Coop (everyone on the same seed, an item found by one is given to all) comes aft
 |---|---|
 | Shared fill, multiworld file, spoiler (`ootrr/multiworld.py`) | done, unit tests (`tests/test_multiworld.py`) |
 | Protocol (`ootrr/mw_protocol.py`) and server (`ootrr/tools/mw_server.py`) | done, unit tests with fake games |
-| Per-player mod (`ootrr/tools/mw_mod.py`, `multiworld.slot_patch`) | PC-built mod; another player's item only in a plain chest: placeholder (one per chest, "You found Bot's Hookshot!") + chest event raising `OoTRR.MW.L<n>`: **validated in game** (Longshot) |
+| Per-player mod (`ootrr/tools/mw_mod.py`, `multiworld.slot_patch`) | PC-built mod; another player's item only in a plain chest: placeholder (one per chest, the item's model, "You found Bot's Hookshot!") + chest event raising `OoTRR.MW.L<n>`: **validated in game** (Longshot) |
 | Eden: native module client (socket, items given in game) | to do, **nothing validated in game** |
 | Longshot: control pipe client (`ootrr/longshot_control.py`) | events, GameData reads, queued writes: **used live** |
 | Longshot: PC bridge (`ootrr/tools/mw_longshot.py`, items: `ootrr/mw_items.py`) | **validated in game** (Longshot v3.0.0, 2026-11-20): found chest -> CHECK, 5 received items given and kept after save + reload; Heart Containers do not work yet (see below) |
@@ -160,7 +160,9 @@ The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld s
   locations). The chest gives its own copy of `Obj_MiniGame_SmallKey` ("door key", not put in the pouch),
   `OoTRR_MW_A<rank>` (`multiworld.remote_actor`, `ModBuilder._write_mw_actors`), whose get texts name the owner:
   "You found Bot's Purple Rupee!" / "It is on its way to Bot's game." (`_mw_texts`, English in every language,
-  the item's name as the game writes it; **validated in game**, Longshot, 2026-11-21). Its `GetEventName` runs
+  the item's name as the game writes it; **validated in game**, Longshot, 2026-11-21), and the model of the owner's
+  item (`_use_item_model`, rupees included; Link holds Bot's Hookshot: **validated in game**, 2026-11-21; a rupee's
+  model not seen in game yet). Its `GetEventName` runs
   a copy of the boss key chest script whose added action is "`OoTRR.MW.L<rank>` + 1" (saved Int,
   `ModBuilder._write_key_flows`). The bridge sees the Int in the `changed` values of the `oot` events -> `CHECK`;
   at connection and after each loading it reads every watched Int again.

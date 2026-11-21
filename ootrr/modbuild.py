@@ -1014,7 +1014,8 @@ class ModBuilder:
     # leur chemin d'origine) ; le module natif redirige le modèle du jeton vers celui de l'objet placé
     token_model_files: dict[str, bytes] | None = None
 
-    def _use_item_model(self, sarc, param_path: str, name: str, item: str, pouch_params: bool = True) -> bool:
+    def _use_item_model(self, sarc, param_path: str, name: str, item: str, pouch_params: bool = True,
+                        rupee: bool = False) -> bool:
         """Remplace le modèle et l'animation du réceptacle par ceux de l'objet donné.
 
         Les fichiers de l'objet sont copiés sous le nom du nouvel acteur (un même
@@ -1056,8 +1057,8 @@ class ModBuilder:
         model, anim = component("ModelInfoRef"), component("AnimationRef")
         if not model or model not in files:
             return False
-        if read_byml(files[model]).get("ModelProjectName") == "Obj_Rupee":
-            return False
+        if read_byml(files[model]).get("ModelProjectName") == "Obj_Rupee" and not rupee:
+            return False  # a rupee model only for a real rupee (rupee: multiworld chests), not for songs
         for key, src, folder, kind in (("ModelInfoRef", model, "ModelInfo", "engine__component__ModelInfo"),
                                        ("AnimationRef", anim, "AnimationParam", "engine__component__AnimationParam")):
             if not src or src not in files:
@@ -1134,19 +1135,27 @@ class ModBuilder:
         """Actors dropped by the multiworld chests: copies of the placeholder key (multiworld.REMOTE_PLACEHOLDER,
         "NotPushToPouch": nothing goes to the pouch), one per chest so that each one has its own texts (the get
         window reads `<actor>_GetMessage` / `_GetCaption`; GAME_KNOWLEDGE: a missing text blocks the game).
-        Writes the archives, returns the RSDB rows."""
+        Each copy also takes the model and animation of the owner's item (`_use_item_model`, as the ground items;
+        unchanged when the item has no model of its own, e.g. rupees). Writes the archives, returns the RSDB rows."""
         from .formats.sarc import Sarc
         from .multiworld import REMOTE_PLACEHOLDER as base
+        from .mw_log import _ALIASES, _RELATED
 
         raw = self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{base}.pack.zs")
         margin = self.restbl.get(f"Pack/Actor/{base}.pack") - len(raw)
         rsdb: dict[str, dict[str, dict]] = {"ActorInfo": {}, "GameActorInfo": {}, "PouchActorInfo": {}}
+        models: dict[str, str] = {}
         for name in sorted(mw_actors):
             sarc = Sarc(raw)
             old_param = f"Actor/{base}.engine__actor__ActorParam.bgyml"
             new_param = f"Actor/{name}.engine__actor__ActorParam.bgyml"
             sarc.files[new_param] = sarc.files.pop(old_param)
             sarc.align[new_param] = sarc.align.pop(old_param)
+            item = _ALIASES.get(mw_actors[name]["item"], mw_actors[name]["item"])
+            for actor in [item] + [item.replace(a, b, 1) for a, b in _RELATED if item.startswith(a)]:
+                if self._use_item_model(sarc, new_param, name, actor, pouch_params=False, rupee=True):
+                    models[name] = actor
+                    break
             data = sarc.to_bytes()
             rel = f"Pack/Actor/{name}.pack"
             self.restbl.set(rel, len(data) + margin)
@@ -1156,6 +1165,7 @@ class ModBuilder:
             rsdb["ActorInfo"][name] = {"__new": True, "__copy_from": base, "ActorName": name}
             rsdb["GameActorInfo"][name] = {"__new": True, "__copy_from": base}
             rsdb["PouchActorInfo"][name] = {"__new": True, "__copy_from": base}
+        self.mw_models = models
         return rsdb
 
     def _write_pickups(self, pickups: dict[str, str], out_romfs: Path) -> dict[str, dict[str, dict]]:
@@ -1370,7 +1380,8 @@ class ModBuilder:
         if mw_actors:
             for table, rows in self._write_mw_actors(mw_actors, out_romfs).items():
                 rsdb_all.setdefault(table, {}).update(rows)
-            report.append(f"{len(mw_actors)} multiworld chest items created")
+            report.append(f"{len(mw_actors)} multiworld chest items created, {len(self.mw_models)} with their item's "
+                          f"model")
         if rsdb_all:
             report += self._write_rsdb(rsdb_all, out_romfs)
 
