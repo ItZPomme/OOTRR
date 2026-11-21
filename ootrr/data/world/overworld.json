@@ -265,7 +265,7 @@
         "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
         "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
         "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium", "gift": true},
-        "LW Deku Scrub Stick Upgrade": {"rule": "is_child", "vanilla": "Item_StickBag_Large", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40}
+        "LW Deku Scrub Stick Upgrade": {"rule": "is_child", "vanilla": "Item_StickBag_Medium", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40}
       },
       "events": {
         "Trade_Odd_Mushroom": "is_adult and Trade_Cojiro",
@@ -290,7 +290,9 @@
     },
     "LW Beyond Mido": {
       "locations": {
-        "LW Deku Scrub Nut Upgrade": {"rule": "can_open_grotto", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "price": 40}
+        "LW Deku Scrub Nut Upgrade":      {"rule": "can_open_grotto", "vanilla": "Item_NutBag_Medium", "hashes": [4328741615941752705, 5764461665617243979], "scrub": true, "price": 40},
+        "LW Deku Theater Skull Mask":     {"rule": "is_child and Zeldas_Letter", "vanilla": "Item_StickBag_Large", "gift": true},
+        "LW Deku Theater Mask of Truth":  {"rule": "is_child and Zeldas_Letter", "vanilla": "Item_NutBag_Large", "gift": true}
       },
       "exits": {
         "Lost Woods": "True",

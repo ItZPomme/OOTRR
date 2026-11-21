@@ -13,6 +13,14 @@
       ["Dm_LostWood_0040", 84, "ActorName", "Item_BulletBag_Large"],
       ["Dm_LostWood_0040", 85, "ActorName", "Item_BulletBag_Medium"]
     ],
+    "LW Deku Theater Skull Mask": [
+      ["LostWood_ScrubForestStageElder_SkullMaskFirst", 28, "ActorName", "Item_StickBag_Medium"],
+      ["LostWood_ScrubForestStageElder_SkullMaskFirst", 29, "ActorName", "Item_StickBag_Large"]
+    ],
+    "LW Deku Theater Mask of Truth": [
+      ["LostWood_ScrubForestStageElder_TrueMaskFirst", 28, "ActorName", "Item_NutBag_Medium"],
+      ["LostWood_ScrubForestStageElder_TrueMaskFirst", 29, "ActorName", "Item_NutBag_Large"]
+    ],
     "Market Bombchu Bowling First Prize": [
       ["MiniGame_BombchuBowling", 297, "ReveiveItem", "Item_BombBag_Medium"],
       ["MiniGame_BombchuBowling", 298, "ReveiveItem", "Item_BombBag_Large"]
