@@ -193,6 +193,17 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   (sets `Get_StoneOfWater_GetRutoLetter`, Step05_01) when the obtained actor has the tag `LetterBottle`, which both
   `Obj_Bottle_Letter` and `Item_Bottle_Letter` carry (RSDB `Tag`). So the letter given from elsewhere should still
   advance the quest, *if* that gift goes through `Dm_SY_Get` (unknown for chests and NPC gifts).
+- **Potion shop bug tutorial softlock** **[files]** (2026-11-20, fix not validated in game; softlock seen in game in
+  Longshot): after the gift, `Item_Bottle_TutorialEvent_Talk` sets `Market_Item_Bottle_TutorialEvent_Started` (19) and
+  starts the challenge `Market_Item_Bottle_TutorialEvent`, step `Playing` (50, `IsMiniGame`; its `GameSafetySetting`
+  is a no-escape area `NoEscapeArea_Market_Item_Bottle_TutorialEvent` / `StartPos_..._TutorialEvent`). The door's AI
+  module (`Logic/Obj_Door_ShopMedicine_9089`) only opens from inside once `Market_Item_Bottle_TutorialEvent_Cleared`
+  is set (the door talk is `CheckRestrictedDoor`: Started and not Cleared -> "catch the bug" line), and only
+  catching the bug in a bottle sets it (`Item_Bottle_TutorialEvent_Animal_Insect_GetEvent`, which also gives a Red
+  Potion in that bottle). With the gift shuffled, Link may have no bottle: stuck inside. Fix
+  (`ModBuilder._skip_bottle_tutorial`, whenever the gift is edited, so also in the native menu mod): the `Playing`
+  step is replaced with a copy of step 19 that sets `..._Cleared`, then the script ends. The minigame never starts
+  and the free Red Potion of the tutorial is lost (not a location).
 - Not locations: the Business Scrubs give a free `Item_Bottle` (`GetInEvent_NotTurn_2DShop`, price 0) when Link has
   no bottle and buys bottled content (`Enemy_Scrub_Business_Common` 444, `_Dream` 291): anti-softlock, left alone.
 - The pickup location can only hold "ground" items (`items.json`), so the letter itself goes to chests and gifts.

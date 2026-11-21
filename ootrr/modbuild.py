@@ -175,6 +175,10 @@ class ModBuilder:
             if flow == self.DAMPE_FLOW:
                 new, dampe_report = self._dampe_exit(new)
                 report += dampe_report
+            # shuffled potion shop gift (a plain edit, or a progressive one: patch.progressive_gifts moves it)
+            if flow == self.BOTTLE_TUTORIAL_FLOW and (flow in self.gift_edits or flow in self.gift_progressive):
+                new, tutorial_report = self._skip_bottle_tutorial(new)
+                report += tutorial_report
             for guard in self.EVENT_GUARDS:
                 if guard[0] == flow:
                     new, guard_report = self._guard_event(new, guard)
@@ -885,6 +889,27 @@ class ModBuilder:
                  {"copy_event": self.DAMPE_WARP, "next": None}]
         new, report = insert_flow(flow, None, nodes, before=self.DAMPE_SUGGEST_EXIT)
         return new, report + [f"{self.DAMPE_FLOW}: sortie sans Grappin après le coffre de la course"]
+
+    # Market potion shop (child): after giving the bottle, the keeper starts the bug-catch tutorial (challenge
+    # Market_Item_Bottle_TutorialEvent, step "Playing", a minigame with a no-escape area) and the door's AI
+    # (Obj_Door_ShopMedicine_9089 module) only opens from inside once Market_Item_Bottle_TutorialEvent_Cleared is
+    # set, which only catching the bug in a bottle does. With the gift shuffled, Link may have no bottle: softlock.
+    # Fix: at the step that starts the challenge, set the Cleared flag instead (copy of the step that sets
+    # ..._Started) and end there, so the minigame never starts and the door opens.
+    BOTTLE_TUTORIAL_FLOW = "Npc_Hylia_020_Shop_Child"
+    BOTTLE_TUTORIAL_FLAG = "Market_Item_Bottle_TutorialEvent_"
+
+    def _skip_bottle_tutorial(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_action_event, insert_flow
+
+        flag = self.BOTTLE_TUTORIAL_FLAG
+        started = find_action_event(flow, "GameDataActor", "EventTriggerSetGameDataBool", "GameDataName", flag + "Started")
+        playing = find_action_event(flow, "ChallengeSystemActor", "EventExecuteProgressChallengeStep", "StepName", "Playing")
+        if started is None or playing is None:
+            raise KeyError(f"{self.BOTTLE_TUTORIAL_FLOW}: bottle tutorial steps not found")
+        new, report = insert_flow(flow, None, [{"copy_event": started, "set": {"GameDataName": flag + "Cleared"},
+                                                "next": "after"}], before=playing)
+        return new, report + [f"{self.BOTTLE_TUTORIAL_FLOW}: bug-catch tutorial skipped (door opens without a bottle)"]
 
     def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
         """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""

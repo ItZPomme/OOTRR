@@ -96,6 +96,9 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Shuffled checks giving bottles: Anju, market potion shop, 5 Big Poes, Talon and Ruto's letter (on the lake
   floor) are locations shuffled with `shuffle_gifts` (see GAME_KNOWLEDGE, "Bottles"), **to validate in game**
   (especially the letter given from elsewhere and the King Zora quest).
+- [ ] Market potion shop: the bug-catch tutorial locked Link inside without a bottle (seen in game); the PC-built and
+  menu mods now skip it after the gift (GAME_KNOWLEDGE, "Potion shop bug tutorial softlock"), **to validate in game**:
+  the door opens after the gift, with and without a bottle
 - [ ] Shuffled Light Arrow cutscene.
 - [ ] Shuffled Great Fairy checks (fountains).
 - [ ] Shuffled Goron Bracelet.
