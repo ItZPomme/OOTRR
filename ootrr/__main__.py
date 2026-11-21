@@ -45,6 +45,20 @@ def _parse_value(text: str):
         return text.strip()
 
 
+def _preserve_native_module(mod_dir: Path, load_dir: Path, mod_name: str) -> bool:
+    target = mod_dir / "exefs" / "subsdk9"
+    if target.exists():
+        return False
+    for existing_name in dict.fromkeys((mod_name, "OoTRR")):
+        source = load_dir / existing_name / "exefs" / "subsdk9"
+        if source.is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+            print(f"Kept the native module from {source}")
+            return True
+    return False
+
+
 def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: Path | None,
               test_pickups: list[str] | None = None, test_chests: list[str] | None = None,
               test_sets: list[str] | None = None, test_flags: list[str] | None = None,
@@ -173,15 +187,18 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 or None,
                                 mw_events=patch.get("mw_events") or None,
                                 mw_actors=patch.get("mw_actors") or None)
+        load_dir = None
+        if install:
+            load_dir = emulator_root() / "load" / TITLE_ID
+            load_dir.mkdir(parents=True, exist_ok=True)
+            _preserve_native_module(mod_dir, load_dir, mod_name)
         if keep_dir:
             dest = keep_dir / mod_name
             if dest.exists():
                 shutil.rmtree(dest)
             shutil.copytree(mod_dir, dest)
             print(f"Mod copié dans {dest}")
-        if install:
-            load_dir = emulator_root() / "load" / TITLE_ID
-            load_dir.mkdir(parents=True, exist_ok=True)
+        if load_dir is not None:
             test_mod = load_dir / "OoTRR-test"
             dest = load_dir / mod_name
             try:

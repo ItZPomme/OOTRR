@@ -23,6 +23,19 @@ def make_world(overrides: dict, spawn: dict | None = None, placements: dict | No
 
 
 class PlandoTest(unittest.TestCase):
+    def test_seed_install_preserves_live_native_module(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            load_dir = root / "load"
+            source = load_dir / "OoTRR" / "exefs" / "subsdk9"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"native module")
+            mod_dir = root / "new-mod" / "OoTRR-essai"
+            (mod_dir / "romfs").mkdir(parents=True)
+
+            self.assertTrue(cli._preserve_native_module(mod_dir, load_dir, "OoTRR-essai"))
+            self.assertEqual((mod_dir / "exefs" / "subsdk9").read_bytes(), b"native module")
+
     def test_placements_kept_and_seed_finishable(self):
         placements = {"HF Grotto Chest 1": "Item_Hookshot", "HF Adult Chest 2": "Item_Hookshot",
                       "Song from Saria": "Item_Melody_FireBolero", "Queen Gohma": "Item_Medal_Light"}

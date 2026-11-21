@@ -222,6 +222,14 @@ The generator (identical to Python) is not modified; a menu seed therefore does 
 - Live mode for test mods: `menutest --live-coords` writes `rando/coords_config.hpp` with `kLive = true` (a normal
   `menutest` run writes it back to false): a line every 250 ms as soon as Link moved 0.3 unit; `tools.coords --live`
   shows it on one line updated in place. Not an on-screen display: the text stays in the emulator log / terminal.
+- A transparent desktop overlay can follow the Fritchii window and show the latest X/Y/Z values:
+  `python -m ootrr.tools.coords_overlay`. Build the live native module with
+  `python -m ootrr.tools.menutest --romfs ROMFS --live-coords` (requires the native build toolchain). To use it
+  with the standard OoTRR / plandomizer mod, copy `output/OoTRR-menu/exefs/subsdk9` into that mod's
+  `exefs/subsdk9`; leave `OoTRR-menu` disabled and keep only the standard OoTRR mod active. Close Fritchii before
+  copying. Seed installs now preserve an existing `OoTRR/exefs/subsdk9`, including when installing under another
+  OoTRR mod name. The overlay is a separate Windows window, not part of the game's renderer; use Fritchii windowed
+  or borderless mode, then close the terminal with Ctrl+C to stop it.
 
 ## Ghidra
 
