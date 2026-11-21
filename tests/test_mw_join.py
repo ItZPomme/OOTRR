@@ -13,7 +13,7 @@ from ootrr import multiworld as mw
 from ootrr import mw_protocol as P
 from ootrr import settings
 from ootrr.mw_code import CodeError, RoomCode, decode, encode
-from ootrr.mw_session import Host, SessionError, fetch_slot, join, room_players
+from ootrr.mw_session import Host, SessionError, fetch_slot, join, join_room, room_players, room_state
 
 
 def _free_port() -> int:
@@ -126,6 +126,67 @@ class SessionTest(unittest.TestCase):
         closed = RoomCode("127.0.0.1", _free_port(), room.room_hash)
         with self.assertRaises(SessionError):
             room_players(closed)
+
+
+class WaitingRoomTest(unittest.TestCase):
+    """The app's host: a waiting room where every player joins with their own settings, then the multiworld is
+    generated and served under the same code."""
+
+    def test_join_settings_and_generate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            host_settings = settings.build({"shuffle_gifts": False})
+            bo_settings = settings.build({"shuffle_skulltulas": "all"})
+            host = Host(None, port=_free_port(), address="127.0.0.1", use_upnp=False, log=lambda s: None)
+            code = host.open_room("Ann", host_settings, Path(tmp))
+            try:
+                self.assertEqual(room_state(code), (False, ["Ann"]))
+                with self.assertRaises(SessionError):
+                    room_players(code)  # not generated yet
+                with self.assertRaises(SessionError):
+                    fetch_slot(code, 1)
+                self.assertEqual(join_room(code, "Bo", settings.build({})), ["Ann", "Bo"])
+                self.assertEqual(join_room(code, "bo", bo_settings), ["Ann", "Bo"])  # same player, new settings
+                self.assertEqual(join_room(code, "  Cy  ", settings.build({})), ["Ann", "Bo", "Cy"])
+                with self.assertRaises(SessionError):
+                    join_room(code, "ann", settings.build({}))  # the host's name
+                with self.assertRaises(SessionError):
+                    join_room(code, "", settings.build({}))
+                host.lobby.remove("Cy")
+                self.assertEqual(room_state(code), (False, ["Ann", "Bo"]))
+
+                path = host.generate(5)
+                generated, names = room_state(code)  # same code, now the multiworld
+                self.assertEqual((generated, names), (True, ["Ann", "Bo"]))
+                with self.assertRaises(SessionError):
+                    join_room(code, "Dee", settings.build({}))  # too late
+                result = mw.load(path)
+                self.assertEqual(result.players[0].settings, host_settings)
+                self.assertEqual(result.players[1].settings, bo_settings)
+                data = fetch_slot(code, 2)
+                self.assertEqual(data, mw.slot_data(result, 1))
+                self.assertEqual(data.settings, bo_settings)
+                self.assertNotEqual(decode(code).room_hash, data.room_hash)  # the code holds the room's id
+            finally:
+                host.stop()
+
+            again = Host(path, port=_free_port(), address="127.0.0.1", use_upnp=False, log=lambda s: None)
+            try:  # hosted again from the file: the same code still works
+                self.assertEqual(decode(again.start()).room_hash, decode(code).room_hash)
+                self.assertEqual(room_players(again.code), ["Ann", "Bo"])
+                self.assertEqual(fetch_slot(again.code, 1), mw.slot_data(result, 0))
+            finally:
+                again.stop()
+
+    def test_failed_generation_reopens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            host = Host(None, port=_free_port(), address="127.0.0.1", use_upnp=False, log=lambda s: None)
+            code = host.open_room("Ann", settings.build({}), Path(tmp))
+            try:
+                with self.assertRaises(SessionError):
+                    host.generate(1)  # alone
+                self.assertEqual(join_room(code, "Bo", settings.build({})), ["Ann", "Bo"])  # still open
+            finally:
+                host.stop()
 
 
 if __name__ == "__main__":

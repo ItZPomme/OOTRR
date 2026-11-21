@@ -16,21 +16,30 @@ Coop (everyone on the same seed, an item found by one is given to all) comes aft
 | Eden: native module client (socket, items given in game) | to do, **nothing validated in game** |
 | Longshot: control pipe client (`ootrr/longshot_control.py`) | events, GameData reads, queued writes: **used live** |
 | Longshot: PC bridge (`ootrr/tools/mw_longshot.py`, items: `ootrr/mw_items.py`) | **validated in game** (Longshot v3.0.0, 2026-11-20): found chest -> CHECK, 5 received items given and kept after save + reload; Heart Containers do not work yet (see below) |
-| Desktop app: Multiworld window (`ootrr/tools/mw_app.py`), room codes (`mw_code.py`), hosting / joining (`mw_session.py`, `upnp.py`) | **partly validated** (2026-11-21): hosting from the window, UPnP opening the port on a home router, code, joining with the code (player data fetched), items received in Longshot; to validate: *Install and play* through to the end after its fixes, and a player on another network |
+| Desktop app: Multiworld window (`ootrr/tools/mw_app.py`), room codes (`mw_code.py`), hosting / joining (`mw_session.py`, `upnp.py`) | **partly validated** (2026-11-21): hosting from the window, UPnP opening the port on a home router, code, joining with the code (player data fetched), items received in Longshot; waiting room with each player's settings, then *Install and play* (one PC); to validate: a player on another network |
 
 ## Joining with a room code (desktop app)
 
 The app's **Multiworld** button (footer, "+") opens the Multiworld window (`ootrr/tools/mw_app.py`):
-- **Host**: player names (one per line, the host first), seed; *Create and host* generates the multiworld with the
-  app's settings for every player (`APPDATA/OoTRR/multiworld/mw_<hash>.json` + spoiler), starts the server inside
-  the app, asks the router to open the port by UPnP (`ootrr/upnp.py`) and shows the **room code** to share.
-- **Join / Play** (also for the host): code -> *Look up* (the players' names) -> pick yours -> *Install and play*:
-  the app fetches **your player's data only** (`GETSLOT`: your world, never the others', no spoiler), builds your
-  mod into Longshot's `mods/OoTRR`, starts Longshot with its control pipe (`HOS_CONTROL=ootrr-mw`,
-  `HOS_CONTROL_MEM=rw`) and runs the bridge in the app; the log shows who sent what to whom. Longshot only for now.
+- **Host**: your name -> *Open the waiting room*: starts the server inside the app, asks the router to open the
+  port by UPnP (`ootrr/upnp.py`) and shows the **room code** to share. The players who join appear in the list
+  with their settings (*Remove player* takes one out); *Generate and start* (seed: empty = random) generates the
+  multiworld, **each player with their own settings** (the host: the app's), into
+  `APPDATA/OoTRR/multiworld/mw_<hash>.json` + spoiler; the code does not change. *Host a file...* serves a
+  multiworld generated before (to resume: the same code works, the file keeps the waiting room's id).
+- **Join / Play** (also for the host): code -> *Look up*. While the room waits: your name -> *Join with my
+  settings* (your app's settings, set before opening the window, sent as a settings string, `ootrr.race`: the same
+  OoTRR version as the host is needed; joining again under the same name replaces them); the window then watches
+  the room and says when the host has started. Then: your name -> *Install and play*: the app fetches **your
+  player's data only** (`GETSLOT`: your world, never the others', no spoiler), builds your mod into Longshot's
+  `mods/OoTRR`, starts Longshot with its control pipe (`HOS_CONTROL=ootrr-mw`, `HOS_CONTROL_MEM=rw`) and runs the
+  bridge in the app; the log shows who sent what to whom. Longshot only for now.
+- Waiting room (`tools.mw_server.Lobby`, `mw_session.Host.open_room` / `generate`, `join_room`, `room_state`):
+  **validated** with the desktop app on one PC (2026-11-21): the host opened the room, a test player joined with
+  other settings, *Generate and start* then *Install and play* worked (mod built, Longshot started).
 
 The code (`ootrr/mw_code.py`, 20 characters, `K7QM-29XD-...`) holds the host's IPv4 address, the port and the room
-hash, with a check character (a typo is caught; I/L/O read as 1/0). The address in it:
+id (the room hash, or the id of the waiting room the multiworld comes from), with a check character (a typo is caught; I/L/O read as 1/0). The address in it:
 1. the router's internet address when UPnP opened the port (most home routers allow UPnP; the app says if not);
 2. otherwise this PC's local address: works on the same network only; for players elsewhere, open the port
    (TCP 38300) on the router by hand and type the internet address, or use a VPN (Tailscale, ZeroTier) and type its

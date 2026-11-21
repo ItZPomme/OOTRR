@@ -19,11 +19,17 @@ Server -> game
     ERROR   <code> <text>                            then the server closes the connection
     PONG
 
-Joining (the desktop app, before any game; a room code gives the address and the room hash, `ootrr.mw_code`)
-    ROOM    <protocol> <room hash>                   -> PLAYERS <name 1> ... <name N>
-    GETSLOT <protocol> <room hash> <slot>            -> DATA <i> <n> <chunk> (i = 0..n-1), then the server closes:
-                                                        that player's data (`multiworld.slot_to_json`, zlib, base64),
-                                                        never the other worlds
+Joining (the desktop app, before any game; a room code gives the address and the room id, `ootrr.mw_code`: the
+room hash, or the id of the waiting room the multiworld was generated from)
+    ROOM    <protocol> <room id>                     -> HASH <room hash>, PLAYERS <name 1> ... <name N>
+                                                        (waiting room: WAITING <name 1> ... <name N>, the players
+                                                        joined so far, the host first)
+    JOIN    <protocol> <room id> <name> <settings>   waiting room only: join with these settings (a settings string,
+                                                     `ootrr.race`); the same name again replaces its settings
+                                                     -> WAITING ...
+    GETSLOT <protocol> <room id> <slot>              -> HASH <room hash>, DATA <i> <n> <chunk> (i = 0..n-1), then the
+                                                        server closes: that player's data (`multiworld.slot_to_json`,
+                                                        zlib, base64), never the other worlds
 """
 
 from __future__ import annotations
@@ -34,6 +40,8 @@ MAX_LINE = 1024
 
 HELLO, CHECK, SYNC, GOAL, PING = "HELLO", "CHECK", "SYNC", "GOAL", "PING"
 ROOM, GETSLOT, PLAYERS, DATA = "ROOM", "GETSLOT", "PLAYERS", "DATA"
+JOIN, WAITING, HASH = "JOIN", "WAITING", "HASH"
+MAX_PLAYERS = 16  # players in a waiting room
 CHUNK = 900  # base64 characters per DATA line
 WELCOME, ITEM, SENT, INFO, ERROR, PONG = "WELCOME", "ITEM", "SENT", "INFO", "ERROR", "PONG"
 
@@ -43,6 +51,10 @@ E_ROOM = "room"           # the game's seed is not this multiworld (room hash)
 E_SLOT = "slot"           # no such player
 E_TAKEN = "taken"         # another game is already connected as this player
 E_HELLO = "hello"         # a message before HELLO
+E_WAITING = "waiting"     # the multiworld is not generated yet (waiting room)
+E_STARTED = "started"     # the waiting room is closed: the multiworld is generated (or being generated)
+E_SETTINGS = "settings"   # settings string not readable by the host's OoTRR
+E_NAME = "name"           # empty or invalid player name, or the waiting room is full
 
 
 def pack(obj) -> list[str]:

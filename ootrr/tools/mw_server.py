@@ -21,6 +21,7 @@ import contextlib
 import json
 import os
 import sys
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -103,10 +104,93 @@ class Room:
         return event
 
 
+class LobbyError(ValueError):
+    def __init__(self, code: str, text: str) -> None:
+        super().__init__(text)
+        self.code = code
+
+
+class Lobby:
+    """Waiting room before the multiworld is generated (the desktop app's host): the players who joined so far,
+    each with their own settings (sent as a settings string, `ootrr.race`), the host first. Joins come from the
+    server's thread, the host's window reads it: hence the lock."""
+
+    MAX_NAME = 24
+
+    def __init__(self, room_id: str, host_name: str, host_settings: dict) -> None:
+        self.id = room_id.upper()
+        self.lock = threading.Lock()
+        self.open = True
+        self.players: dict[str, dict] = {}
+        self.players[self.check_name(host_name)] = dict(host_settings)
+
+    @classmethod
+    def check_name(cls, name: str) -> str:
+        name = " ".join(str(name).split())
+        if not name or len(name) > cls.MAX_NAME or any(ord(c) < 32 for c in name):
+            raise LobbyError(P.E_NAME, f"a player name has 1 to {cls.MAX_NAME} characters")
+        return name
+
+    def join(self, name: str, settings_string: str) -> list[str]:
+        """Adds a player (or replaces the settings of the player who joined under that name); the names."""
+        from .. import race
+        name = self.check_name(name)
+        try:
+            settings, _ = race.decode(settings_string)
+        except (race.SettingsStringError, ValueError) as exc:
+            raise LobbyError(P.E_SETTINGS, f"settings not readable by the host's OoTRR ({exc})") from None
+        with self.lock:
+            if not self.open:
+                raise LobbyError(P.E_STARTED, "the host has already started the multiworld")
+            host = next(iter(self.players))
+            same = next((n for n in self.players if n.casefold() == name.casefold()), None)
+            if same == host:
+                raise LobbyError(P.E_NAME, f"{host} is the host's name: pick another one")
+            if same is None and len(self.players) >= P.MAX_PLAYERS:
+                raise LobbyError(P.E_NAME, f"the waiting room is full ({P.MAX_PLAYERS} players)")
+            self.players[same or name] = settings
+            return list(self.players)
+
+    def remove(self, name: str) -> None:
+        with self.lock:
+            if name != next(iter(self.players)):
+                self.players.pop(name, None)
+
+    def set_host_settings(self, settings: dict) -> None:
+        with self.lock:
+            self.players[next(iter(self.players))] = dict(settings)
+
+    def names(self) -> list[str]:
+        with self.lock:
+            return list(self.players)
+
+    def players_copy(self) -> list[tuple[str, dict]]:
+        with self.lock:
+            return [(n, dict(s)) for n, s in self.players.items()]
+
+    def close(self) -> list[tuple[str, dict]]:
+        """No more joins (the host generates): the players and their settings, in order."""
+        with self.lock:
+            self.open = False
+        return self.players_copy()
+
+    def reopen(self) -> None:
+        """The generation failed: players may join again or change their settings."""
+        with self.lock:
+            self.open = True
+
+
 class Server:
-    def __init__(self, room: Room) -> None:
+    def __init__(self, room: Room | None = None, lobby: Lobby | None = None) -> None:
         self.room = room
+        self.lobby = lobby
+        self.aliases: set[str] = set()  # other ids of this multiworld (the waiting room it was generated from)
         self.clients: dict[int, asyncio.StreamWriter] = {}
+
+    def _knows(self, room_id: str) -> bool:
+        room_id = room_id.upper()
+        return ((self.room is not None and room_id == self.room.hash) or room_id in self.aliases
+                or (self.lobby is not None and room_id == self.lobby.id))
 
     def log(self, text: str) -> None:
         print(text, flush=True)
@@ -162,11 +246,14 @@ class Server:
                     return
                 cmd, args = msg[0], msg[1:]
                 if slot is None:
-                    if cmd in (P.ROOM, P.GETSLOT):  # joining from the desktop app (no game yet)
+                    if cmd in (P.ROOM, P.GETSLOT, P.JOIN):  # joining from the desktop app (no game yet)
                         await self._join(cmd, args, writer, error)
                         return
                     if cmd != P.HELLO:
                         await error(P.E_HELLO, "HELLO first")
+                        return
+                    if self.room is None:
+                        await error(P.E_WAITING, "the multiworld is not generated yet")
                         return
                     slot = await self._hello(args, writer, error)
                     if slot is None:
@@ -192,20 +279,42 @@ class Server:
                 writer.close()
 
     async def _join(self, cmd: str, args: list[str], writer: asyncio.StreamWriter, error) -> None:
-        """ROOM: the players' names; GETSLOT: one player's data (`multiworld.slot_data`), never the other worlds."""
+        """ROOM: the players' names (or the waiting room's); JOIN: a player joins the waiting room with their
+        settings; GETSLOT: one player's data (`multiworld.slot_data`), never the other worlds."""
         if len(args) < 2 or args[0] != str(P.PROTOCOL):
             await error(P.E_PROTOCOL, f"protocol {P.PROTOCOL} expected")
             return
-        if args[1].upper() != self.room.hash:
-            await error(P.E_ROOM, f"this server runs multiworld {self.room.hash}")
+        if not self._knows(args[1]):
+            await error(P.E_ROOM, "this server runs another multiworld")
             return
-        if cmd == P.ROOM:
+        if cmd == P.JOIN:
+            if len(args) != 4:
+                await error(P.E_PROTOCOL, "JOIN <protocol> <room id> <name> <settings>")
+                return
+            if self.room is not None or self.lobby is None:
+                await error(P.E_STARTED, "the host has already started the multiworld")
+                return
+            try:
+                names = self.lobby.join(args[2], args[3])
+            except LobbyError as exc:
+                await error(exc.code, str(exc))
+                return
+            self.log(f"{Lobby.check_name(args[2])} joined the waiting room (players: {', '.join(names)})")
+            writer.write(P.encode(P.WAITING, *names))
+        elif self.room is None:
+            if cmd == P.GETSLOT:
+                await error(P.E_WAITING, "the multiworld is not generated yet")
+                return
+            writer.write(P.encode(P.WAITING, *self.lobby.names()))
+        elif cmd == P.ROOM:
+            writer.write(P.encode(P.HASH, self.room.hash))
             writer.write(P.encode(P.PLAYERS, *self.room.names))
         else:
             if len(args) != 3 or not args[2].isdigit() or not 1 <= int(args[2]) <= len(self.room.names):
                 await error(P.E_SLOT, f"player 1 to {len(self.room.names)}")
                 return
             slot = int(args[2]) - 1
+            writer.write(P.encode(P.HASH, self.room.hash))
             chunks = P.pack(mw.slot_to_json(mw.slot_data(self.room.result, slot)))
             for i, chunk in enumerate(chunks):
                 writer.write(P.encode(P.DATA, i, len(chunks), chunk))

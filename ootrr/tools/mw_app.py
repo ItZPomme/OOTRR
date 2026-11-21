@@ -3,11 +3,14 @@
 
     python -m ootrr.tools.mw_app          # alone; the desktop app opens it with its "Multiworld" button
 
-Host: player names (one per line), seed; "Create and host" generates the multiworld with the app's settings for
-every player, starts the server in the app (port opened on the router by UPnP when possible) and shows the code.
-Join (also the host, for their own game): code -> players -> pick yours -> "Install and play": the player's data
-is fetched (never the other worlds), the mod is built and installed into Longshot, Longshot is started with its
-control pipe and the bridge runs in the app; the log shows who sent what to whom.
+Host: "Open the waiting room" starts the server in the app (port opened on the router by UPnP when possible) and
+shows the code. The others join with the code and their own app's settings; the host sees them arrive, then
+"Generate and start" generates the multiworld, every player with their settings (the host: the app's). The code
+stays the same. "Host a file..." serves a multiworld generated before (to resume a game).
+Join (also the host, for their own game): code -> "Look up" -> "Join with my settings" while the room waits, then,
+once generated, pick your name -> "Install and play": the player's data is fetched (never the other worlds), the
+mod is built and installed into Longshot, Longshot is started with its control pipe and the bridge runs in the
+app; the log shows who sent what to whom.
 Only Longshot can play a multiworld for now (Eden has no client yet).
 """
 
@@ -21,17 +24,18 @@ import subprocess
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, scrolledtext, ttk
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from .. import multiworld as mw
 from .. import mw_protocol as P
 from .. import settings as settings_mod
-from ..mw_code import CodeError, decode
-from ..mw_session import Host, SessionError, fetch_slot, room_players, save_slot
+from ..mw_code import CodeError, RoomCode, decode
+from ..mw_session import Host, SessionError, fetch_slot, join_room, room_players, room_state, save_slot
 
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "OoTRR"
 MW_DIR = APP_DIR / "multiworld"
 PIPE = "ootrr-mw"  # Longshot's HOS_CONTROL value (its control pipe name)
+WAIT_EVERY = 3.0  # seconds between two looks at a waiting room (joined player)
 
 
 class QueueText:
@@ -49,21 +53,34 @@ class QueueText:
         pass
 
 
+def changed_settings(values: dict) -> dict:
+    """The settings that differ from the defaults."""
+    defaults = settings_mod.defaults()
+    return {k: v for k, v in values.items() if defaults.get(k) != v}
+
+
+def describe(values: dict) -> str:
+    changed = changed_settings(values)
+    return ", ".join(f"{k}={v}" for k, v in changed.items()) if changed else "all defaults"
+
+
 class MultiworldWindow:
     def __init__(self, master: tk.Misc | None = None, settings: dict | None = None, longshot: Path | None = None,
                  romfs: Path | None = None) -> None:
         from .longshot_app import find_longshot
         self.root = tk.Toplevel(master) if master is not None else tk.Tk()
         self.root.title("OoTRR · Multiworld")
-        self.root.geometry("760x620")
-        self.settings = dict(settings or settings_mod.defaults())
+        self.root.geometry("780x680")
+        self.settings = settings_mod.build(dict(settings or settings_mod.defaults()))
         self.longshot = Path(longshot) if longshot else find_longshot()
         self.romfs = Path(romfs) if romfs else (self.longshot / "romfs" if self.longshot else None)
         self.q: queue.Queue = queue.Queue()
         self.host: Host | None = None
         self.host_file: Path | None = None
         self.bridge_stop: threading.Event | None = None
+        self.wait_stop: threading.Event | None = None
         self.busy = False
+        self._shown_players: list[tuple[str, str]] = []
         self._build()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self._after = self.root.after(100, self._poll)
@@ -73,30 +90,43 @@ class MultiworldWindow:
         tabs = ttk.Notebook(self.root)
         tabs.pack(fill="x", padx=10, pady=(10, 4))
         self.tabs = tabs
+        mine = f"Your settings (the app's): {describe(self.settings)}"
 
         host = ttk.Frame(tabs, padding=10)
         tabs.add(host, text="Host")
-        ttk.Label(host, text="Players (one name per line, you first)").grid(row=0, column=0, sticky="w")
-        self.names = tk.Text(host, width=28, height=6)
-        self.names.insert("1.0", "Player 1\nPlayer 2")
-        self.names.grid(row=1, column=0, rowspan=4, sticky="nw", pady=(2, 0))
-        ttk.Label(host, text="Seed (empty: random)").grid(row=0, column=1, sticky="w", padx=(16, 0))
-        self.seed_var = tk.StringVar()
-        ttk.Entry(host, textvariable=self.seed_var, width=16).grid(row=1, column=1, sticky="nw", padx=(16, 0))
-        ttk.Label(host, text="Port").grid(row=2, column=1, sticky="w", padx=(16, 0))
+        ttk.Label(host, text="Your name").grid(row=0, column=0, sticky="w")
+        self.host_name_var = tk.StringVar(value="Player 1")
+        ttk.Entry(host, textvariable=self.host_name_var, width=24).grid(row=1, column=0, sticky="w")
+        ttk.Label(host, text="Port").grid(row=0, column=1, sticky="w", padx=(16, 0))
         self.port_var = tk.StringVar(value=str(P.DEFAULT_PORT))
-        ttk.Entry(host, textvariable=self.port_var, width=8).grid(row=3, column=1, sticky="nw", padx=(16, 0))
+        ttk.Entry(host, textvariable=self.port_var, width=8).grid(row=1, column=1, sticky="w", padx=(16, 0))
         ttk.Label(host, text="Address for the code (empty: automatic)").grid(row=0, column=2, sticky="w", padx=(16, 0))
         self.address_var = tk.StringVar()
-        ttk.Entry(host, textvariable=self.address_var, width=20).grid(row=1, column=2, sticky="nw", padx=(16, 0))
-        ttk.Label(host, text="Every player uses the app's settings.", foreground="#666").grid(
-            row=2, column=2, sticky="w", padx=(16, 0))
+        ttk.Entry(host, textvariable=self.address_var, width=20).grid(row=1, column=2, sticky="w", padx=(16, 0))
         bar = ttk.Frame(host)
-        bar.grid(row=5, column=0, columnspan=3, sticky="w", pady=(10, 0))
-        self.host_button = ttk.Button(bar, text="Create and host", command=self.create_and_host)
-        self.host_button.pack(side="left")
+        bar.grid(row=2, column=0, columnspan=3, sticky="w", pady=(8, 0))
+        self.open_button = ttk.Button(bar, text="Open the waiting room", command=self.open_room)
+        self.open_button.pack(side="left")
+        self.file_button = ttk.Button(bar, text="Host a file...", command=self.host_file_dialog)
+        self.file_button.pack(side="left", padx=6)
         self.stop_host_button = ttk.Button(bar, text="Stop hosting", command=self.stop_hosting, state="disabled")
-        self.stop_host_button.pack(side="left", padx=6)
+        self.stop_host_button.pack(side="left")
+
+        ttk.Label(host, text="Players (each with their own settings)").grid(row=3, column=0, columnspan=3,
+                                                                          sticky="w", pady=(10, 0))
+        self.players_list = tk.Listbox(host, height=6, width=96, exportselection=False)
+        self.players_list.grid(row=4, column=0, columnspan=3, sticky="we")
+        bar = ttk.Frame(host)
+        bar.grid(row=5, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        self.remove_button = ttk.Button(bar, text="Remove player", command=self.remove_player, state="disabled")
+        self.remove_button.pack(side="left")
+        ttk.Label(bar, text="Seed (empty: random)").pack(side="left", padx=(16, 4))
+        self.seed_var = tk.StringVar()
+        ttk.Entry(bar, textvariable=self.seed_var, width=14).pack(side="left")
+        self.generate_button = ttk.Button(bar, text="Generate and start", command=self.generate, state="disabled")
+        self.generate_button.pack(side="left", padx=(10, 0))
+        ttk.Label(host, text=mine + ". Set them in the app before opening this window.", foreground="#666",
+                  wraplength=740).grid(row=6, column=0, columnspan=3, sticky="w", pady=(6, 0))
 
         join = ttk.Frame(tabs, padding=10)
         tabs.add(join, text="Join / Play")
@@ -105,21 +135,28 @@ class MultiworldWindow:
         ttk.Entry(join, textvariable=self.code_var, width=30, font=("Consolas", 12)).grid(row=1, column=0, sticky="w")
         ttk.Button(join, text="Look up", command=self.look_up).grid(row=1, column=1, padx=6, sticky="w")
         ttk.Button(join, text="Copy", command=self.copy_code).grid(row=1, column=2, sticky="w")
-        ttk.Label(join, text="You are").grid(row=2, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(join, text="Your name").grid(row=2, column=0, sticky="w", pady=(10, 0))
         self.player_var = tk.StringVar()
-        self.player_box = ttk.Combobox(join, textvariable=self.player_var, state="readonly", width=27)
+        self.player_box = ttk.Combobox(join, textvariable=self.player_var, width=27)
         self.player_box.grid(row=3, column=0, sticky="w")
+        self.state_var = tk.StringVar(value="Paste the host's code, then Look up.")
+        ttk.Label(join, textvariable=self.state_var, foreground="#666").grid(row=3, column=1, columnspan=2,
+                                                                            sticky="w", padx=6)
         bar = ttk.Frame(join)
         bar.grid(row=4, column=0, columnspan=3, sticky="w", pady=(10, 0))
+        self.join_button = ttk.Button(bar, text="Join with my settings", command=self.join, state="disabled")
+        self.join_button.pack(side="left")
         self.play_button = ttk.Button(bar, text="Install and play", command=self.install_and_play)
-        self.play_button.pack(side="left")
+        self.play_button.pack(side="left", padx=6)
         self.stop_bridge_button = ttk.Button(bar, text="Stop", command=self.stop_bridge, state="disabled")
-        self.stop_bridge_button.pack(side="left", padx=6)
+        self.stop_bridge_button.pack(side="left")
+        ttk.Label(join, text=mine, foreground="#666", wraplength=740).grid(row=5, column=0, columnspan=3,
+                                                                          sticky="w", pady=(8, 0))
         where = f"Longshot: {self.longshot}" if self.longshot else "Longshot not found: install it, or start the app once"
-        ttk.Label(join, text=where, foreground="#666").grid(row=5, column=0, columnspan=3, sticky="w", pady=(8, 0))
+        ttk.Label(join, text=where, foreground="#666").grid(row=6, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
         ttk.Label(self.root, text="Log").pack(anchor="w", padx=10)
-        self.log = scrolledtext.ScrolledText(self.root, height=18, state="disabled", font=("Consolas", 9))
+        self.log = scrolledtext.ScrolledText(self.root, height=16, state="disabled", font=("Consolas", 9))
         self.log.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     # ---- helpers ----
@@ -134,35 +171,68 @@ class MultiworldWindow:
                 self.log.insert("end", value + "\n")
                 self.log.see("end")
                 self.log.configure(state="disabled")
-            elif kind == "hosted":
-                self.code_var.set(value)
-                self.player_box.configure(values=self._names())
-                if self._names():
-                    self.player_var.set(self._names()[0])
+            elif kind == "hosted":  # (code, waiting room?)
+                code, waiting = value
+                self.code_var.set(code)
                 self.stop_host_button.configure(state="normal")
+                for b in (self.open_button, self.file_button):
+                    b.configure(state="disabled")
+                if waiting:
+                    self.remove_button.configure(state="normal")
+                    self.generate_button.configure(state="normal")
+                    self.player_var.set(self.host_name_var.get().strip())
+                else:
+                    self.q.put(("players", (True, self.host.lobby.names() if self.host.lobby else
+                                            [p.name for p in mw.load(self.host_file).players])))
+            elif kind == "players":  # (generated, names)
+                generated, names = value
+                self.player_box.configure(values=names)
+                if generated:
+                    self.join_button.configure(state="disabled")
+                    self.state_var.set("Started: pick your name, then Install and play.")
+                    if names and self.player_var.get() not in names:
+                        self.player_var.set(names[0])
+                else:
+                    self.join_button.configure(state="normal" if not self._is_host_room() else "disabled")
+                    self.state_var.set("Waiting room: " + ", ".join(names))
+            elif kind == "generated":
+                self.remove_button.configure(state="disabled")
+                self.generate_button.configure(state="disabled")
+                self.q.put(("players", (True, value)))
+                self.player_var.set(self.host_name_var.get().strip())
                 self.tabs.select(1)
-            elif kind == "players":
-                self.player_box.configure(values=value)
-                if value and self.player_var.get() not in value:
-                    self.player_var.set(value[0])
             elif kind == "bridge":
                 self.stop_bridge_button.configure(state="normal" if value else "disabled")
             elif kind == "idle":
                 self.busy = False
-                for b in (self.host_button, self.play_button):
+                for b in (self.play_button,):
                     b.configure(state="normal")
+                if self.host is None:
+                    for b in (self.open_button, self.file_button):
+                        b.configure(state="normal")
             elif kind == "error":
                 messagebox.showerror("Multiworld", value, parent=self.root)
+        self._refresh_players()
         self._after = self.root.after(100, self._poll)
 
-    def _names(self) -> list[str]:
-        return [n.strip() for n in self.names.get("1.0", "end").splitlines() if n.strip()]
+    def _refresh_players(self) -> None:
+        """The host's list: the waiting room's players and their settings, as they join."""
+        lobby = self.host.lobby if self.host is not None else None
+        if lobby is None:
+            return
+        rows = [(n, describe(s)) for n, s in lobby.players_copy()]
+        if rows == self._shown_players:
+            return
+        self._shown_players = rows
+        self.players_list.delete(0, "end")
+        for i, (name, text) in enumerate(rows):
+            self.players_list.insert("end", f"{i + 1}. {name}{' (you)' if i == 0 else ''}: {text}")
 
     def _start(self, target) -> None:
         if self.busy:
             return
         self.busy = True
-        for b in (self.host_button, self.play_button):
+        for b in (self.open_button, self.file_button, self.play_button):
             b.configure(state="disabled")
 
         def run():
@@ -179,47 +249,94 @@ class MultiworldWindow:
 
         threading.Thread(target=run, daemon=True).start()
 
-    # ---- host ----
-    def create_and_host(self) -> None:
-        if self.host is not None:
-            messagebox.showinfo("Multiworld", "Already hosting: stop it first.", parent=self.root)
-            return
-        names = self._names()
+    def _port(self) -> int | None:
         try:
-            port = int(self.port_var.get())
+            return int(self.port_var.get())
         except ValueError:
             messagebox.showerror("Multiworld", "The port must be a number.", parent=self.root)
+            return None
+
+    def _announce(self, host: Host, waiting: bool) -> None:
+        for note in host.notes:
+            self.say(note)
+        self.say(f"Room code: {host.code}  (share it; the others use Join with it)")
+        if host.local_code and host.local_code != host.code:
+            self.say(f"Players on your own network (same box) use this one instead: {host.local_code}")
+        if waiting:
+            self.say("Waiting for the players: they paste the code, Look up, then Join with my settings. Then click "
+                     "Generate and start.")
+        self.q.put(("hosted", (host.code, waiting)))
+
+    # ---- host ----
+    def open_room(self) -> None:
+        if self.host is not None:
             return
-        seed_text = self.seed_var.get().strip()
+        port = self._port()
+        name = self.host_name_var.get().strip()
+        if port is None:
+            return
+        if not name:
+            messagebox.showerror("Multiworld", "Enter your name.", parent=self.root)
+            return
         address = self.address_var.get().strip() or None
 
         def work():
+            host = Host(None, port=port, address=address, log=self.say)
+            host.open_room(name, self.settings, MW_DIR)
+            self.host = host
+            self.say(f"{name} (you): {describe(self.settings)}")
+            self._announce(host, waiting=True)
+
+        self._start(work)
+
+    def host_file_dialog(self) -> None:
+        if self.host is not None:
+            return
+        port = self._port()
+        if port is None:
+            return
+        path = filedialog.askopenfilename(parent=self.root, title="Multiworld file", initialdir=str(MW_DIR),
+                                          filetypes=[("Multiworld", "mw_*.json"), ("JSON", "*.json")])
+        if not path:
+            return
+        address = self.address_var.get().strip() or None
+
+        def work():
+            host = Host(Path(path), port=port, address=address, log=self.say)
+            host.start()
+            self.host, self.host_file = host, Path(path)
+            self._announce(host, waiting=False)
+
+        self._start(work)
+
+    def remove_player(self) -> None:
+        if self.host is None or self.host.lobby is None:
+            return
+        sel = self.players_list.curselection()
+        if not sel or sel[0] == 0:
+            return
+        name = self._shown_players[sel[0]][0]
+        self.host.lobby.remove(name)
+        self.say(f"{name} removed from the waiting room")
+
+    def generate(self) -> None:
+        if self.host is None or self.host.lobby is None:
+            return
+        seed_text = self.seed_var.get().strip()
+        if len(self.host.lobby.names()) < 2:
+            messagebox.showinfo("Multiworld", "Nobody has joined yet.", parent=self.root)
+            return
+
+        def work():
             from .. import __main__ as cli
-            players = [mw.Player(n, settings_mod.build(dict(self.settings))) for n in names]
             seed = cli.seed_to_int(seed_text) if seed_text else random.SystemRandom().randrange(1, 10 ** 9)
-            self.say(f"Generating the multiworld (seed {seed}, {len(players)} players)...")
-            defaults = settings_mod.defaults()
-            changed = {k: v for k, v in players[0].settings.items() if defaults.get(k) != v}
-            self.say("Settings (the app's, same for every player): "
-                     + (", ".join(f"{k}={v}" for k, v in changed.items()) if changed else "all defaults"))
-            worlds = mw.build_worlds(players)
-            result = mw.generate(players, seed, worlds=worlds)
-            data = mw.to_json(result, worlds)
-            MW_DIR.mkdir(parents=True, exist_ok=True)
-            path = MW_DIR / f"mw_{data['hash']}.json"
-            import json
-            path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-            path.with_suffix(".txt").write_text(mw.to_text(data), encoding="utf-8")
-            self.say(f"Multiworld {data['hash']} written: {path} (spoiler: {path.with_suffix('.txt').name})")
-            host = Host(path, port=port, address=address, log=self.say)
-            code = host.start()
-            self.host, self.host_file = host, path
-            for note in host.notes:
-                self.say(note)
-            self.say(f"Room code: {code}  (share it; the others use Join with it)")
-            if host.local_code and host.local_code != code:
-                self.say(f"Players on your own network (same box) use this one instead: {host.local_code}")
-            self.q.put(("hosted", code))
+            for name, values in self.host.lobby.players_copy():
+                self.say(f"{name}: {describe(values)}")
+            path = self.host.generate(seed)
+            self.host_file = path
+            self.say(f"Multiworld written: {path} (spoiler: {path.with_suffix('.txt').name})")
+            self.say("Started: everyone can now Install and play (the code is the same).")
+            self.q.put(("generated", [p.name for p in mw.load(path).players]))
 
         self._start(work)
 
@@ -227,21 +344,38 @@ class MultiworldWindow:
         if self.host is None:
             return
         if not messagebox.askyesno("Multiworld", "Stop the server? The others will be disconnected (their progress "
-                                   "is kept: host again with the same file to resume).", parent=self.root):
+                                   "is kept: Host a file... with the same file to resume).", parent=self.root):
             return
         self.host.stop()
         self.say("Server stopped.")
         self.host = None
-        self.stop_host_button.configure(state="disabled")
+        self._shown_players = []
+        self.players_list.delete(0, "end")
+        for b in (self.stop_host_button, self.remove_button, self.generate_button):
+            b.configure(state="disabled")
+        for b in (self.open_button, self.file_button):
+            b.configure(state="normal")
 
     # ---- join ----
-    def _hosting(self, code) -> bool:
-        return self.host is not None and self.host_file is not None and code.room_hash in self.host_file.name
+    def _host_ids(self) -> set[str]:
+        if self.host is None or not self.host.code:
+            return set()
+        ids = {decode(self.host.code).room_hash}
+        if self.host_file is not None:
+            ids.add(self.host_file.stem.split("_")[-1].upper())
+        return ids
 
-    def _reach(self, code):
+    def _hosting(self, code: RoomCode) -> bool:
+        return code.room_hash.upper() in self._host_ids()
+
+    def _is_host_room(self) -> bool:
+        with contextlib.suppress(CodeError):
+            return self._hosting(decode(self.code_var.get().strip()))
+        return False
+
+    def _reach(self, code: RoomCode) -> RoomCode:
         """The host reaches their own server on this PC: a router usually refuses a connection from inside to its
         own internet address (seen 2026-11-21, "actively refused")."""
-        from ..mw_code import RoomCode
         return RoomCode("127.0.0.1", code.port, code.room_hash) if self._hosting(code) else code
 
     def copy_code(self) -> None:
@@ -252,16 +386,56 @@ class MultiworldWindow:
         code = self.code_var.get().strip()
 
         def work():
-            names = room_players(self._reach(decode(code)))
-            self.say(f"Players of {decode(code).room_hash}: {', '.join(names)}")
-            self.q.put(("players", names))
+            generated, names = room_state(self._reach(decode(code)))
+            self.say(("Players: " if generated else "Waiting room, players so far: ") + ", ".join(names))
+            self.q.put(("players", (generated, names)))
 
         self._start(work)
+
+    def join(self) -> None:
+        code_text = self.code_var.get().strip()
+        name = self.player_var.get().strip()
+        if not code_text or not name:
+            messagebox.showinfo("Multiworld", "Enter the room code and your name.", parent=self.root)
+            return
+
+        def work():
+            code = self._reach(decode(code_text))
+            names = join_room(code, name, self.settings)
+            self.say(f"Joined as {name} with your settings ({describe(self.settings)}). Players: {', '.join(names)}")
+            self.say("Waiting for the host to start the multiworld...")
+            self.q.put(("players", (False, names)))
+            self._wait_for_start(code)
+
+        self._start(work)
+
+    def _wait_for_start(self, code: RoomCode) -> None:
+        """Looks at the waiting room every few seconds until the host generates the multiworld."""
+        if self.wait_stop is not None:
+            self.wait_stop.set()
+        stop = self.wait_stop = threading.Event()
+
+        def run():
+            last = None
+            while not stop.wait(WAIT_EVERY):
+                try:
+                    generated, names = room_state(code)
+                except (SessionError, OSError) as exc:
+                    self.say(f"waiting room: {exc}")
+                    continue
+                if (generated, names) != last:
+                    self.q.put(("players", (generated, names)))
+                    last = (generated, names)
+                if generated:
+                    self.say("The host started the multiworld: Install and play.")
+                    return
+
+        threading.Thread(target=run, daemon=True).start()
 
     def install_and_play(self) -> None:
         from .longshot_app import game_running
         code_text = self.code_var.get().strip()
-        player = self.player_var.get()
+        player = self.player_var.get().strip()
         if not code_text or not player:
             messagebox.showinfo("Multiworld", "Enter the room code, Look up, and pick your name.", parent=self.root)
             return
@@ -279,8 +453,10 @@ class MultiworldWindow:
             from ..__main__ import build_mod
             code = self._reach(decode(code_text))
             names = room_players(code)
+            if player not in names:
+                raise SessionError(f"no player named {player} (players: {', '.join(names)})")
             slot = names.index(player) + 1
-            if self._hosting(code):  # the host plays too: their own file, their own server
+            if self._hosting(code) and self.host_file is not None:  # the host plays too: their own file
                 data = mw.load_slot(self.host_file, slot)
             else:
                 data = fetch_slot(code, slot)
@@ -313,6 +489,8 @@ class MultiworldWindow:
                 "Multiworld", "You are hosting: closing stops the server for everyone. Close anyway?", parent=self.root):
             return
         self.stop_bridge()
+        if self.wait_stop is not None:
+            self.wait_stop.set()
         if self.host is not None:
             self.host.stop()
         with contextlib.suppress(tk.TclError):
