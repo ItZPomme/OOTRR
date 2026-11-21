@@ -48,14 +48,18 @@ def build(name: str, module: str, out: Path) -> Path:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         launcher = tmp / f"{name}.py"
-        launcher.write_text(f"from {module} import main\nraise SystemExit(main())\n", encoding="utf-8")
-        cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--windowed", "--noconfirm",
+        light = name in LIGHT
+        launcher.write_text(PAUSE.format(module=module) if light
+                            else f"from {module} import main\nraise SystemExit(main())\n", encoding="utf-8")
+        cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--noconfirm",
                "--name", name, "--icon", str(ICON), "--distpath", str(out), "--workpath", str(tmp / "build"),
-               "--specpath", str(tmp), "--paths", str(ROOT),
-               "--add-data", f"{ROOT / 'ootrr' / 'data'}{sep}ootrr/data",
-               "--add-data", f"{ROOT / 'ootrr' / 'assets'}{sep}ootrr/assets",
-               "--collect-submodules", "ootrr", "--collect-all", "ainb", "--hidden-import", "zstandard",
-               str(launcher)]
+               "--specpath", str(tmp), "--paths", str(ROOT)]
+        if not light:  # windowed app with the randomizer data and libraries
+            cmd += ["--windowed",
+                    "--add-data", f"{ROOT / 'ootrr' / 'data'}{sep}ootrr/data",
+                    "--add-data", f"{ROOT / 'ootrr' / 'assets'}{sep}ootrr/assets",
+                    "--collect-submodules", "ootrr", "--collect-all", "ainb", "--hidden-import", "zstandard"]
+        cmd.append(str(launcher))
         subprocess.run(cmd, check=True)
     exe = out / f"{name}.exe"
     print("written:", exe, f"({exe.stat().st_size // 1024} KB)")
