@@ -19,8 +19,8 @@ from .. import multiworld as mw
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m ootrr.tools.mw_mod", description=__doc__.splitlines()[0])
-    ap.add_argument("file", help="multiworld file (python -m ootrr.multiworld)")
-    ap.add_argument("--slot", type=int, required=True, help="player number (from 1)")
+    ap.add_argument("file", help="multiworld file (python -m ootrr.multiworld), or a player's data file (joining)")
+    ap.add_argument("--slot", type=int, help="player number (from 1); not needed with a player's data file")
     ap.add_argument("--romfs", required=True, help="RomFS used to build the mod (Longshot's own romfs folder works)")
     ap.add_argument("--mod-name", default="OoTRR")
     ap.add_argument("--mod-out", help="copy the mod into this mods folder (Longshot: <Longshot>/mods)")
@@ -29,11 +29,13 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     from ..__main__ import build_mod
 
-    result = mw.load(args.file)
-    if not 1 <= args.slot <= len(result.players):
-        print(f"error: player 1 to {len(result.players)}", file=sys.stderr)
+    try:
+        data = mw.load_slot(args.file, args.slot)
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
-    patch = mw.slot_patch(result, args.slot - 1)
+    args.slot = data.slot + 1
+    patch = mw.slot_patch(data)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     patch_path = out / f"mw_{patch['multiworld']['hash']}_p{args.slot}_patch.json"

@@ -608,6 +608,22 @@ not change) **[game]**.
 - Texts of a layout's panes (e.g. `Pa_AmiiboBtn_00-T_BtnTitle_00`): read by 0xa6b250 (message file already loaded),
   not by 0xa6afe0 / 0xa6b060 **[files, Ghidra]**.
 - An actor in a logic group (AiGroups) may ignore its presence condition depending on the module; test it.
+- A **new** script copied from another one keeps the template's name inside the `.bfevfl` (file and flowchart names):
+  a chest whose `GetEventName` runs such a copy never opens, without any error. Rename the copy
+  (`replace_strings(raw, {template: new})`) **[game]** (Longshot, 2026-11-20; `ModBuilder._write_key_flows`, used by
+  the keys of another dungeon and the multiworld chests).
+- GameData written from outside the game (Longshot pipe, `ootrr/longshot_control.py`) **[game]** (2026-11-17/20):
+  only writes appended to the game's write queues are saved and reach the objects behind some values (rupees,
+  pouch); writing the entry directly shows for a while, is lost after save + reload and leaves a stale entry.
+  `PlayerStatus.Life` / `MaxLife` are rewritten from Link's data every frame (a written max life goes back). An
+  ammunition count needs its own flag: no bombs in the menu until `IsGet.Item_Bomb` is set, whatever
+  `PouchData.Item_Bomb.StockNum` holds.
+- Starting an event from an actor AI (`OneShotEventMemberRequestEventByEventName`, added to Link's walk module)
+  **[game]** (Longshot, 2026-11-20): works; an added selector there is only evaluated when the module is entered
+  (Link starts walking). In that event (row copied from a plain `FlowchartEvent`), the pouch action
+  `EventTriggerAddOrRemovePouchContent` gives an item, but the get window subscript
+  `GetPouchContent:GetPouchContentByActorName` never opens and the event stays stuck (softlock). GameData written
+  inside an event is queued like any write: a branch right after reads the old value. See docs/MULTIWORLD.md.
 - PowerShell 5 adds a UTF-8 BOM with `Set-Content -Encoding utf8`: breaks JSON files.
 - Windows paths too long: build in a temporary folder then copy.
 

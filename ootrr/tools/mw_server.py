@@ -6,6 +6,8 @@
 One player runs it; the others connect to that PC (port open on the router, or a VPN such as Tailscale/ZeroTier).
 The progress (found locations, items sent to each player) is saved next to the multiworld file
 (`<file>.state.json`) after every change: the server can be stopped and started again, the games resume.
+Every exchange is written to `<file>.log` ("Bot -> Pomme: Hookshot (GF Rupee Chest)", the items' names from the
+game's texts, `ootrr.mw_log`) and sent to every game, whose bridge logs it too.
 
 When a player beats the game (GOAL), the items of their world that other players still need are sent to them
 ("release", like Archipelago), unless `--no-release`.
@@ -24,6 +26,7 @@ from pathlib import Path
 
 from .. import multiworld as mw
 from .. import mw_protocol as P
+from ..mw_log import Log, exchange, labeller, plain_label
 
 
 @dataclass
@@ -38,8 +41,10 @@ class Room:
     """State of a multiworld (no network here: `Server` relays it). Slots are indexes from 0 here, numbers from
     1 in the protocol."""
 
-    def __init__(self, result: mw.MultiResult, state_path: Path | None = None, release: bool = True) -> None:
+    def __init__(self, result: mw.MultiResult, state_path: Path | None = None, release: bool = True,
+                 label=None) -> None:
         self.result = result
+        self.label = label or plain_label  # item actor -> readable name (mw_log)
         self.hash = mw.room_hash(result)
         self.names = [p.name for p in result.players]
         self.state_path = state_path
@@ -82,7 +87,7 @@ class Room:
             self.received[owner].append((slot, item, location))
             event.items.append((owner, len(self.received[owner]) - 1))
             event.sent.append((slot, owner, item, location))
-            event.info.append(f"{self.names[slot]} found {self.names[owner]}'s {item} ({location})")
+            event.info.append(exchange(self.names[slot], self.names[owner], self.label(item), location))
         return event
 
     def finish(self, slot: int) -> Event:
@@ -157,6 +162,9 @@ class Server:
                     return
                 cmd, args = msg[0], msg[1:]
                 if slot is None:
+                    if cmd in (P.ROOM, P.GETSLOT):  # joining from the desktop app (no game yet)
+                        await self._join(cmd, args, writer, error)
+                        return
                     if cmd != P.HELLO:
                         await error(P.E_HELLO, "HELLO first")
                         return
@@ -182,6 +190,28 @@ class Server:
                 self.log(f"{self.room.names[slot]} disconnected")
             with contextlib.suppress(ConnectionError, OSError):
                 writer.close()
+
+    async def _join(self, cmd: str, args: list[str], writer: asyncio.StreamWriter, error) -> None:
+        """ROOM: the players' names; GETSLOT: one player's data (`multiworld.slot_data`), never the other worlds."""
+        if len(args) < 2 or args[0] != str(P.PROTOCOL):
+            await error(P.E_PROTOCOL, f"protocol {P.PROTOCOL} expected")
+            return
+        if args[1].upper() != self.room.hash:
+            await error(P.E_ROOM, f"this server runs multiworld {self.room.hash}")
+            return
+        if cmd == P.ROOM:
+            writer.write(P.encode(P.PLAYERS, *self.room.names))
+        else:
+            if len(args) != 3 or not args[2].isdigit() or not 1 <= int(args[2]) <= len(self.room.names):
+                await error(P.E_SLOT, f"player 1 to {len(self.room.names)}")
+                return
+            slot = int(args[2]) - 1
+            chunks = P.pack(mw.slot_to_json(mw.slot_data(self.room.result, slot)))
+            for i, chunk in enumerate(chunks):
+                writer.write(P.encode(P.DATA, i, len(chunks), chunk))
+            self.log(f"{self.room.names[slot]}'s data sent (joining)")
+        with contextlib.suppress(ConnectionError, OSError):
+            await writer.drain()
 
     async def _hello(self, args: list[str], writer: asyncio.StreamWriter, error) -> int | None:
         if len(args) < 3 or args[0] != str(P.PROTOCOL):
@@ -217,15 +247,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=P.DEFAULT_PORT)
     ap.add_argument("--no-release", action="store_true", help="keep a finished player's items in their world")
+    ap.add_argument("--log", help="log of every exchange (default: <file>.log, appended)")
+    ap.add_argument("--romfs", help="RomFS for the items' names (default: Longshot's own, else actor names)")
     args = ap.parse_args(argv)
     path = Path(args.file)
     try:
-        room = Room(mw.load(path), path.with_suffix(".state.json"), release=not args.no_release)
+        room = Room(mw.load(path), path.with_suffix(".state.json"), release=not args.no_release,
+                    label=labeller(args.romfs))
     except (OSError, ValueError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    server = Server(room)
+    server.log = Log(args.log or path.with_suffix(".log"), echo=lambda line: print(line, flush=True))
     try:
-        asyncio.run(Server(room).serve(args.host, args.port))
+        asyncio.run(server.serve(args.host, args.port))
     except KeyboardInterrupt:
         pass
     return 0

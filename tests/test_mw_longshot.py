@@ -70,6 +70,7 @@ class ItemGiverTest(unittest.TestCase):
         ItemGiver(g).give("Item_BombBag_Large")  # progressive: the small one first
         self.assertTrue(g.bools["IsGet.Item_BombBag_Small"])
         self.assertEqual(g.ints["PouchData.Item_Bomb.StockNum"], 20)
+        self.assertTrue(g.bools["IsGet.Item_Bomb"])  # without it the menu shows no bombs (seen in game)
         g = _pouch("Weapon_Range_Bow", "Item_Quiver_Small", "Item_Quiver_Medium", "Item_Arrow_Normal")
         ItemGiver(g).give("Item_Range_Bow")
         self.assertTrue(g.bools["IsGet.Weapon_Range_Bow"] and g.bools["IsGet.Item_Quiver_Small"])
@@ -90,6 +91,13 @@ class ItemGiverTest(unittest.TestCase):
         giver.give("Item_Bottle")
         giver.give("Item_Bottle")
         self.assertEqual(g.ints["PouchData.Item_Bottle.StockNum"], 2)
+
+    def test_pouch_name_of_another_actor(self):
+        """The Lens of Truth's counter is Armor_GlassTruth's (seen in game, 2026-11-21)."""
+        g = _pouch("Armor_GlassTruth")
+        ItemGiver(g).give("Item_GlassTruth")
+        self.assertTrue(g.bools["IsGet.Armor_GlassTruth"])
+        self.assertEqual(g.ints["PouchData.Armor_GlassTruth.StockNum"], 1)
 
     def test_unknown_item_writes_nothing(self):
         g = _pouch()
@@ -221,3 +229,47 @@ class BridgeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LogTest(unittest.TestCase):
+    """Who sent what to whom: server INFO lines, log files, readable names (ootrr.mw_log)."""
+
+    def test_plain_names_and_line(self):
+        from ootrr.mw_log import exchange, plain_label
+        self.assertEqual(plain_label("Item_Gauntlet_Silver"), "Gauntlet Silver")
+        self.assertEqual(plain_label("TBox_Rupee_Purple"), "Rupee Purple")
+        self.assertEqual(exchange("Bot", "Pomme", "Hookshot", "GF Rupee Chest"), "Bot -> Pomme: Hookshot (GF Rupee Chest)")
+
+    def test_log_file(self):
+        import tempfile
+        from pathlib import Path
+        from ootrr.mw_log import Log
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sub" / "mw.log"
+            shown = []
+            log = Log(path, echo=shown.append)
+            log("first")
+            log("second")
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertTrue(lines[0].endswith("] first") and lines[0].startswith("["))
+            self.assertEqual(shown, lines)
+
+    def test_server_and_bridge_lines(self):
+        result = mw.generate([mw.Player("A", settings.build({})), mw.Player("B", settings.build({}))], 4)
+        room = Room(result, label=lambda item: f"<{item}>")
+        loc, (owner, item) = next((l, p) for l, p in sorted(result.sent(0).items()) if p[0] == 1)
+        ev = room.check(0, loc)
+        self.assertEqual(ev.info, [f"A -> B: <{item}> ({loc})"])
+        # B's bridge logs the server's line, then the item once given in its game
+        said: list[str] = []
+        game = FakeGame({mw.RECEIVED_COUNTER: 0, "PlayerStatus.CurrentRupee": 0, "PlayerStatus.MaxLife": 12,
+                         "PlayerStatus.Life": 12, "PouchData.Obj_Heart_Piece.StockNum": 0}, {})
+        bridge = Bridge(game, {}, room.hash, 2, ["A", "B"], lambda *f: None, said.append,
+                        label=lambda it: f"<{it}>")
+        bridge.on_server([P.WELCOME, "2", "2", "A", "B"])
+        bridge.on_server([P.INFO, ev.info[0]])
+        bridge.on_server([P.ITEM, "0", "1", item, loc])
+        bridge.apply()
+        self.assertIn(ev.info[0], said)
+        self.assertTrue(any(s.startswith(f"  given in game: <{item}> (from A, {loc}") for s in said), said)

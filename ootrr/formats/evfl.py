@@ -553,7 +553,9 @@ def _container_end(d: bytes, p: int) -> int:
     for i in range(n):
         child = _q(d, p + 0x10 + 8 * i)
         kind, count = d[child], struct.unpack_from("<H", d, child + 2)[0]
-        if kind in (2, 3, 4, 5):
+        # 0: argument of the entry point (the value is the argument's name: MiniGame_Diving step 316,
+        # IsNpcEventStarter); 2 int, 3 bool, 4 float, 5 text: one value or pointer at +0x10
+        if kind in (0, 2, 3, 4, 5):
             size = 0x18
         elif kind in (10, 11, 12):  # tableaux de textes, identifiant d'acteur : pointeurs
             size = 0x10 + 8 * count
@@ -699,6 +701,18 @@ def add_actions(d: bytes, entry: str, actor: str, action: str, template: bytes, 
     struct.pack_into("<QQ", body, f + 0x28, actors, events)
     struct.pack_into("<H", body, entry_at + 0x1C, first)
     return build_relt(body, slots), report
+
+
+def rename_flow(d: bytes, old: str, new: str) -> bytes:
+    """Renames a copied script: only the file and flowchart names (the references to `old` in the header, before
+    the actor table), not the step parameters that happen to hold the same text (e.g. a challenge named after its
+    script). A copy keeping its template's name never runs (GAME_KNOWLEDGE, pitfalls). Call it on the untouched
+    template: ensure_actor_member moves the actor table, after which this test would take every reference."""
+    fc = _flowchart_full(d)
+    slots = [s for s in string_refs(d).get(old, []) if s < fc["actors"]]
+    if not slots:
+        raise KeyError(f"no header reference to {old}")
+    return _redirect_slots(d, [(new, slots)])[0]
 
 
 def replace_strings(d: bytes, mapping: dict[str, str]) -> tuple[bytes, int]:

@@ -325,20 +325,78 @@ def to_text(data: dict[str, Any]) -> str:
 
 # ---- per-player mod ---------------------------------------------------------------------------------------------
 
-def slot_patch(result: MultiResult, slot: int, world: World | None = None) -> dict[str, Any]:
-    """The build patch (`patch.build_patch`) of player `slot`'s world: own items as in a solo seed; a location
+SLOT_FORMAT = 1  # slot data file format (what a joiner receives); bump it when it changes
+
+
+@dataclass
+class SlotData:
+    """What one player needs, without the other worlds (no spoiler of the others): their mod (`slot_patch`) and
+    their bridge (`remote_watch`) are built from it. The server sends it to a joiner (`tools.mw_server`)."""
+    room_hash: str
+    slot: int  # index from 0
+    names: list[str]
+    settings: dict[str, Any]
+    seed: int
+    attempts: int
+    placements: dict[str, Placed]  # this player's world: location -> (owner, item)
+
+    def sent(self) -> dict[str, Placed]:
+        return {loc: p for loc, p in self.placements.items() if p[0] != self.slot}
+
+
+def slot_data(result: MultiResult, slot: int) -> SlotData:
+    return SlotData(room_hash(result), slot, [p.name for p in result.players], result.players[slot].settings,
+                    result.seed, result.attempts, dict(result.placements[slot]))
+
+
+def slot_to_json(data: SlotData) -> dict[str, Any]:
+    return {"slot_format": SLOT_FORMAT, "version": __version__, "hash": data.room_hash, "slot": data.slot + 1,
+            "names": data.names, "settings": data.settings, "seed": data.seed, "attempts": data.attempts,
+            "placements": {loc: [o, i] for loc, (o, i) in sorted(data.placements.items())}}
+
+
+def slot_from_json(raw: dict[str, Any]) -> SlotData:
+    if raw.get("slot_format") != SLOT_FORMAT:
+        raise ValueError(f"player data format {raw.get('slot_format')}, expected {SLOT_FORMAT}")
+    return SlotData(str(raw["hash"]), int(raw["slot"]) - 1, [str(n) for n in raw["names"]], dict(raw["settings"]),
+                    int(raw["seed"]), int(raw.get("attempts", 1)),
+                    {loc: (int(o), str(i)) for loc, (o, i) in raw["placements"].items()})
+
+
+def load_slot(path: str | Path, slot: int | None = None) -> SlotData:
+    """A player's data from either file: a player data file (from joining), or the whole multiworld file and the
+    player number (from 1)."""
+    with Path(path).open(encoding="utf-8") as fh:
+        raw = json.load(fh)
+    if "slot_format" in raw:
+        data = slot_from_json(raw)
+        if slot is not None and slot - 1 != data.slot:
+            raise ValueError(f"this file is player {data.slot + 1}'s, not player {slot}'s")
+        return data
+    if slot is None:
+        raise ValueError("a multiworld file needs the player number (--slot)")
+    result = from_json(raw)
+    if not 1 <= slot <= len(result.players):
+        raise ValueError(f"player 1 to {len(result.players)}")
+    return slot_data(result, slot - 1)
+
+
+def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: World | None = None) -> dict[str, Any]:
+    """The build patch (`patch.build_patch`) of one player's world: own items as in a solo seed; a location
     holding another player's item gets the placeholder and its own chest event (`chests[i]["remote"]`,
-    `patch["mw_events"]`); `patch["multiworld"]` tells the bridge what to watch."""
+    `patch["mw_events"]`); `patch["multiworld"]` tells the bridge what to watch. `source`: the whole result and
+    the player's index, or the player's data."""
     from .fill import Result
     from .patch import build_patch
 
-    world = world or World(result.players[slot].settings)
-    placements = {loc: (item if owner == slot else REMOTE_PLACEHOLDER)
-                  for loc, (owner, item) in result.placements[slot].items()}
-    patch = build_patch(world, Result(result.seed, result.attempts, placements), f"{room_hash(result)}-{slot + 1}")
-    remote = result.sent(slot)
+    data = source if isinstance(source, SlotData) else slot_data(source, slot)
+    world = world or World(data.settings)
+    placements = {loc: (item if owner == data.slot else REMOTE_PLACEHOLDER)
+                  for loc, (owner, item) in data.placements.items()}
+    patch = build_patch(world, Result(data.seed, data.attempts, placements), f"{data.room_hash}-{data.slot + 1}")
+    remote = data.sent()
     events: dict[str, str] = {}
-    watch = remote_watch(result, slot, world)
+    watch = remote_watch(data, world=world)
     for chest in patch["chests"]:
         placed = remote.get(chest["location"])
         if placed is None:
@@ -347,21 +405,23 @@ def slot_patch(result: MultiResult, slot: int, world: World | None = None) -> di
         chest["remote"] = {"owner": placed[0], "item": placed[1], "event": remote_event(rank)}
         events[remote_event(rank)] = location_counter(rank)
     if len(events) != len(remote):
-        raise ValueError(f"player {slot + 1}: {len(remote) - len(watch)} remote items outside the chests")
+        raise ValueError(f"player {data.slot + 1}: {len(remote) - len(events)} remote items outside the chests")
     patch["mw_events"] = events
     for table, rows in mw_rsdb_rows(events).items():
         patch["rsdb_changes"].setdefault(table, {}).update(rows)
-    patch["multiworld"] = {"hash": room_hash(result), "slot": slot + 1, "players": [p.name for p in result.players],
+    patch["multiworld"] = {"hash": data.room_hash, "slot": data.slot + 1, "players": data.names,
                            "received_counter": RECEIVED_COUNTER, "locations": watch}
     return patch
 
 
-def remote_watch(result: MultiResult, slot: int, world: World | None = None) -> dict[str, str]:
-    """{saved Int raised by the mod: location} for the locations of `slot`'s world holding another player's item
-    (rank = index in World.locations, as patch.build_patch)."""
-    world = world or World(result.players[slot].settings)
+def remote_watch(source: MultiResult | SlotData, slot: int | None = None,
+                 world: World | None = None) -> dict[str, str]:
+    """{saved Int raised by the mod: location} for the locations of one player's world holding another player's
+    item (rank = index in World.locations, as patch.build_patch)."""
+    data = source if isinstance(source, SlotData) else slot_data(source, slot)
+    world = world or World(data.settings)
     rank = {name: i for i, name in enumerate(world.locations)}
-    return {location_counter(rank[loc]): loc for loc in sorted(result.sent(slot))}
+    return {location_counter(rank[loc]): loc for loc in sorted(data.sent())}
 
 
 def mw_rsdb_rows(events: dict[str, str]) -> dict[str, dict[str, dict]]:

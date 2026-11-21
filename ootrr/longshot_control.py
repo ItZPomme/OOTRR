@@ -180,23 +180,35 @@ class Longshot:
         n comes from the previous frame: if the count changed in between, the batch is reported as wrong."""
         mgr = self.gamedata_manager()
         buf, cap = self.u64(mgr + buf_off), self.u32(mgr + cap_off)
-        n = self.u32(mgr + count_off) & 0xfffff
-        if not buf or n + 1 >= min(cap, 0x10000):
-            raise ControlError("GameData write queue unavailable or full")
-        slot = buf + n * len(entry)
-        replies = self.batch([
-            ("mem_read", {"addr": mgr + count_off, "size": 4}),
-            ("mem_write", {"addr": slot, "hex": entry.hex()}),
-            ("mem_write", {"addr": mgr + count_off, "hex": (n + 1).to_bytes(2, "little").hex()}),
-            ("mem_read", {"addr": slot, "size": len(entry)}),
-            ("mem_read", {"addr": mgr + count_off, "size": 4}),
-        ])
-        frames = {r.get("frame") for r in replies}
-        before = int.from_bytes(bytes.fromhex(replies[0]["data"]), "little") & 0xfffff
-        after = int.from_bytes(bytes.fromhex(replies[4]["data"]), "little") & 0xfffff
-        if len(frames) != 1 or before != n or after != n + 1 or bytes.fromhex(replies[3]["data"]) != entry:
-            raise ControlError(f"GameData queue append not atomic (frames {sorted(frames)}, count {n} -> "
-                               f"{before} before, {after} after)")
+        problems = []
+        for _ in range(self.QUEUE_TRIES):
+            # the count must be the same on two consecutive frames: a queue being emptied or filled is skipped
+            # (seen in play, 2026-11-20: count 2 on one frame, 0 on the next; writing 3 then made the game
+            # apply stale entries again: one received item given four times)
+            n = self.u32(mgr + count_off) & 0xfffff
+            if self.u32(mgr + count_off) & 0xfffff != n:
+                problems.append("count moving")
+                continue
+            if not buf or n + 1 >= min(cap, 0x10000):
+                raise ControlError("GameData write queue unavailable or full")
+            slot = buf + n * len(entry)
+            replies = self.batch([
+                ("mem_read", {"addr": mgr + count_off, "size": 4}),
+                ("mem_write", {"addr": slot, "hex": entry.hex()}),
+                ("mem_write", {"addr": mgr + count_off, "hex": (n + 1).to_bytes(2, "little").hex()}),
+                ("mem_read", {"addr": slot, "size": len(entry)}),
+                ("mem_read", {"addr": mgr + count_off, "size": 4}),
+            ])
+            frames = {r.get("frame") for r in replies}
+            before = int.from_bytes(bytes.fromhex(replies[0]["data"]), "little") & 0xfffff
+            after = int.from_bytes(bytes.fromhex(replies[4]["data"]), "little") & 0xfffff
+            if len(frames) == 1 and before == n and after == n + 1 and bytes.fromhex(replies[3]["data"]) == entry:
+                return
+            problems.append(f"count {n} -> {before} before, {after} after")
+            time.sleep(0.05)
+        raise ControlError(f"GameData queue append failed: {'; '.join(problems)}")
+
+    QUEUE_TRIES = 6
 
     def batch(self, requests: list[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
         """Sends the requests together (served within one game frame) and returns their answers in order."""

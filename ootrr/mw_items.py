@@ -13,8 +13,11 @@ queues (`longshot_control.Longshot.set_int` / `set_bool`, saved like the game's 
 - Rupees: `PlayerStatus.CurrentRupee` + value. Heart Container: `PlayerStatus.MaxLife` + 4 quarters and full life
   (as `ingame::AddMaxLife`). Piece of Heart: the pieces counter, a container every 4 [hypothesis].
 
-Only the Hookshot, rupees and counts are validated in game; the other kinds are written from the files and the
-native module, **to validate in game** (the giver logs every write). No get-item window: the bridge prints the item.
+Validated in game (Longshot, 2026-11-20, kept after save + reload): Hookshot, progressive bomb bag + bombs, Bow +
+quiver + arrows, rupees. **Heart Containers do not work**: the game rewrites PlayerStatus.MaxLife from Link's data
+every frame (the sound plays, the heart goes away). Pieces of Heart, bottles (no PouchData.Item_Bottle.StockNum),
+seeds, songs, swords, shields and magic: written from the files and the native module, **to validate in game**
+(the giver logs every write). No get-item window: the bridge prints the item.
 
 `gd` is any object with get_int / get_bool / set_int(name, value, add=False) / set_bool (a `Longshot`, or a fake
 in the tests).
@@ -52,10 +55,10 @@ BAGS = {
 # extra items that come with a step (the bow comes with its small quiver; memory: a bow without one is unusable)
 WITH = {"Item_Range_Bow": ("Item_Quiver_Small",), "Item_Range_SlingShot": ("Item_BulletBag_Small",)}
 # ammunition bundles -> (ammunition, amount)
-BUNDLES = {
+BUNDLES = {  # counts from the game's names ("Three Deku Nuts", "Five Arrows", "10 Arrows"...)
     "Item_BombBundle_Small": ("Item_Bomb", 5), "Item_BombchuBundle_Small": ("Item_Bombchu", 5),
-    "TBox_ArrowBundle_Medium": ("Item_Arrow_Normal", 10), "TBox_ArrowBundle_Large": ("Item_Arrow_Normal", 30),
-    "TBox_DekuNutBundle": ("Item_DekuNut", 5), "Item_DekuStickBundle_Small": ("Item_DekuStick", 1),
+    "TBox_ArrowBundle_Medium": ("Item_Arrow_Normal", 5), "TBox_ArrowBundle_Large": ("Item_Arrow_Normal", 10),
+    "TBox_DekuNutBundle": ("Item_DekuNut", 3), "Item_DekuStickBundle_Small": ("Item_DekuStick", 3),
 }
 COUNTED = ("Item_Bottle", "Item_Token_Gold")  # several copies: the count grows
 MAX_LIFE, LIFE, RUPEE = "PlayerStatus.MaxLife", "PlayerStatus.Life", "PlayerStatus.CurrentRupee"
@@ -114,6 +117,13 @@ class ItemGiver:
         self.gd.set_bool(name, True)
         self.log.append(f"{name} = true")
 
+    def _ammo_flag(self, ammo: str) -> None:
+        """The ammunition's own IsGet flag: without IsGet.Item_Bomb the menu shows no bombs, whatever their count
+        (Longshot, 2026-11-20: 20 bombs written with the bag stayed invisible until the flag was set; a real bomb bag
+        chest sets it too)."""
+        if self.gd.get_bool(f"IsGet.{ammo}") is False:
+            self._bool(f"IsGet.{ammo}")
+
     def _pouch_item(self, name: str) -> bool:
         """IsGet + StockNum of a pouch item; False if the game has no counter of that name."""
         current = self.gd.get_int(_stock(name))
@@ -156,6 +166,7 @@ class ItemGiver:
                 return self.log
             if self.gd.get_int(_stock(ammo)) is not None:
                 self._int(_stock(ammo), amount, add=True)
+                self._ammo_flag(ammo)
             else:
                 self.log.append(f"{item}: no counter {_stock(ammo)}, nothing given")
             return self.log
@@ -163,7 +174,11 @@ class ItemGiver:
         if real != item:
             self.log.append(f"{item} -> {real}")
         name = self.pouch.get(real, real)
-        candidates = [name, real, real.replace("TBox_", "Item_", 1), real.replace("Item_", "Weapon_", 1)]
+        # the pouch name may be another actor's: Weapon_Range_Bow, Armor_GlassTruth (Lens of Truth: given as nothing
+        # without this one, 2026-11-21), Armor_Adult_Gauntlet_Silver...
+        candidates = [name, real, real.replace("TBox_", "Item_", 1), real.replace("Item_", "Weapon_", 1),
+                      real.replace("Item_", "Armor_", 1), real.replace("Item_", "Armor_Adult_", 1),
+                      real.replace("Item_", "Armor_Child_", 1)]
         if not any(self._pouch_item(n) for n in dict.fromkeys(candidates)):
             self.log.append(f"{real}: no pouch counter found ({', '.join(dict.fromkeys(candidates))}), nothing given")
             return self.log
@@ -173,4 +188,5 @@ class ItemGiver:
             ammo, capacity = BAGS[real]
             if self.gd.get_int(_stock(ammo)) is not None:
                 self._int(_stock(ammo), capacity)
+                self._ammo_flag(ammo)
         return self.log

@@ -12,11 +12,38 @@ Coop (everyone on the same seed, an item found by one is given to all) comes aft
 |---|---|
 | Shared fill, multiworld file, spoiler (`ootrr/multiworld.py`) | done, unit tests (`tests/test_multiworld.py`) |
 | Protocol (`ootrr/mw_protocol.py`) and server (`ootrr/tools/mw_server.py`) | done, unit tests with fake games |
-| Per-player mod (items of other players in our locations) | to do |
+| Per-player mod (`ootrr/tools/mw_mod.py`, `multiworld.slot_patch`) | PC-built mod; another player's item only in a plain chest: placeholder + chest event raising `OoTRR.MW.L<n>`: **validated in game** (Longshot) |
 | Eden: native module client (socket, items given in game) | to do, **nothing validated in game** |
 | Longshot: control pipe client (`ootrr/longshot_control.py`) | events, GameData reads, queued writes: **used live** |
-| Longshot: PC bridge | to do; detecting checks and giving an item (saved) both work through the pipe |
-| Desktop app (create / join a multiworld) | to do |
+| Longshot: PC bridge (`ootrr/tools/mw_longshot.py`, items: `ootrr/mw_items.py`) | **validated in game** (Longshot v3.0.0, 2026-11-20): found chest -> CHECK, 5 received items given and kept after save + reload; Heart Containers do not work yet (see below) |
+| Desktop app: Multiworld window (`ootrr/tools/mw_app.py`), room codes (`mw_code.py`), hosting / joining (`mw_session.py`, `upnp.py`) | **partly validated** (2026-11-21): hosting from the window, UPnP opening the port on a home router, code, joining with the code (player data fetched), items received in Longshot; to validate: *Install and play* through to the end after its fixes, and a player on another network |
+
+## Joining with a room code (desktop app)
+
+The app's **Multiworld** button (footer, "+") opens the Multiworld window (`ootrr/tools/mw_app.py`):
+- **Host**: player names (one per line, the host first), seed; *Create and host* generates the multiworld with the
+  app's settings for every player (`APPDATA/OoTRR/multiworld/mw_<hash>.json` + spoiler), starts the server inside
+  the app, asks the router to open the port by UPnP (`ootrr/upnp.py`) and shows the **room code** to share.
+- **Join / Play** (also for the host): code -> *Look up* (the players' names) -> pick yours -> *Install and play*:
+  the app fetches **your player's data only** (`GETSLOT`: your world, never the others', no spoiler), builds your
+  mod into Longshot's `mods/OoTRR`, starts Longshot with its control pipe (`HOS_CONTROL=ootrr-mw`,
+  `HOS_CONTROL_MEM=rw`) and runs the bridge in the app; the log shows who sent what to whom. Longshot only for now.
+
+The code (`ootrr/mw_code.py`, 20 characters, `K7QM-29XD-...`) holds the host's IPv4 address, the port and the room
+hash, with a check character (a typo is caught; I/L/O read as 1/0). The address in it:
+1. the router's internet address when UPnP opened the port (most home routers allow UPnP; the app says if not);
+2. otherwise this PC's local address: works on the same network only; for players elsewhere, open the port
+   (TCP 38300) on the router by hand and type the internet address, or use a VPN (Tailscale, ZeroTier) and type its
+   address (the *Address for the code* field).
+Seen on 2026-11-21: UPnP opened the port on the developer's box (a first test from the command line found no
+gateway: the SSDP search is now sent on every network interface). The host cannot use the internet-address code
+on their own network (the box refused the connection to its own public address, "hairpinning"): the host's app
+uses its own server directly, and the window also gives a **local-network code** for players at the host's place. A public relay (always reachable) would remove these cases; not done (needs
+hosting).
+
+Command line equivalents: `python -m ootrr.tools.mw_host FILE` (server + code), `python -m ootrr.tools.mw_join CODE
+[--player NAME]` (names, or the player data file), then `tools.mw_mod` and `tools.mw_longshot` accept that file
+instead of the whole multiworld file (`multiworld.load_slot`).
 
 ## Usage (what exists today)
 
@@ -24,6 +51,19 @@ Coop (everyone on the same seed, an item found by one is given to all) comes aft
 python -m ootrr.multiworld --players 2 --names Alice,Bob --seed 1234 -o output/mw.json
 python -m ootrr.multiworld --config players.json --seed 1234 -o output/mw.json
 python -m ootrr.tools.mw_server output/mw.json --port 38300
+python -m ootrr.tools.mw_mod output/mw.json --slot 2 --romfs "<Longshot>/romfs" --mod-out "<Longshot>/mods"
+python -m ootrr.tools.mw_longshot output/mw.json --slot 2 --server HOST:38300   # Longshot started with HOS_CONTROL=1, HOS_CONTROL_MEM=rw
+```
+
+**Log of the exchanges** (`ootrr/mw_log.py`): the server writes every exchange to `<file>.log` and sends it to every
+game; each bridge writes them to `<file>_p<slot>.log` (`--log` for another path), plus a line when an item has really
+been given in its game. Items are named as the game writes them (`ActorMsg/PouchContent`, from Longshot's RomFS or
+`--romfs`; actor name otherwise):
+
+```
+[2026-11-20 23:42:14] Bot -> Pomme: Deku Shield (Bottom of the Well Lens of Truth Chest)
+[2026-11-20 23:42:15] Pomme -> Bot: Din's Fire (Bottom of the Well Red Rupee Chest 2)
+[2026-11-20 23:42:31]   given in game: Deku Shield (from Bot, Bottom of the Well Lens of Truth Chest)
 ```
 
 `players.json`: `{"players": [{"name": "Alice", "settings": {"shuffle_songs": "shuffle"}}, {"name": "Bob"}]}`.
@@ -64,7 +104,7 @@ TCP, one message per line, UTF-8, tab-separated fields (location names hold spac
   ("release"; `--no-release` keeps them).
 - A game reconnecting as the same player replaces its old connection.
 
-## Game side (to do)
+## Game side
 
 What the games need, the same for Eden and Longshot:
 1. **A location holding another player's item** gives nothing to our player. Shown item: the real item model (all
@@ -114,25 +154,55 @@ Verified live:
 - **Reading any GameData Int / Bool from the PC**: the lookups of the game's `GetInt` (0x163d20) and `GetBool`
   (0x3744460), decompiled and re-implemented over `mem_read`: values equal to those of the event stream.
 
-Plan: a **PC bridge** (Python, part of the desktop app): Longshot pipe <-> multiworld server.
-- Found locations: the per-player mod sets a saved flag per location (`OoTRR.MW.L<n>`, or the location's existing
-  flag) -> `changed` in the `oot` events -> `CHECK`.
-- Received items: **solved for a simple item** (`HOS_CONTROL_MEM=rw`, throwaway save, 2026-11-17): the bridge
-  appends writes to the game's own GameData write queues (`Longshot.set_bool` / `set_int`), which the game applies at
-  its next frame, as if it had written them itself. Hookshot given with `IsGet.Item_Hookshot` = true and
-  `PouchData.Item_Hookshot.StockNum` = 1: shown in the menu, equipped, **fires, and is still there after save and
-  reload** **[game]**. Same for rupees (`PlayerStatus.CurrentRupee`, also as an "add") and a Deku Nut count.
-- Writing a value's entry directly instead (+0x1c) is shown in game (HUD rupees, menu counts, even a new Hookshot)
-  but **not saved**: after save + reload everything was back **[game]**. The queued write also sets the entry's
-  +0x18 copy (probably what the save reads). Always go through the queues.
-- Still to handle per item kind, as the native module's `ingame::AdjustItem` does: progressive items (read `IsGet.*`
-  first), bags and quivers (capacity), ammunition counts, Heart Containers / Pieces (`PlayerStatus.MaxLife`, the
-  pieces counter), songs, bottles, swords and shields (equipment), keys (dungeon counters). There is no get-item
-  window: the bridge can show the received item itself (or later a mailbox Int read by a node of Link's AI, to let
-  the game play its own get-item event).
-- A queued write takes two `mem_write` calls (the entry, then the count); a game write landing between them could
-  collide. Not seen; to keep in mind (write when `event` is false in the `oot` stream, few writes per frame).
-- Longshot is a release candidate: the pipe and its JSON may change; the bridge checks `"protocol": 1` of `status`.
+The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld server.
+- **Found locations** (validated in game, 2026-11-20): another player's item only goes into a plain chest
+  (`multiworld.can_hold_remote`: no event of its own kept, not conditional, not a gift; 96 of 161 shuffled
+  locations). The chest gives `Obj_MiniGame_SmallKey` ("door key", not put in the pouch) and its `GetEventName` runs
+  a copy of the boss key chest script whose added action is "`OoTRR.MW.L<rank>` + 1" (saved Int,
+  `ModBuilder._write_key_flows`). The bridge sees the Int in the `changed` values of the `oot` events -> `CHECK`;
+  at connection and after each loading it reads every watched Int again.
+- **A copied chest script must be renamed**: with its template's name (`ForestTemple_Gimmick`, the file and
+  flowchart names inside the `.bfevfl`) the chest never opened, no error; renamed (`replace_strings`), it opens and
+  runs **[game]**. Same code for the small / boss keys of another dungeon (`keys.py`), which had never been tested:
+  they should now work too (to validate).
+- **Received items** (`mw_items.ItemGiver`): queued GameData writes, given when Link is in play (no scene, no
+  loading), counted in the saved Int `OoTRR.MW.Received` (`SYNC`). Validated **[game]**: Hookshot, progressive bomb
+  bag (Large -> Small) + 20 bombs, Bow + small quiver + 30 arrows, rupees, all kept after save + reload.
+  - **Only queued writes count**: writing a value's entry directly (+0x1c, even with its +0x0c "written" flag) is
+    shown for a while but lost after save + reload, and leaves a stale entry (the rupees and the pouch live in other
+    objects, which only queued writes reach).
+  - **The queue append must be atomic**: the game queues its own writes every frame (`PlayerStatus.Life` / `MaxLife`
+    sit in the Int queue), so an entry and a count written in two frames lost writes (seen: rupees, a Piece of
+    Heart). Pipelined requests are served within one frame (six reads, one frame number): `Longshot._queue` sends
+    read count / write entry / write the count's two low bytes / read back in one batch and checks them.
+  - **Ammunition needs its own flag**: 20 bombs written with the bag stayed invisible until `IsGet.Item_Bomb` was set
+    (the real bomb bag chest sets it, hash 0x2bb00768) **[game]**.
+  - **Heart Containers: not working**. `PlayerStatus.MaxLife` + 4 plays the sound but goes back to 12: the game
+    rewrites `Life` / `MaxLife` into GameData from Link's data every frame. The native module's note says max life
+    is recomputed at an age change; there is no Heart Container counter (`PouchData.Obj_Heart_Container.StockNum`
+    does not exist). To find.
+  - Not seen in game yet: Pieces of Heart (same problem expected), bottles (no `PouchData.Item_Bottle.StockNum`:
+    nothing is given), seeds with the Slingshot (`PouchData.Item_DekuSeed.StockNum` exists, not filled yet), songs,
+    swords and shields, magic. No get-item window: the bridge prints the received item.
+- No `GOAL` yet: the end of the game is not watched, so a Longshot player who finishes does not release items.
+- The pipe and its JSON may change with Longshot versions (seen: rc.6 -> v3.0.0 kept them); the bridge warns when
+  `status` is not `"protocol": 1`. Longshot now installs to `Games/Longshot/<channel>/<version>` (`stable/v3.0.0`,
+  `rc/v3.0.0-rc.7`).
+
+#### Tried and removed: received items given by a game scene (2026-11-20)
+
+To get the chest's get-item animation, received items were given by a scene of our own: the bridge wrote the item's
+number into a mailbox Int, a node added to Link's walk AI (`OneShotEventMemberRequestEventByEventName`, copied
+from `EventProxyRequestActor`) requested an event, and the event gave the item with the game's pouch action
+`EventTriggerAddOrRemovePouchContent` (Longshot v3.0.0). What was learnt (see also GAME_KNOWLEDGE, pitfalls):
+- the request works, but only when Link **starts walking** (the walk module is entered); each run hides the HUD and
+  stops Link for an instant, and an item the scene cannot give (a chest bundle such as `TBox_DekuNutBundle`) made it
+  start again at every step;
+- the get window (`GetPouchContent:GetPouchContentByActorName`) blocked inside the call (softlock) whatever the
+  steps before it, the kind of event row or its `SubFlowList`; `IsGetEvent` = true on the pouch action showed nothing;
+- GameData written inside a scene is queued too: a branch right after it reads the old value.
+No animation came out of it and the scene disturbed play, so it was removed (user's decision): received items are
+given by GameData writes (`mw_items.ItemGiver`), invisible in game, and the logs say what was received.
 
 The same pipe-and-memory approach cannot drive Eden (no such pipe), so Eden keeps the native client.
 

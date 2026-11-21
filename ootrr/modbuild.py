@@ -1076,7 +1076,7 @@ class ModBuilder:
         mw_events: multiworld chests holding another player's item ({event: saved Int}): same copy, the line
         becomes "<Int> + 1" (multiworld.slot_patch); the script is named after the event."""
         from . import keys as keys_mod
-        from .formats.evfl import ensure_actor_member, event_params, insert_flow, replace_strings
+        from .formats.evfl import ensure_actor_member, event_params, insert_flow, rename_flow
 
         specs = [(keys_mod.flow_name(kind, game), kind, keys_mod.COUNTER[kind].format(game=game),
                   f"chest event {event}") for event, (kind, game) in sorted(key_events.items())]
@@ -1091,14 +1091,14 @@ class ModBuilder:
         report = []
         for flow_name, kind, counter, what in specs:
             action = keys_mod.ACTION[kind]
-            flow = ensure_actor_member(raw, "GameDataActor", "action", action)
+            # its own name first (rename_flow reads the untouched header layout)
+            flow = ensure_actor_member(rename_flow(raw, keys_mod.TEMPLATE_FLOW, flow_name), "GameDataActor", "action", action)
             node = {"actor": "GameDataActor", "action": action,
                     "template": (actions, event_params(actions, keys_mod.ACTION_TEMPLATE_STEP[kind])),
                     "set": {"GameDataName": counter}, "next": None}
             new, steps = insert_flow(flow, None, [node], before=keys_mod.TEMPLATE_STEP)
             # the copy names itself (file and flowchart names, the only two references): with the template's name
             # the chest never opened (Longshot, 2026-11-17: template event fine, copy refused)
-            new, _ = replace_strings(new, {keys_mod.TEMPLATE_FLOW: flow_name})
             name = f"{flow_name}.bfevfl"
             rel = f"Event/EventFlow/{name}"
             self.restbl.set(rel, self.restbl.get(src_rel) + max(0, len(new) - len(raw)))

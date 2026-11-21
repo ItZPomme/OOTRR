@@ -10,12 +10,15 @@
 - Received items: `ITEM <index>` are given in order by `ItemGiver` (queued GameData writes) when Link is in play,
   not in a scene or a loading; the saved Int `OoTRR.MW.Received` counts the applied ones (`SYNC`). Reloading an
   older save lowers it: the server sends the missing items again.
+- Log: every exchange of the multiworld (the server's INFO lines: "Bot -> Pomme: Hookshot (GF Rupee Chest)") and
+  each item given in this game, in `<file>_p<slot>.log` (`--log`), with the items' names from the game's texts.
 - No GOAL yet: the game's end is not watched (no release when a Longshot player finishes).
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import queue
 import socket
 import sys
@@ -28,6 +31,7 @@ from .. import multiworld as mw
 from .. import mw_protocol as P
 from ..formats.gamedata import flag_hash
 from ..mw_items import ItemGiver
+from ..mw_log import Log, labeller, plain_label
 
 
 class BridgeError(RuntimeError):
@@ -39,12 +43,14 @@ class Bridge:
     the server. Feed it server messages (`on_server`) and Longshot `oot` events (`on_game`)."""
 
     def __init__(self, game: Any, watch: dict[str, str], room_hash: str, slot: int, names: list[str],
-                 send: Callable[..., None], say: Callable[[str], None] = print) -> None:
+                 send: Callable[..., None], say: Callable[[str], None] = print,
+                 label: Callable[[str], str] | None = None) -> None:
         self.game, self.send, self.say = game, send, say
         self.watch = watch  # saved Int -> location
         self.by_hash = {flag_hash(name): loc for name, loc in watch.items()}
         self.room_hash, self.slot, self.names = room_hash, slot, names
         self.giver = ItemGiver(game)
+        self.label = label or plain_label
         self.pending: dict[int, tuple[int, str, str]] = {}  # received index -> (from slot, item, location)
         self.sent: set[str] = set()
         self.ready = False  # WELCOME received
@@ -84,9 +90,9 @@ class Bridge:
             index, finder, item, loc = int(args[0]), int(args[1]), args[2], args[3]
             self.pending[index] = (finder, item, loc)
         elif cmd == P.SENT:
-            self.say(f"sent {args[1]} to {self.names[int(args[0]) - 1]} ({args[2]})")
+            pass  # the server's INFO line for the same exchange is logged
         elif cmd == P.INFO:
-            self.say(args[0])
+            self.say(args[0])  # every exchange of the multiworld (mw_log.exchange), and the players' goals
         elif cmd == P.ERROR:
             raise BridgeError(f"server: {' '.join(args)}")
 
@@ -100,7 +106,8 @@ class Bridge:
             self.apply()
 
     def apply(self) -> int:
-        """Gives the received items the game does not count yet, in order; returns how many."""
+        """Gives the received items the game does not count yet, in order (GameData writes, `ItemGiver`);
+        returns how many."""
         count = self.received_count()
         if self.written is not None:
             count = max(count, self.written)
@@ -108,16 +115,19 @@ class Bridge:
         while count in self.pending:
             finder, item, loc = self.pending.pop(count)
             writes = self.giver.give(item)
-            self.game.set_int(mw.RECEIVED_COUNTER, count + 1)
-            count += 1
-            self.written = count
+            count = self._counted(count)
             given += 1
-            self.say(f"received {item} from {self.names[finder - 1]} ({loc}): {'; '.join(writes)}")
+            self.say(f"  given in game: {self.label(item)} (from {self.names[finder - 1]}, {loc}; {'; '.join(writes)})")
         if given:
             self.send(P.SYNC, count)
         for index in [i for i in self.pending if i < count]:
             del self.pending[index]  # already applied (an older copy sent again)
         return given
+
+    def _counted(self, index: int) -> int:
+        self.game.set_int(mw.RECEIVED_COUNTER, index + 1)
+        self.written = index + 1
+        return index + 1
 
     def reloaded(self) -> None:
         """After a loading: the save may be another one, read everything again."""
@@ -158,58 +168,104 @@ class ServerLink:
         self.inbox.put(None)  # connection lost
 
 
-def run(args) -> int:
+class Retry(Exception):
+    """Not ready yet (Longshot not started, server not reachable): try again a bit later."""
+
+
+def run(args, echo: Callable[[str], None] = print, stop: threading.Event | None = None) -> int:
+    """The bridge until Longshot or the server goes away (BridgeError / Retry / OSError), or `stop` is set."""
     from ..longshot_control import ControlError, Longshot
 
-    result = mw.load(args.file)
-    slot = args.slot
-    if not 1 <= slot <= len(result.players):
-        print(f"error: player 1 to {len(result.players)}", file=sys.stderr)
-        return 1
-    watch = mw.remote_watch(result, slot - 1)
+    data = mw.load_slot(args.file, args.slot)
+    slot = data.slot + 1
+    watch = mw.remote_watch(data)
     host, _, port = args.server.rpartition(":")
     inbox: queue.Queue = queue.Queue()
     try:
-        game = Longshot(args.pipe)
-    except ControlError as exc:
-        print(f"error: {exc}\nStart Longshot with HOS_CONTROL={args.pipe} and HOS_CONTROL_MEM=rw.", file=sys.stderr)
-        return 1
+        game = Longshot(args.pipe, timeout=2)
+    except ControlError:
+        raise Retry(f"waiting for Longshot (started with HOS_CONTROL={args.pipe}, HOS_CONTROL_MEM=rw)") from None
     if game.call("status").get("protocol") != 1:
-        print("warning: Longshot's control protocol is not 1: this bridge may not understand it")
-    link = ServerLink(host or "127.0.0.1", int(port or P.DEFAULT_PORT), inbox)
-    bridge = Bridge(game, watch, mw.room_hash(result), slot, [p.name for p in result.players], link.send)
-    print(f"multiworld {bridge.room_hash}, player {slot} {bridge.names[slot - 1]}: {len(watch)} locations watched")
+        echo("warning: Longshot's control protocol is not 1: this bridge may not understand it")
+    try:
+        link = ServerLink(host or "127.0.0.1", int(port or P.DEFAULT_PORT), inbox)
+    except OSError as exc:
+        game.close()
+        raise Retry(f"cannot reach the server {args.server}: {exc}") from None
+    path = Path(args.file)
+    log = Log(args.log or path.with_name(f"{path.stem}_p{slot}.log"), echo=echo)
+    bridge = Bridge(game, watch, data.room_hash, slot, data.names, link.send, say=log, label=labeller(args.romfs))
+    echo(f"multiworld {bridge.room_hash}, player {slot} {bridge.names[slot - 1]}: {len(watch)} locations watched")
     bridge.hello()
     game.call("subscribe", events=["oot", "state"], every=args.every, changes=True)
     loading = False
-    for ev in game.events():
-        while not inbox.empty():
-            msg = inbox.get()
-            if msg is None:
-                raise BridgeError("connection to the server lost")
-            bridge.on_server(msg)
-        if ev.get("event") == "oot":
-            g = ev.get("game") or {}
-            if loading and not g.get("loading"):
-                bridge.reloaded()
-            loading = bool(g.get("loading"))
-            bridge.on_game(g)
-        elif ev.get("event") == "state" and ev.get("state") != "play":
-            loading = True
+    try:
+        for ev in game.events():
+            if stop is not None and stop.is_set():
+                return 0
+            while not inbox.empty():
+                msg = inbox.get()
+                if msg is None:
+                    raise BridgeError("connection to the server lost")
+                bridge.on_server(msg)
+            if ev.get("event") == "oot":
+                g = ev.get("game") or {}
+                if loading and not g.get("loading"):
+                    bridge.reloaded()
+                loading = bool(g.get("loading"))
+                bridge.on_game(g)
+            elif ev.get("event") == "state" and ev.get("state") != "play":
+                loading = True
+    finally:
+        game.close()
+        with contextlib.suppress(OSError):
+            link.sock.close()
     return 0
+
+
+def run_until_stopped(file: str | Path, server: str, stop: threading.Event, echo: Callable[[str], None] = print,
+                      pipe: str = "1", every: int = 10, log: str | None = None, romfs: str | None = None) -> None:
+    """The bridge again and again (Longshot restarted, connection lost...) until `stop` is set; for the app."""
+    args = argparse.Namespace(file=str(file), slot=None, server=server, pipe=pipe, every=every, log=log, romfs=romfs)
+    waiting = None
+    while not stop.is_set():
+        try:
+            run(args, echo, stop)
+        except Retry as exc:
+            if str(exc) != waiting:  # say it once, not every 5 s
+                echo(str(exc))
+                waiting = str(exc)
+        except BridgeError as exc:
+            echo(f"bridge: {exc}")
+            waiting = None
+            if "server:" in str(exc) or "does not run" in str(exc):
+                return
+        except (OSError, ConnectionError, ValueError) as exc:
+            echo(f"bridge: {exc}")
+            waiting = None
+        stop.wait(5)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m ootrr.tools.mw_longshot", description=__doc__.splitlines()[0])
-    ap.add_argument("file", help="multiworld file")
-    ap.add_argument("--slot", type=int, required=True, help="your player number (from 1)")
+    ap.add_argument("file", help="multiworld file, or your player's data file (joining)")
+    ap.add_argument("--slot", type=int, help="your player number (from 1); not needed with a player's data file")
     ap.add_argument("--server", default=f"127.0.0.1:{P.DEFAULT_PORT}", help="host:port of the multiworld server")
     ap.add_argument("--pipe", default="1", help="Longshot's HOS_CONTROL value (default 1)")
     ap.add_argument("--every", type=int, default=10, help="frames between two looks at the game (default 10)")
+    ap.add_argument("--log", help="log of the exchanges (default: <file>_p<slot>.log next to the file, appended)")
+    ap.add_argument("--romfs", help="RomFS for the items' names (default: Longshot's own, else actor names)")
     args = ap.parse_args(argv)
+    try:
+        mw.load_slot(args.file, args.slot)
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     while True:
         try:
-            return run(args)
+            return run(args, lambda line: print(line, flush=True))
+        except Retry as exc:
+            print(exc, file=sys.stderr)
         except BridgeError as exc:
             print(f"bridge: {exc}", file=sys.stderr)
             if "server:" in str(exc) or "does not run" in str(exc):

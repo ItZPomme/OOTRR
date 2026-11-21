@@ -137,11 +137,14 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   game**, bridge opening at the chosen number to check.
 
 ## Multiworld, then coop
-See [`MULTIWORLD.md`](MULTIWORLD.md). Done (unit tests only): shared fill over several worlds (`ootrr/multiworld.py`),
-protocol and relay server (`ootrr/tools/mw_server.py`). **To do**: per-player mod with the other players' items,
-Eden client in the native module (`nn::socket` from sdk, items given on the game thread), Longshot PC bridge over
-Longshot's control pipe (`ootrr/longshot_control.py`, used live: events, GameData reads, and an item given through the
-game's write queues, saved), desktop app, then coop.
+See [`MULTIWORLD.md`](MULTIWORLD.md). Done: shared fill over several worlds (`ootrr/multiworld.py`), protocol and relay
+server (`ootrr/tools/mw_server.py`), per-player mod (`tools/mw_mod.py`) and the Longshot bridge
+(`tools/mw_longshot.py`): **validated in game** in Longshot v3.0.0 (2026-11-20: a found chest reaches the server,
+received items given and kept after save + reload). **To do**: Heart Containers / Pieces received in Longshot (max
+life is rewritten every frame), the other item kinds to check (bottles, seeds, songs, swords, magic), GOAL detection,
+a player on another network (room code + UPnP: validated on one PC only, 2026-11-21), the Eden client in the native
+module (`nn::socket` from sdk), then coop. The desktop app's Multiworld window (host with a room code, join, install
+and play) is validated in game on one PC.
 
 ## Deku Scrub salesmen (scrubsanity)
 - Mechanism validated in game (a Deku Scrub sells any item, message in the game's language).

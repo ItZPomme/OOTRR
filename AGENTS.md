@@ -54,6 +54,8 @@ python -m ootrr.tools.longshot_app                       # seed installer window
 python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (PyInstaller, windowed)
 python -m ootrr.multiworld --players 2 --names A,B --seed 1 -o output/mw.json   # multiworld seed (docs/MULTIWORLD.md)
 python -m ootrr.tools.mw_server output/mw.json          # multiworld item relay server (port 38300)
+python -m ootrr.tools.mw_host output/mw.json            # same + UPnP + room code; tools.mw_join CODE to join
+python -m ootrr.tools.mw_app                            # Multiworld window (the app's "+ Multiworld" button)
 python -m ootrr.tools.make_icon                          # redraws the logo: ootrr/assets/longshot.png + .ico
 ```
 
@@ -72,7 +74,7 @@ python -m ootrr.tools.make_icon                          # redraws the logo: oot
 | `ootrr/fill.py` | "Assumed fill" placement, shuffled boss rewards, dungeon keys first |
 | `ootrr/keys.py` | Dungeon keys (`small_keys`, `boss_keys`, data in `data/keys.json`): names, chest changes, key events |
 | `ootrr/plando.py` | Plandomizer files: chosen placements (pool, shuffled rewards / songs), start point, settings; used by `fill` through `World.plando` |
-| `ootrr/multiworld.py` | Multiworld: one world per player, shared fill, multiworld file; `mw_protocol.py` + `tools/mw_server.py` relay the items (see `docs/MULTIWORLD.md`) |
+| `ootrr/multiworld.py` | Multiworld: one world per player, shared fill, multiworld file; `mw_protocol.py` + `tools/mw_server.py` relay the items, `mw_log.py` logs who sent what to whom; `mw_code.py` room codes, `mw_session.py` + `upnp.py` hosting / joining, `tools/mw_app.py` the app's window (see `docs/MULTIWORLD.md`) |
 | `ootrr/longshot_control.py` | Longshot's control pipe (`HOS_CONTROL`): JSON commands, GameData events, guest memory, GameData Int lookup |
 | `ootrr/patch.py` | Result -> JSON patch (everything the builder must apply) |
 | `ootrr/race.py` | Races: settings string (format 2, frozen field order: bump `FORMAT` when the shown settings change) and the 5 hash symbols; `tools/seed_icons.py` draws them |

@@ -18,6 +18,12 @@ Server -> game
     INFO    <text>                                   a line to show (another player found something, finished...)
     ERROR   <code> <text>                            then the server closes the connection
     PONG
+
+Joining (the desktop app, before any game; a room code gives the address and the room hash, `ootrr.mw_code`)
+    ROOM    <protocol> <room hash>                   -> PLAYERS <name 1> ... <name N>
+    GETSLOT <protocol> <room hash> <slot>            -> DATA <i> <n> <chunk> (i = 0..n-1), then the server closes:
+                                                        that player's data (`multiworld.slot_to_json`, zlib, base64),
+                                                        never the other worlds
 """
 
 from __future__ import annotations
@@ -27,6 +33,8 @@ DEFAULT_PORT = 38300
 MAX_LINE = 1024
 
 HELLO, CHECK, SYNC, GOAL, PING = "HELLO", "CHECK", "SYNC", "GOAL", "PING"
+ROOM, GETSLOT, PLAYERS, DATA = "ROOM", "GETSLOT", "PLAYERS", "DATA"
+CHUNK = 900  # base64 characters per DATA line
 WELCOME, ITEM, SENT, INFO, ERROR, PONG = "WELCOME", "ITEM", "SENT", "INFO", "ERROR", "PONG"
 
 # ERROR codes
@@ -35,6 +43,22 @@ E_ROOM = "room"           # the game's seed is not this multiworld (room hash)
 E_SLOT = "slot"           # no such player
 E_TAKEN = "taken"         # another game is already connected as this player
 E_HELLO = "hello"         # a message before HELLO
+
+
+def pack(obj) -> list[str]:
+    """JSON -> zlib -> base64, cut into DATA chunks."""
+    import base64
+    import json
+    import zlib
+    text = base64.b64encode(zlib.compress(json.dumps(obj, ensure_ascii=False).encode("utf-8"), 9)).decode("ascii")
+    return [text[i:i + CHUNK] for i in range(0, len(text), CHUNK)] or [""]
+
+
+def unpack(chunks: list[str]):
+    import base64
+    import json
+    import zlib
+    return json.loads(zlib.decompress(base64.b64decode("".join(chunks))).decode("utf-8"))
 
 
 class ProtocolError(ValueError):

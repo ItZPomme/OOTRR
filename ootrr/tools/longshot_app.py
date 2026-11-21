@@ -29,6 +29,7 @@ import ctypes
 import json
 import os
 import queue
+import re
 import secrets
 import subprocess
 import sys
@@ -90,14 +91,46 @@ def pretty(name, value) -> str:
     return settings_ui.value_label(name, value)
 
 
-def find_longshot() -> Path | None:
-    """Newest `Games/Longshot/v*` folder that holds longshot.exe."""
-    for base in (Path.home() / "Games" / "Longshot", Path("C:/Games/Longshot")):
-        if base.is_dir():
-            found = sorted((p for p in base.iterdir() if (p / "longshot.exe").is_file()), reverse=True)
+LONGSHOT_BASES = (Path.home() / "Games" / "Longshot", Path("C:/Games/Longshot"))
+CHANNEL_ORDER = ("stable", "", "rc")  # "" = old layout, versions straight under Games/Longshot
+
+
+def _version_key(name: str) -> tuple:
+    """v3.0.0 > v3.0.0-rc.7 > v3.0.0-rc.4 > v2.9.1 (numbers compared as numbers, a release after its candidates)."""
+    main, _, pre = name.lstrip("vV").partition("-")
+    nums = tuple(int(x) if x.isdigit() else 0 for x in main.split("."))
+    pre_nums = tuple(int(x) for x in re.findall(r"\d+", pre))
+    return nums, (1,) if not pre else (0,) + pre_nums
+
+
+def find_longshot(bases: tuple[Path, ...] = LONGSHOT_BASES) -> Path | None:
+    """The Longshot version folder (the one with longshot.exe) to use: the newest stable one, else the newest of the
+    old layout (`Games/Longshot/v*`), else the newest release candidate. Since 2026-11 the launcher installs to
+    `Games/Longshot/<channel>/<version>` (`stable/v3.0.0`, `rc/v3.0.0-rc.7`)."""
+    for base in bases:
+        if not base.is_dir():
+            continue
+        for channel in CHANNEL_ORDER:
+            folder = base / channel if channel else base
+            if not folder.is_dir():
+                continue
+            found = [p for p in folder.iterdir() if p.is_dir() and (p / "longshot.exe").is_file()]
             if found:
-                return found[0]
+                return max(found, key=lambda p: _version_key(p.name))
+        others = sorted((c for c in base.iterdir() if c.is_dir() and c.name not in CHANNEL_ORDER), key=lambda c: c.name)
+        for channel in others:  # a channel this version of the app does not know
+            found = [p for p in channel.iterdir() if p.is_dir() and (p / "longshot.exe").is_file()]
+            if found:
+                return max(found, key=lambda p: _version_key(p.name))
     return None
+
+
+def saved_longshot(path: str | None) -> Path | None:
+    """The Longshot folder saved in the settings if it still holds longshot.exe (the launcher deletes old versions),
+    otherwise the one found now."""
+    if path and (Path(path) / "longshot.exe").is_file():
+        return Path(path)
+    return find_longshot()
 
 
 def valid_romfs(path: Path) -> bool:
@@ -161,8 +194,9 @@ class App:
                 with contextlib.suppress(Exception):
                     self.values[k] = settings_mod._coerce(k, v)
         self.preset = self.cfg.get("preset", "Standard")
-        self.longshot = Path(self.cfg["longshot"]) if self.cfg.get("longshot") else find_longshot()
-        self.romfs_override = Path(self.cfg["romfs"]) if self.cfg.get("romfs") else None
+        self.longshot = saved_longshot(self.cfg.get("longshot"))
+        # a RomFS saved inside a Longshot version the launcher has since deleted is dropped (default: the game's own)
+        self.romfs_override = Path(self.cfg["romfs"]) if self.cfg.get("romfs") and valid_romfs(Path(self.cfg["romfs"])) else None
         self.target = self.cfg.get("target") if self.cfg.get("target") in TARGETS else "longshot"
         self.emu_dir = Path(self.cfg["emu_dir"]) if self.cfg.get("emu_dir") else emulator_root()
         self.eden_romfs = Path(self.cfg["eden_romfs"]) if self.cfg.get("eden_romfs") else None
@@ -227,6 +261,11 @@ class App:
             pass
 
     def _close(self):
+        win = getattr(self, "_mw_window", None)
+        if win is not None and win.root.winfo_exists():
+            win.close()  # stops hosting (closes the router port) and the bridge; asks first while hosting
+            if win.root.winfo_exists():
+                return  # the player kept the server running
         self._save_cfg()
         self.root.destroy()
 
@@ -624,7 +663,8 @@ class App:
                                "page to download the new OoTRR-App.exe. Racers must all use the same version.")
         else:
             self.text(56, 705, f"OoTRR v{__version__}", self.f_small, FAINT)
-        items = [("Spoiler", "X", "spoiler", self.open_spoiler, bool(self.result.get("spoiler"))),
+        items = [("Multiworld", "+", "multiworld", self.open_multiworld, True),
+                 ("Spoiler", "X", "spoiler", self.open_spoiler, bool(self.result.get("spoiler"))),
                  ("Default Settings", "Y", "defaults", lambda: self.apply_preset("Standard"), True),
                  ("Back", "B", "close", self._close, True)]
         x = W - 28
@@ -815,6 +855,16 @@ class App:
     def open_spoiler(self):
         if self.result.get("spoiler"):
             os.startfile(self.result["spoiler"])
+
+    def open_multiworld(self):
+        """Host or join a multiworld (tools.mw_app), with these settings for every player when hosting."""
+        win = getattr(self, "_mw_window", None)
+        if win is not None and win.root.winfo_exists():
+            win.root.lift()
+            return
+        from .mw_app import MultiworldWindow
+        romfs = self._romfs() if self.target == "longshot" else (self.longshot / "romfs" if self.longshot else None)
+        self._mw_window = MultiworldWindow(self.root, settings=dict(self.values), longshot=self.longshot, romfs=romfs)
 
     def open_update(self):
         if self.new_release:
