@@ -12,6 +12,7 @@ import argparse
 import ctypes
 import os
 import tkinter as tk
+import tkinter.font as tkfont
 from ctypes import wintypes
 from pathlib import Path
 
@@ -193,11 +194,17 @@ class PositionOverlay:
             self.root.destroy()
             raise RuntimeError("This Tk installation does not support a transparent overlay.") from exc
         self.root.attributes("-topmost", True)
+        # Font sizes are in points: with Windows display scaling the text is wider than the default size.
+        big = tkfont.Font(root=self.root, family="Consolas", size=14)
+        small = tkfont.Font(root=self.root, family="Consolas", size=11, weight="bold")
+        self.width = max(OVERLAY_WIDTH, big.measure(self.position_text(-99999.9, -99999.9, -99999.9)) + 24)
+        self.line_y = small.metrics("linespace") + 10
+        self.height = max(OVERLAY_HEIGHT, self.line_y + big.metrics("linespace") + 10)
         self.canvas = tk.Canvas(
-            self.root, width=OVERLAY_WIDTH, height=OVERLAY_HEIGHT, bg=COLOR_KEY, highlightthickness=0, bd=0
+            self.root, width=self.width, height=self.height, bg=COLOR_KEY, highlightthickness=0, bd=0
         )
         self.canvas.pack()
-        self.root.geometry(f"{OVERLAY_WIDTH}x{OVERLAY_HEIGHT}+20+20")
+        self.root.geometry(f"{self.width}x{self.height}+20+20")
         self.root.update_idletasks()
         self.hwnd = int(self.root.wm_frame(), 0)
         self.api.make_click_through(self.hwnd)
@@ -212,6 +219,10 @@ class PositionOverlay:
         self.root.after(POLL_MS, self.update)
 
     @staticmethod
+    def position_text(x: float, y: float, z: float) -> str:
+        return f"X {x:9.1f}   Y {y:9.1f}   Z {z:9.1f}"
+
+    @staticmethod
     def _file_identity(stat: os.stat_result) -> tuple[int, int]:
         return stat.st_dev, stat.st_ino
 
@@ -224,12 +235,11 @@ class PositionOverlay:
         self.canvas.delete("all")
         self.draw_text("LINK POSITION  (world X / Y / Z)", 8, 6, 11, "#8de1ff", True)
         if not self.attached:
-            self.draw_text("Waiting for Fritchii window...", 8, 31, 14, "#ffffff")
+            self.draw_text("Waiting for Fritchii window...", 8, self.line_y, 14, "#ffffff")
         elif self.position is None:
-            self.draw_text("Waiting for live position...", 8, 31, 14, "#ffffff")
+            self.draw_text("Waiting for live position...", 8, self.line_y, 14, "#ffffff")
         else:
-            x, y, z = self.position
-            self.draw_text(f"X {x:9.1f}   Y {y:9.1f}   Z {z:9.1f}", 8, 31, 14, "#ffffff")
+            self.draw_text(self.position_text(*self.position), 8, self.line_y, 14, "#ffffff")
         self.root.update_idletasks()
 
     def poll_log(self) -> None:
@@ -262,13 +272,13 @@ class PositionOverlay:
             self.window_rect = self.api.emulator_rect(self.title_filter)
             if self.window_rect is None:
                 self.attached = False
-                self.root.geometry(f"{OVERLAY_WIDTH}x{OVERLAY_HEIGHT}+20+20")
+                self.root.geometry(f"{self.width}x{self.height}+20+20")
             else:
                 left, top, width, height = self.window_rect
-                x = left + min(self.x_offset, max(0, width - OVERLAY_WIDTH))
-                y = top + min(self.y_offset, max(0, height - OVERLAY_HEIGHT))
+                x = left + min(self.x_offset, max(0, width - self.width))
+                y = top + min(self.y_offset, max(0, height - self.height))
                 self.attached = True
-                self.root.geometry(f"{OVERLAY_WIDTH}x{OVERLAY_HEIGHT}+{x}+{y}")
+                self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
             self.draw()
         self.root.after(POLL_MS, self.update)
 

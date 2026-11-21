@@ -51,7 +51,7 @@ python -m ootrr --plando FILE.json --romfs ROMFS --install   # same, from the co
 python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField --filter Obj_TBox --follow  # Link's position (menu mod) + nearest actors
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
 python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
-python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (PyInstaller, windowed)
+python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (windowed) + OoTRR-Overlay.exe (PyInstaller)
 python -m ootrr.multiworld --players 2 --names A,B --seed 1 -o output/mw.json   # multiworld seed (docs/MULTIWORLD.md)
 python -m ootrr.tools.mw_server output/mw.json          # multiworld item relay server (port 38300)
 python -m ootrr.tools.mw_host output/mw.json            # same + UPnP + room code; tools.mw_join CODE to join
