@@ -61,6 +61,12 @@ def remote_event(rank: int) -> str:
     return f"OoTRR_MW_L{rank:04d}"
 
 
+def remote_actor(rank: int) -> str:
+    """Item dropped by that location's chest: a copy of the placeholder with its own get texts
+    ("You found Pomme's Hookshot!", `ModBuilder._write_mw_actors`)."""
+    return f"OoTRR_MW_A{rank:04d}"
+
+
 def can_hold_remote(loc: Location) -> bool:
     """Locations that may hold another player's item: plain chests whose event can be replaced, as for a key of
     another dungeon (`World._can_hold_key`), not conditional (their AI picks the item)."""
@@ -396,17 +402,21 @@ def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: W
     patch = build_patch(world, Result(data.seed, data.attempts, placements), f"{data.room_hash}-{data.slot + 1}")
     remote = data.sent()
     events: dict[str, str] = {}
+    actors: dict[str, dict[str, str]] = {}
     watch = remote_watch(data, world=world)
     for chest in patch["chests"]:
         placed = remote.get(chest["location"])
         if placed is None:
             continue
         rank = chest["index"]
-        chest["remote"] = {"owner": placed[0], "item": placed[1], "event": remote_event(rank)}
+        chest["remote"] = {"owner": placed[0], "item": placed[1], "event": remote_event(rank),
+                           "actor": remote_actor(rank)}
         events[remote_event(rank)] = location_counter(rank)
+        actors[remote_actor(rank)] = {"owner": data.names[placed[0]], "item": placed[1]}
     if len(events) != len(remote):
         raise ValueError(f"player {data.slot + 1}: {len(remote) - len(events)} remote items outside the chests")
     patch["mw_events"] = events
+    patch["mw_actors"] = actors
     for table, rows in mw_rsdb_rows(events).items():
         patch["rsdb_changes"].setdefault(table, {}).update(rows)
     patch["multiworld"] = {"hash": data.room_hash, "slot": data.slot + 1, "players": data.names,

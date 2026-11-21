@@ -7,6 +7,7 @@ Les fichiers du jeu d'origine ne sont jamais modifiés.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -549,9 +550,12 @@ class ModBuilder:
     SCRUB_TEMPLATE = "Enemy_Scrub_Business_Heart_01"
     SCRUB_TEXT = ("I've got ", " for you! It's ", " rupees", ". Wanna buy it?")  # secours si le modèle manque
 
-    def _write_messages(self, scrub_items: list[str], out_romfs: Path, questions: list[str] = ()) -> list[str]:
+    def _write_messages(self, scrub_items: list[str], out_romfs: Path, questions: list[str] = (),
+                        pouch_texts: dict[str, bytes] | None = None) -> list[str]:
         """Messages des Peste Mojo : un message par objet vendu, dans chaque langue, avec le nom
-        de l'objet tel que le jeu l'écrit (ActorMsg/PouchContent.msbt) et le prix (SimpleShop_Price)."""
+        de l'objet tel que le jeu l'écrit (ActorMsg/PouchContent.msbt) et le prix (SimpleShop_Price).
+        pouch_texts: item texts added to ActorMsg/PouchContent.msbt in every language ({label: text}; the
+        multiworld chest actors, `_mw_texts`)."""
         from .formats.msbt import add_messages, read_labels, read_texts, tag
         from .formats.sarc import Sarc
 
@@ -588,13 +592,15 @@ class ModBuilder:
                 new[f"{self.ANSWER_LABELS[1]:04d}"] = b"No"
             key = "EventFlowMsg/Enemy_Event.msbt"
             sarc.files[key] = add_messages(sarc.files[key], new)
+            if pouch_texts:
+                sarc.files["ActorMsg/PouchContent.msbt"] = add_messages(names, pouch_texts)
             data = sarc.to_bytes()
             rel = path.relative_to(self.romfs).as_posix()
             self.restbl.resize_like(rel[:-3], len(raw), len(data))
             dest = out_romfs / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(self.codec.compress(path.name, data))
-            report.append(f"{rel}: {len(new)} messages de Peste Mojo")
+            report.append(f"{rel}: {len(new)} scrub messages, {len(pouch_texts or {})} item texts")
         return report
     # balise des boutiques : nom de l'objet contenu dans la donnée GameData Shop_SelectItemName
     SHOP_ITEM_NAME_TAG = bytes.fromhex("0e020003001700130053686f705f53656c6563744974656d4e616d65ffff")
@@ -1108,6 +1114,50 @@ class ModBuilder:
             report.append(f"{name}: {what} ({'; '.join(steps)})")
         return report
 
+    MW_TEXT_FORBIDDEN = re.compile("[\x00-\x1f\x7f]")  # control characters (0x0e starts a text tag)
+
+    def _mw_texts(self, mw_actors: dict[str, dict[str, str]]) -> dict[str, bytes]:
+        """Get texts of the multiworld chest actors: "You found Pomme's Hookshot!" and the caption under it,
+        English in every language for now; the item's name as the game writes it in English (mw_log)."""
+        from .mw_log import labeller
+        label = labeller(self.romfs)
+        out: dict[str, bytes] = {}
+        for actor, spec in sorted(mw_actors.items()):
+            owner = self.MW_TEXT_FORBIDDEN.sub("", spec["owner"]).strip() or "another player"
+            item = self.MW_TEXT_FORBIDDEN.sub("", label(spec["item"]))
+            out[f"{actor}_Name"] = f"{owner}'s {item}".encode()
+            out[f"{actor}_GetMessage"] = f"You found {owner}'s {item}!".encode()
+            out[f"{actor}_GetCaption"] = f"It is on its way to {owner}'s game.".encode()
+        return out
+
+    def _write_mw_actors(self, mw_actors: dict[str, dict[str, str]], out_romfs: Path) -> dict[str, dict[str, dict]]:
+        """Actors dropped by the multiworld chests: copies of the placeholder key (multiworld.REMOTE_PLACEHOLDER,
+        "NotPushToPouch": nothing goes to the pouch), one per chest so that each one has its own texts (the get
+        window reads `<actor>_GetMessage` / `_GetCaption`; GAME_KNOWLEDGE: a missing text blocks the game).
+        Writes the archives, returns the RSDB rows."""
+        from .formats.sarc import Sarc
+        from .multiworld import REMOTE_PLACEHOLDER as base
+
+        raw = self.codec.decompress(self.romfs / "Pack" / "Actor" / f"{base}.pack.zs")
+        margin = self.restbl.get(f"Pack/Actor/{base}.pack") - len(raw)
+        rsdb: dict[str, dict[str, dict]] = {"ActorInfo": {}, "GameActorInfo": {}, "PouchActorInfo": {}}
+        for name in sorted(mw_actors):
+            sarc = Sarc(raw)
+            old_param = f"Actor/{base}.engine__actor__ActorParam.bgyml"
+            new_param = f"Actor/{name}.engine__actor__ActorParam.bgyml"
+            sarc.files[new_param] = sarc.files.pop(old_param)
+            sarc.align[new_param] = sarc.align.pop(old_param)
+            data = sarc.to_bytes()
+            rel = f"Pack/Actor/{name}.pack"
+            self.restbl.set(rel, len(data) + margin)
+            dest = out_romfs / (rel + ".zs")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(self.codec.compress(dest.name, data))
+            rsdb["ActorInfo"][name] = {"__new": True, "__copy_from": base, "ActorName": name}
+            rsdb["GameActorInfo"][name] = {"__new": True, "__copy_from": base}
+            rsdb["PouchActorInfo"][name] = {"__new": True, "__copy_from": base}
+        return rsdb
+
     def _write_pickups(self, pickups: dict[str, str], out_romfs: Path) -> dict[str, dict[str, dict]]:
         """Crée des objets ramassables sur mesure : copie du réceptacle de cœur qui donne un autre objet.
 
@@ -1178,7 +1228,8 @@ class ModBuilder:
               timeline_fade_in: list[str] | None = None,
               ainb_edits: dict[str, dict] | None = None,
               key_events: dict[str, tuple[str, str]] | None = None,
-              mw_events: dict[str, str] | None = None) -> list[str]:
+              mw_events: dict[str, str] | None = None,
+              mw_actors: dict[str, dict[str, str]] | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -1301,9 +1352,10 @@ class ModBuilder:
             if set(logic_ints) & set(logic_patches or {}):
                 raise ValueError(f"modules edited twice: {sorted(set(logic_ints) & set(logic_patches))}")
             report += self._write_logic_ints(logic_ints, out_romfs)
-        if scrub_sales or questions:
-            items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items))
-            report += self._write_messages(items, out_romfs, questions or [])
+        if scrub_sales or questions or mw_actors:
+            items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items)) if scrub_sales or questions else []
+            report += self._write_messages(items, out_romfs, questions or [],
+                                           self._mw_texts(mw_actors) if mw_actors else None)
         if key_events or mw_events:
             report += self._write_key_flows(key_events or {}, out_romfs, mw_events)
         if pack_changes:
@@ -1315,6 +1367,10 @@ class ModBuilder:
             for table, rows in self._write_pickups(pickups, out_romfs).items():
                 rsdb_all.setdefault(table, {}).update(rows)
             report.append(f"{len(pickups)} objets ramassables créés : {pickups}")
+        if mw_actors:
+            for table, rows in self._write_mw_actors(mw_actors, out_romfs).items():
+                rsdb_all.setdefault(table, {}).update(rows)
+            report.append(f"{len(mw_actors)} multiworld chest items created")
         if rsdb_all:
             report += self._write_rsdb(rsdb_all, out_romfs)
 

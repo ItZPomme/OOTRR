@@ -134,9 +134,12 @@ class SlotPatchTest(unittest.TestCase):
             for c in remote:
                 self.assertEqual(c["item"], mw.REMOTE_PLACEHOLDER)
                 for h in c["hashes"]:
-                    self.assertEqual(changes[int(h)], {"Drop__DropActor": mw.REMOTE_PLACEHOLDER,
+                    self.assertEqual(changes[int(h)], {"Drop__DropActor": mw.remote_actor(c["index"]),
                                                        "GetEventName": c["remote"]["event"]})
                 self.assertEqual(patch["mw_events"][c["remote"]["event"]], mw.location_counter(c["index"]))
+                owner, item = sent[c["location"]]
+                self.assertEqual(patch["mw_actors"][mw.remote_actor(c["index"])],
+                                 {"owner": "AB"[owner], "item": item})
                 self.assertIn(c["remote"]["event"], patch["rsdb_changes"]["EventSetting"])
             # own items stay as placed
             for c in patch["chests"]:
@@ -144,6 +147,19 @@ class SlotPatchTest(unittest.TestCase):
                     owner, item = self.result.placements[slot][c["location"]]
                     self.assertEqual((owner, c["item"]), (slot, item))
             self.assertEqual(patch["multiworld"]["locations"], mw.remote_watch(self.result, slot))
+
+    def test_chest_item_texts(self):
+        """Each remote chest's item names its owner and the item ("You found B's Hookshot!"); a missing text blocks
+        the game, so all three labels are there; control characters of a name are dropped."""
+        from ootrr.modbuild import ModBuilder
+        builder = ModBuilder.__new__(ModBuilder)
+        builder.romfs = None
+        texts = builder._mw_texts({"OoTRR_MW_A0001": {"owner": "B", "item": "Item_Hookshot"},
+                                   "OoTRR_MW_A0002": {"owner": "Ev\x0eil\n", "item": "Item_Hookshot"}})
+        self.assertEqual(set(texts), {f"OoTRR_MW_A000{i}_{k}" for i in (1, 2) for k in ("Name", "GetMessage", "GetCaption")})
+        self.assertTrue(texts["OoTRR_MW_A0001_GetMessage"].startswith(b"You found B's "))
+        self.assertTrue(texts["OoTRR_MW_A0002_GetMessage"].startswith(b"You found Evil's "))
+        self.assertFalse(any(b"\x0e" in t or b"\n" in t for t in texts.values()))
 
     def test_remote_items_only_in_plain_chests(self):
         from ootrr.world import World

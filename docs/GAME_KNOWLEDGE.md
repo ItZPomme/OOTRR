@@ -624,6 +624,11 @@ not change) **[game]**.
   `EventTriggerAddOrRemovePouchContent` gives an item, but the get window subscript
   `GetPouchContent:GetPouchContentByActorName` never opens and the event stays stuck (softlock). GameData written
   inside an event is queued like any write: a branch right after reads the old value. See docs/MULTIWORLD.md.
+- A **copy of a chest item actor with its own texts** works **[game]** (Longshot, 2026-11-21): renamed copy of
+  `Obj_MiniGame_SmallKey`'s archive (ActorParam renamed) + RSDB rows `ActorInfo` (ActorName = the copy),
+  `GameActorInfo`, `PouchActorInfo` copied from the key; the chest's get window shows the copy's
+  `ActorMsg/PouchContent` texts `<copy>_GetMessage` / `_GetCaption` (`_Name` added too). Used by the multiworld
+  chests (one copy per chest, "You found Bot's Purple Rupee!").
 - PowerShell 5 adds a UTF-8 BOM with `Set-Content -Encoding utf8`: breaks JSON files.
 - Windows paths too long: build in a temporary folder then copy.
 

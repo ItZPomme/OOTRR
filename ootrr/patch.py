@@ -205,7 +205,8 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
             continue
         if chest.get("remote"):  # multiworld: another player's item (multiworld.slot_patch)
             for h in chest["hashes"]:
-                changes[int(h)] = {"Drop__DropActor": chest["item"], "GetEventName": chest["remote"]["event"]}
+                changes[int(h)] = {"Drop__DropActor": chest["remote"].get("actor", chest["item"]),
+                                   "GetEventName": chest["remote"]["event"]}
             continue
         chain = next((c for c in chains if chest["item"] in c), None)
         progressive = chain and progressive_chest(chest["item"], chains, patch.get("progressive_pouch"),
