@@ -54,7 +54,6 @@
         "Colossus_Bean_Planted": "is_child and Magic_Bean"
       },
       "exits": {
-        "Haunted Wasteland": "True",
         "Spirit Temple Lobby": "True"
       }
     },
@@ -169,7 +168,7 @@
     },
     "Haunted Wasteland": {
       "exits": {
-        "Gerudo Fortress": "True",
+        "Gerudo Fortress": "is_adult and Gerudo_Membership_Card and (can_use(Hover_Boots) or can_use_longshot)",
         "Desert Colossus": "can_see_invisible"
       }
     },
