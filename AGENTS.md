@@ -49,6 +49,7 @@ python -m ootrr.tools.saves backup NAME                  # emulator saves (emula
 python -m ootrr.tools.plando_app [FILE.json]            # plandomizer window: chosen items, start age / point, settings
 python -m ootrr --plando FILE.json --romfs ROMFS --install   # same, from the command line
 python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField --filter Obj_TBox --follow  # Link's position (menu mod) + nearest actors
+python -m ootrr.tools.checkwatch --romfs ROMFS           # live: GameData changes, event, nearest actor hashes (Longshot, HOS_CONTROL=1)
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
 python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
 python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (windowed) + OoTRR-Overlay.exe (PyInstaller)
