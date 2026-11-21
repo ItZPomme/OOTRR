@@ -28,7 +28,7 @@ from .. import settings as settings_mod
 from .. import settings_ui, starting
 from ..modbuild import emulator_root
 from ..world import DataError, World
-from .longshot_app import CONFIG, QueueWriter, TARGETS, find_longshot, game_running, valid_romfs
+from .longshot_app import CONFIG, QueueWriter, TARGETS, game_running, saved_longshot, valid_romfs
 
 APP_DIR = CONFIG.parent
 OUT = APP_DIR / "plando"
@@ -54,6 +54,7 @@ class PlandoApp:
         self.path: Path | None = None
         self.settings: dict = {k: v for k, v in settings_mod.defaults().items() if k != "spawn_point"}
         self.placements: dict[str, str] = {}
+        self.starting_items: list[str] = []
         self.world: World | None = None
         self.kinds: dict[str, str] = {}
         self.log_queue: queue.Queue = queue.Queue()
@@ -66,14 +67,19 @@ class PlandoApp:
         self.item_search_var = tk.StringVar(value="")
         self.target_var = tk.StringVar(value=self.cfg.get("target") if self.cfg.get("target") in TARGETS
                                        else "longshot")
-        longshot = self.cfg.get("longshot") or (str(find_longshot()) if find_longshot() else "")
+        found = saved_longshot(self.cfg.get("longshot"))
+        longshot = str(found) if found else ""
         emu = self.cfg.get("emu_dir") or (str(emulator_root()) if emulator_root() else "")
         self.dirs = {"longshot": longshot, "eden": emu}
-        self.romfs_dirs = {"longshot": self.cfg.get("romfs") or "", "eden": self.cfg.get("eden_romfs") or ""}
+        romfs = self.cfg.get("romfs") or ""
+        if romfs and not valid_romfs(Path(romfs)):  # inside a Longshot version deleted since
+            romfs = ""
+        self.romfs_dirs = {"longshot": romfs, "eden": self.cfg.get("eden_romfs") or ""}
         self.game_var = tk.StringVar()
         self.romfs_var = tk.StringVar()
         self.only_set_var = tk.BooleanVar(value=False)
         self._build()
+        self._update_start_items_button()
         if path:
             self.open_file(Path(path))
         else:
@@ -139,6 +145,13 @@ class PlandoApp:
         ttk.Button(top, text="Save as…", command=lambda: self.save_dialog(True)).pack(side="right", padx=4)
         ttk.Button(top, text="Save", command=lambda: self.save_dialog(False)).pack(side="right")
         ttk.Button(top, text="New", command=self.new_plando).pack(side="right", padx=4)
+
+        start_bar = ttk.Frame(self.root, padding=(10, 0, 10, 6))
+        start_bar.pack(fill="x")
+        self.start_items_button = ttk.Button(start_bar, text="Choose starting items…",
+                                             command=self.open_start_items)
+        self.start_items_button.pack(side="left")
+        ttk.Label(start_bar, text="Select items Link receives at the start.").pack(side="left", padx=8)
 
         body = ttk.PanedWindow(self.root, orient="horizontal")
         body.pack(fill="both", expand=True, padx=10)
@@ -377,6 +390,88 @@ class PlandoApp:
             self.fill_tree()
             self.show_location()
 
+    def _update_start_items_button(self):
+        self.start_items_button.configure(text=f"Choose starting items… ({len(self.starting_items)})")
+
+    def open_start_items(self):
+        if self.world is None:
+            return
+        world = self.world
+        win = tk.Toplevel(self.root)
+        win.title("Starting items")
+        win.geometry("760x480")
+        win.minsize(620, 360)
+        win.transient(self.root)
+
+        search_var = tk.StringVar()
+        search = ttk.Frame(win, padding=8)
+        search.pack(fill="x")
+        ttk.Label(search, text="Search").pack(side="left")
+        ttk.Entry(search, textvariable=search_var).pack(side="left", fill="x", expand=True, padx=6)
+
+        lists = ttk.PanedWindow(win, orient="horizontal")
+        lists.pack(fill="both", expand=True, padx=8)
+        available_frame = ttk.LabelFrame(lists, text="Available items")
+        chosen_frame = ttk.LabelFrame(lists, text="Selected starting items")
+        lists.add(available_frame, weight=1)
+        lists.add(chosen_frame, weight=1)
+        available = tk.Listbox(available_frame, selectmode="extended", exportselection=False)
+        chosen = tk.Listbox(chosen_frame, selectmode="extended", exportselection=False)
+        available_scroll = ttk.Scrollbar(available_frame, orient="vertical", command=available.yview)
+        chosen_scroll = ttk.Scrollbar(chosen_frame, orient="vertical", command=chosen.yview)
+        available.configure(yscrollcommand=available_scroll.set)
+        chosen.configure(yscrollcommand=chosen_scroll.set)
+        available.pack(side="left", fill="both", expand=True, padx=(5, 0), pady=5)
+        available_scroll.pack(side="right", fill="y", padx=(0, 5), pady=5)
+        chosen.pack(side="left", fill="both", expand=True, padx=(5, 0), pady=5)
+        chosen_scroll.pack(side="right", fill="y", padx=(0, 5), pady=5)
+
+        def refresh_available():
+            needle = search_var.get().lower().strip()
+            available.delete(0, "end")
+            for name in plando_mod.startable_items(world):
+                if not needle or needle in name.lower():
+                    available.insert("end", name)
+
+        def refresh_chosen():
+            chosen.delete(0, "end")
+            for name in self.starting_items:
+                chosen.insert("end", name)
+            self._update_start_items_button()
+
+        def add_selected():
+            self.starting_items.extend(available.get(i) for i in available.curselection())
+            refresh_chosen()
+
+        def remove_selected():
+            for i in reversed(chosen.curselection()):
+                del self.starting_items[i]
+            refresh_chosen()
+
+        def add_double_clicked(event: tk.Event):
+            index = available.nearest(event.y)
+            if index >= 0:
+                available.selection_clear(0, "end")
+                available.selection_set(index)
+                add_selected()
+
+        def remove_on_delete(event: tk.Event):
+            if event.widget is chosen:
+                remove_selected()
+
+        search_var.trace_add("write", lambda *_: refresh_available())
+        available.bind("<Double-Button-1>", add_double_clicked)
+        chosen.bind("<Delete>", remove_on_delete)
+        buttons = ttk.Frame(win, padding=8)
+        buttons.pack(fill="x")
+        ttk.Button(buttons, text="Add selected →", command=add_selected).pack(side="left")
+        ttk.Button(buttons, text="← Remove selected", command=remove_selected).pack(side="left", padx=6)
+        ttk.Button(buttons, text="Clear all", command=lambda: (self.starting_items.clear(), refresh_chosen())).pack(
+            side="left")
+        ttk.Button(buttons, text="Done", command=win.destroy).pack(side="right")
+        refresh_available()
+        refresh_chosen()
+
     # ------------------------------------------------------------------ settings dialog
     def open_settings(self):
         win = tk.Toplevel(self.root)
@@ -441,24 +536,29 @@ class PlandoApp:
 
     # ------------------------------------------------------------------ files
     def new_plando(self):
-        if self.placements and not messagebox.askyesno("New plando", "Forget the chosen placements?"):
+        if (self.placements or self.starting_items) and not messagebox.askyesno(
+            "New plando", "Forget the chosen placements and starting items?"
+        ):
             return
         self.path = None
         self.placements = {}
+        self.starting_items = []
+        self._update_start_items_button()
         self.seed_var.set("")
         self.root.title("OoTRR Plandomizer")
         self.rebuild_world()
 
-    def to_data(self) -> tuple[str | None, dict, dict | None, dict]:
+    def to_data(self) -> tuple[str | None, dict, dict | None, dict, list[str]]:
         defaults = settings_mod.defaults()
         settings = {k: v for k, v in self.settings.items() if k != "spawn_point" and v != defaults[k]}
         if self.age_var.get() != defaults["starting_age"]:
             settings["starting_age"] = self.age_var.get()
-        return self.seed_var.get().strip() or None, settings, self.spawn(), dict(self.placements)
+        return (self.seed_var.get().strip() or None, settings, self.spawn(), dict(self.placements),
+                list(self.starting_items))
 
     def save_to(self, path: Path):
-        seed, settings, spawn, placements = self.to_data()
-        plando_mod.save(path, seed, settings, spawn, placements)
+        seed, settings, spawn, placements, start_items = self.to_data()
+        plando_mod.save(path, seed, settings, spawn, placements, start_items)
 
     def save_dialog(self, ask: bool):
         path = self.path
@@ -490,6 +590,8 @@ class PlandoApp:
         self.age_var.set(age if age in ("child", "adult") else "child")
         self.seed_var.set(str(data.get("seed", "")))
         self.placements = {str(k): str(v) for k, v in data.get("placements", {}).items()}
+        self.starting_items = list(data.get("start_items", []))
+        self._update_start_items_button()
         self.fill_spawns(data.get("spawn"))
         self.path = path
         self.root.title(f"OoTRR Plandomizer - {path.name}")
@@ -543,9 +645,17 @@ class PlandoApp:
     def generate(self, install: bool):
         if self.running:
             return
+        if self.world is None:
+            messagebox.showerror("Plando", "World data is not available.")
+            return
         problems = self.problems()
         if problems:
             messagebox.showerror("Plando", "Fix these placements first:\n\n" + "\n".join(problems.values()))
+            return
+        start_errors = plando_mod.validate_start_items(self.world, self.starting_items)
+        if start_errors:
+            messagebox.showerror("Starting items", "Fix the selected starting items:\n\n"
+                                  + "\n".join(start_errors))
             return
         OUT.mkdir(parents=True, exist_ok=True)
         current = OUT / "_current.json"

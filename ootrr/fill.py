@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 from . import keys as keys_mod
 from .search import State
-from .world import Location, World
+from .world import JUNK_REPLACEMENT, Location, World
 
 
 class FillError(RuntimeError):
@@ -40,14 +40,25 @@ def _candidates(world: World, item: str, locations: list[Location], placements: 
             if l.name not in placements and world.can_place(item, l) and state.can_reach(l)]
 
 
+def _pool_with_start_items(world: World, starting_items: list[str]) -> list[tuple[str, str | None]]:
+    """Replace matching pool items with junk while keeping the pool size unchanged."""
+    pool = world.pool()
+    for item in starting_items:
+        for i, (name, _) in enumerate(pool):
+            if name == item:
+                pool[i] = (JUNK_REPLACEMENT, None)
+                break
+    return pool
+
+
 def _assumed_fill(world: World, rng: random.Random, items: list[str], locations: list[Location],
-                  placements: dict[str, str], others: list[str] = ()) -> None:
+                  placements: dict[str, str], others: list[str] = (), starting_items: list[str] = ()) -> None:
     """Place les objets de progression, en commençant à chaque étape par celui
     qui a le moins de lieux possibles (évite les impasses). `others`: progression items placed later,
     assumed owned meanwhile (dungeon keys are placed first)."""
     items = list(items)
     rng.shuffle(items)
-    assumed = list(items) + list(others)
+    assumed = list(items) + list(others) + list(starting_items)
     while items:
         options = {name: _candidates(world, name, locations, placements, assumed)
                    for name in dict.fromkeys(items)}
@@ -61,7 +72,8 @@ def _assumed_fill(world: World, rng: random.Random, items: list[str], locations:
 
 
 def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | None]], shuffled: list[Location],
-                placements: dict[str, str], no_logic: bool) -> list[tuple[str, str | None]]:
+                placements: dict[str, str], no_logic: bool, starting_items: list[str] = ()) \
+        -> list[tuple[str, str | None]]:
     """Dungeon keys first (data/keys.json), returns the rest of the pool.
 
     small_keys=own_dungeon: in each vanilla small key room, as many keys as in the vanilla game, among the room's
@@ -88,7 +100,7 @@ def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | No
     if no_logic:
         return rest + [(item, None) for item in keys]  # placed with the rest, placement rules kept
     others = [item for item, d in rest if d is None and world.is_progression(item)]
-    _assumed_fill(world, rng, keys, shuffled, placements, others)
+    _assumed_fill(world, rng, keys, shuffled, placements, others, starting_items)
     return rest
 
 
@@ -109,15 +121,15 @@ def _plando_split(locations: list[Location], plando: dict[str, str],
     return free, items
 
 
-def _attempt(world: World, rng: random.Random) -> dict[str, str]:
+def _attempt(world: World, rng: random.Random, starting_items: list[str] = ()) -> dict[str, str]:
     # logic = none: random placement, no reachability check (same random draws as generator.cpp)
     no_logic = world.settings.get("logic") == "none"
-    placements, shuffled, free_pool = prefill(world, rng)
+    placements, shuffled, free_pool = prefill(world, rng, starting_items)
     progression = [] if no_logic else [i for i in free_pool if world.is_progression(i)]
     rest = list(free_pool) if no_logic else [i for i in free_pool if not world.is_progression(i)]
 
     # 2. objets de progression, 3. le reste
-    _assumed_fill(world, rng, progression, shuffled, placements)
+    _assumed_fill(world, rng, progression, shuffled, placements, starting_items=starting_items)
 
     # 3. le reste : d'abord les objets qui ont le moins de lieux possibles (pas au sol)
     empty = [l for l in shuffled if l.name not in placements]
@@ -133,40 +145,42 @@ def _attempt(world: World, rng: random.Random) -> dict[str, str]:
     return placements
 
 
-def prefill(world: World, rng: random.Random) -> tuple[dict[str, str], list[Location], list[str]]:
+def prefill(world: World, rng: random.Random, starting_items: list[str] = ()) \
+        -> tuple[dict[str, str], list[Location], list[str]]:
     """Everything placed before the free pool: fixed locations, shuffled rewards and songs, plando, dungeon keys,
     maps and compasses. Returns (placements, shuffled locations, items of the pool left to place). Also used per
     world by the multiworld fill (`ootrr.multiworld`): these items always stay in their own world."""
     no_logic = world.settings.get("logic") == "none"
+    starting_items = list(starting_items)
     plando = getattr(world, "plando", None) or {}  # location -> item chosen by the player (ootrr/plando.py)
     placements = {l.name: l.vanilla for l in world.fixed_locations()}
+    pool = _pool_with_start_items(world, starting_items)
     if world.settings.get("shuffle_rewards") == "shuffled":
         # pierres et médaillons mélangés entre les boss et la poche de Link
         rewards, items = _plando_split(world.reward_locations(), plando, placements)
         # tirage refait tant qu'il rend la partie infinissable même avec tous les autres objets
-        everything = [item for item, _ in world.pool()]
+        everything = [item for item, _ in pool]
         for _ in range(200):
             rng.shuffle(items)
             trial = dict(placements)
             trial.update({loc.name: item for loc, item in zip(rewards, items)})
-            if no_logic or State(world, everything).sweep(trial).beaten():
+            if no_logic or State(world, everything + starting_items).sweep(trial).beaten():
                 break
         for loc, item in zip(rewards, items):
             placements[loc.name] = item
     if world.settings.get("shuffle_songs") == "shuffle":
         # chants mélangés entre les emplacements de chants (même méthode ; même ordre dans generator.cpp)
         songs, items = _plando_split(world.song_locations(), plando, placements)
-        everything = [item for item, _ in world.pool()]
+        everything = [item for item, _ in pool]
         for _ in range(200):
             rng.shuffle(items)
             trial = dict(placements)
             trial.update({loc.name: item for loc, item in zip(songs, items)})
-            if no_logic or State(world, everything).sweep(trial).beaten():
+            if no_logic or State(world, everything + starting_items).sweep(trial).beaten():
                 break
         for loc, item in zip(songs, items):
             placements[loc.name] = item
     shuffled = world.shuffled_locations()
-    pool = world.pool()
     if plando:
         from .plando import take_from_pool
         for loc in shuffled:
@@ -174,7 +188,7 @@ def prefill(world: World, rng: random.Random) -> tuple[dict[str, str], list[Loca
                 if not take_from_pool(pool, plando[loc.name]):
                     raise FillError(f"plando: no room in the pool for {plando[loc.name]} (no rupee left to replace)")
                 placements[loc.name] = plando[loc.name]
-    pool = _place_keys(world, rng, pool, shuffled, placements, no_logic)
+    pool = _place_keys(world, rng, pool, shuffled, placements, no_logic, starting_items)
 
     # 1. objets liés à un donjon (cartes, boussoles) : dans un coffre de ce donjon
     for item, dungeon in pool:
@@ -188,28 +202,29 @@ def prefill(world: World, rng: random.Random) -> tuple[dict[str, str], list[Loca
     return placements, shuffled, [item for item, dungeon in pool if dungeon is None]
 
 
-def check(world: World, placements: dict[str, str]) -> tuple[bool, list[str]]:
-    state = State(world).sweep(placements)
+def check(world: World, placements: dict[str, str], starting_items: list[str] = ()) -> tuple[bool, list[str]]:
+    state = State(world, starting_items).sweep(placements)
     return state.beaten(), sorted(set(world.locations) - state.collected)
 
 
-def generate(world: World, seed: int, max_attempts: int = 20) -> Result:
+def generate(world: World, seed: int, max_attempts: int = 20, starting_items: list[str] = ()) -> Result:
     rng = random.Random(seed)
+    starting_items = list(starting_items)
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
-            placements = _attempt(world, rng)
+            placements = _attempt(world, rng, starting_items)
         except FillError as exc:
             last_error = exc
             continue
-        beaten, unreachable = check(world, placements)
+        beaten, unreachable = check(world, placements, starting_items)
         if world.settings.get("logic") == "none":
-            return Result(seed, attempt, placements, [], unreachable)
+            return Result(seed, attempt, placements, starting_items, unreachable)
         if not beaten:
             last_error = FillError("seed non finissable")
             continue
         if world.settings["accessibility"] == "all" and unreachable:
             last_error = FillError(f"{len(unreachable)} lieux inaccessibles, ex. {unreachable[0]}")
             continue
-        return Result(seed, attempt, placements, [], unreachable)
+        return Result(seed, attempt, placements, starting_items, unreachable)
     raise FillError(f"échec après {max_attempts} tentatives : {last_error}")

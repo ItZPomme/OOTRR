@@ -245,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         p.error("--install nécessite --romfs")
 
     plando = None
+    start_items = []
     if args.plando:
         from . import plando as plando_mod
         try:
@@ -294,13 +295,17 @@ def main(argv: list[str] | None = None) -> int:
         world = World(resolved)
     if plando is not None:
         errors = plando_mod.validate(world, plando.get("placements", {}))
+        start_items = list(plando.get("start_items", []))
+        errors.extend(plando_mod.validate_start_items(world, start_items))
         if errors:
             print("Erreur : plando invalide :\n  " + "\n  ".join(errors), file=sys.stderr)
             return 2
         world.plando = dict(plando.get("placements", {}))
     t0 = time.perf_counter()
+    # Start items can remove many of the few ground items that shuffled scrub checks accept.
+    max_attempts = 100 if start_items and world.settings.get("shuffle_scrubs") else 20
     try:
-        result = generate(world, seed)
+        result = generate(world, seed, max_attempts=max_attempts, starting_items=start_items)
     except FillError as exc:
         print(f"Seed {seed} : {exc}", file=sys.stderr)
         return 1

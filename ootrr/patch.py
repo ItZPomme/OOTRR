@@ -69,7 +69,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "rsdb_changes": rsdb,
         "key_events": {event: list(key) for event, key in key_events.items()},
         "pack_changes": world.pack_changes(),
-        "start_items": world.start_items(result.placements),
+        "start_items": world.start_items(result.placements) + result.starting_items,
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
         "event_changes": _merge_events(world.reward_event_changes(result.placements),
                                        world.ocarina_event_changes(result.placements)),

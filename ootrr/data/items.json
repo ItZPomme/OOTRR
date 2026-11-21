@@ -67,8 +67,10 @@
     "Item_Token_Gerudo":      {"logic": "Gerudo_Membership_Card"},
     "Item_ZeldaLetter":       {"logic": "Zeldas_Letter"},
     "Item_PocketEgg":         {"logic": "Pocket_Egg", "trade": true, "_doc": "start of the adult trade sequence: a logic item only with adult_trade_sequence"},
-    "Goron_Tunic":            {"logic": "Goron_Tunic", "_doc": "acteur réel inconnu : donné par un PNJ, jamais mélangé"},
-    "Zora_Tunic":             {"logic": "Zora_Tunic", "_doc": "acteur réel inconnu : donné par un PNJ, jamais mélangé"},
+    "Goron_Tunic":            {"logic": "Goron_Tunic", "_doc": "logic-only alias; the pouch actor is Armor_Adult_Goron"},
+    "Zora_Tunic":             {"logic": "Zora_Tunic", "_doc": "logic-only alias; the pouch actor is Armor_Adult_Zora"},
+    "Armor_Adult_Goron":      {"logic": "Goron_Tunic", "_doc": "real pouch actor for the Goron Tunic"},
+    "Armor_Adult_Zora":       {"logic": "Zora_Tunic", "_doc": "real pouch actor for the Zora Tunic"},
 
     "Item_Melody_ZeldaLullaby":   {"logic": "Zeldas_Lullaby"},
     "Item_Melody_EponaSong":      {"logic": "Eponas_Song"},

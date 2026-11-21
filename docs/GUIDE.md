@@ -266,6 +266,12 @@ It uses the same game, emulator and RomFS folders as the desktop app:
 
 - **Starting age** and **Start point** (top): child or adult, and where Link appears (the list of
   `data/spawns.json` for that age; "Default" = Link's house / Temple of Time).
+- **Starting items…**: choose items Link receives at the start. If a selected item is in the shuffled pool, that
+  copy is replaced by a green rupee; items not in the pool are added as extra starting items. Only items supported by
+  the game's pouch action are listed; dungeon maps and compasses use `maps_compasses`, and dungeon keys use their key
+  settings. The tunics appear as `Armor_Adult_Goron` and `Armor_Adult_Zora` (their game actor names); `Goron_Tunic`
+  and `Zora_Tunic` are logic aliases, not pouch actor names. The selection is saved in the plando file and included
+  in the spoiler.
 - **Settings…**: the same settings as the desktop app. The list of locations follows them (scrubs, Skulltulas,
   songs... only appear when they are shuffled).
 - **Locations** (left, by region): select one, then double-click an item on the right. "(Random)" leaves it to the

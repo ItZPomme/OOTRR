@@ -14,7 +14,10 @@ from .world import World
 
 
 def seed_hash(world: World, result: Result) -> str:
-    blob = json.dumps({"s": world.settings, "p": result.placements, "v": __version__}, sort_keys=True)
+    data = {"s": world.settings, "p": result.placements, "v": __version__}
+    if result.starting_items:
+        data["i"] = result.starting_items
+    blob = json.dumps(data, sort_keys=True)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:10].upper()
 
 
@@ -63,6 +66,7 @@ def build(world: World, result: Result) -> dict[str, Any]:
         "hash": seed_id,
         "hash_symbols": hash_symbols(seed_id),  # the 5 symbols the desktop app draws
         "settings": world.settings,
+        "starting_items": result.starting_items,
         "attempts": result.attempts,
         "beatable": beatable,
         "required": [{"location": l, "item": i, "shuffled": world.locations[l].shuffle} for l, i in required],
@@ -85,6 +89,8 @@ def to_text(spoiler: dict[str, Any]) -> str:
     sp = spawn(spoiler["settings"])
     age = "adulte" if spoiler["settings"].get("starting_age") == "adult" else "enfant"
     out.append(f"  Départ : Link {age}, " + (f"{sp['region']} ({sp['banc']} / {sp['pos']})" if sp else "maison de Link"))
+    if spoiler.get("starting_items"):
+        out.append("  Objets de départ : " + ", ".join(spoiler["starting_items"]))
     if not spoiler.get("beatable", True):
         out += ["", "!! Seed not beatable according to the logic (logic = none) !!"]
     out += ["", "== Objets requis dans les coffres mélangés (voie du héros) =="]

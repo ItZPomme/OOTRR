@@ -7,10 +7,12 @@ A plando file is JSON:
       "seed": "1234",                                   # optional: placement of the other items
       "settings": {"starting_age": "adult", ...},       # optional: same names as settings.py
       "spawn": {"age": "adult", "region": "Hyrule Field"},   # optional: one of data/spawns.json
+      "start_items": ["Item_Hookshot"],                  # optional: given to Link at the start
       "placements": {"HF Grotto Chest 1": "Item_Hookshot", ...}
     }
 
 `python -m ootrr --plando FILE [--romfs ROMFS --install]`; `python -m ootrr.tools.plando_app` edits these files.
+Starting items replace matching items in the shuffled pool with a green rupee; items outside the pool are extra.
 
 Placements may target the shuffled locations of these settings (the pool), and, when they are shuffled, the boss
 rewards (`shuffle_rewards = shuffled`: a stone or a medallion) and the song locations (`shuffle_songs = shuffle`: a
@@ -29,6 +31,20 @@ from . import starting
 
 FORMAT = 1
 
+UNSUPPORTED_START_ITEMS = {
+    "Goron_Tunic": "logic-only alias; use Armor_Adult_Goron",
+    "Zora_Tunic": "logic-only alias; use Armor_Adult_Zora",
+    "Item_Dungeon_Map": "PouchActorInfo marks it NotPushToPouch; use maps_compasses = start_with",
+    "Item_Dungeon_Compass": "PouchActorInfo marks it NotPushToPouch; use maps_compasses = start_with",
+    "Tbox_MagicJar_Large": "PouchActorInfo marks it NotPushToPouch",
+}
+
+
+def _unsupported_start_reason(item: str) -> str | None:
+    if item.startswith("OoTRR_"):
+        return "custom dungeon keys are managed by the dungeon-key settings, not PouchAdd"
+    return UNSUPPORTED_START_ITEMS.get(item)
+
 
 class PlandoError(ValueError):
     pass
@@ -44,6 +60,10 @@ def load(path: str | Path) -> dict[str, Any]:
     for key, kind in (("settings", dict), ("placements", dict)):
         if not isinstance(data.get(key, {}), kind):
             raise PlandoError(f"plando file {path}: \"{key}\" must be an object")
+    if not isinstance(data.get("start_items", []), list) or not all(
+        isinstance(item, str) for item in data.get("start_items", [])
+    ):
+        raise PlandoError(f"plando file {path}: \"start_items\" must be a list of item names")
     return data
 
 
@@ -111,6 +131,23 @@ def validate(world, placements: dict[str, str]) -> list[str]:
     return errors
 
 
+def validate_start_items(world, items: list[str]) -> list[str]:
+    """Problems with the selected starting items (empty = valid)."""
+    errors = []
+    for item in items:
+        reason = _unsupported_start_reason(item)
+        if reason:
+            errors.append(f"{item}: cannot be added at the start ({reason})")
+        elif item not in world.items:
+            errors.append(f"unknown starting item {item}")
+    return errors
+
+
+def startable_items(world) -> list[str]:
+    """Items supported by the game's PouchAdd action."""
+    return sorted(name for name in world.items if _unsupported_start_reason(name) is None)
+
+
 def take_from_pool(pool: list[tuple[str, str | None]], item: str) -> bool:
     """Removes the item from the pool, or a rupee in its place (an extra copy); False if neither is there."""
     for i, (name, _) in enumerate(pool):
@@ -125,12 +162,14 @@ def take_from_pool(pool: list[tuple[str, str | None]], item: str) -> bool:
 
 
 def save(path: str | Path, seed: str | None, settings: dict[str, Any], spawn: dict | None,
-         placements: dict[str, str]) -> None:
+         placements: dict[str, str], start_items: list[str] | None = None) -> None:
     data: dict[str, Any] = {"format": FORMAT}
     if seed:
         data["seed"] = str(seed)
     data["settings"] = settings
     if spawn:
         data["spawn"] = spawn
+    if start_items:
+        data["start_items"] = list(start_items)
     data["placements"] = dict(sorted(placements.items()))
     Path(path).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
