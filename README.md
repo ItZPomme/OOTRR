@@ -97,6 +97,9 @@ python -m ootrr.tools.ingame_spoiler --romfs ...   # spoiler of the in-game menu
 python -m ootrr.tools.ingame_spoiler --seed 727557 --set shuffle_shops=4   # ... or menu seed + settings
 ```
 
+A [PopTracker](https://github.com/black-sliver/PopTracker) map tracker built from this logic lives in its own
+repository: [OOTRR-Tracker](https://github.com/ItZPomme/OOTRR-Tracker).
+
 ## Structure
 
 | Path | Role |
