@@ -68,8 +68,8 @@ class PlandoTest(unittest.TestCase):
 
     def test_impossible_plando_fails(self):
         # the only Megaton Hammer locked in a chest that needs it: that chest can never be opened
-        world = make_world({}, None, {"GV Heart Piece Chest": "Item_Hammer"})
-        self.assertIn("Megaton_Hammer", world.locations["GV Heart Piece Chest"].rule_src)
+        world = make_world({}, None, {"GV Chest": "Item_Hammer"})
+        self.assertIn("Megaton_Hammer", world.locations["GV Chest"].rule_src)
         self.assertEqual(plando.validate(world, world.plando), [])
         with self.assertRaises(FillError):
             generate(world, 1, max_attempts=3)
