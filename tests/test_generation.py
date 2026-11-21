@@ -142,7 +142,9 @@ class WorldTests(unittest.TestCase):
         replaced = {s for scenes in skips.values() for s in scenes}
         self.assertGreater(len(replaced), 50)
         self.assertLessEqual(set(fade_in), replaced)
-        self.assertLessEqual(replaced, set(data["game_skippable"]))
+        self.assertLessEqual(replaced, set(data["game_skippable"]) | set(data["timeline_gated"]))
+        # the Deku Tree arrival event (Navi's tutorial, which unlocks the D-pad guide) must still run
+        self.assertIn("Dm_Deku_0000", replaced)
         self.assertFalse(replaced & set(data["game_no_skip"]))
         self.assertFalse(replaced & set(data["timeline_kept"]))
         seen = {k for k, v in world.start_flags().items() if k.startswith("HavePlayedEvent.") and v is True}

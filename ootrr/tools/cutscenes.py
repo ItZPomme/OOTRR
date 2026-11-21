@@ -8,7 +8,9 @@ Two lists, both used by the skip_cutscenes=safe setting:
    listed if it has a HavePlayedEvent.<name> flag AND neither it nor its sub-flows:
      - change a save flag (EventTriggerSetGameData*, AddOrSubGameDataInt);
      - give or take an item (GetPouchContent*, AddOrRemovePouchContent, or an item name);
-     - change the time, save, or change scene (title, credits...).
+     - change the time, save, or change scene (title, credits...);
+   and its flag does not gate another event on a map (e.g. InitEventFlag of an entrance actor: the event it
+   starts would be skipped too, see map_gates).
 
 2. "timeline_skips": the scenes the game itself lets the player skip (+ / X). The game decides it in RSDB
    EventSetting: an event whose EventSettingComponentList has the category "TimelineEvent" can be skipped,
@@ -93,16 +95,37 @@ def classify(romfs: Path) -> tuple[list[str], dict[str, list[str]]]:
         memo[f] = why
         return why
 
+    gates = map_gates(romfs, codec)
     safe, kept = [], {}
     for flow in sorted(f for f in flows if f.startswith("Dm_")):
         if murmur3_32(f"HavePlayedEvent.{flow}") not in idx:
             continue
-        why = reasons(flow)
+        why = reasons(flow) + [f"gates:{e}" for e in sorted(gates.get(flow, ()))]
         if why:
             kept[flow] = why
         else:
             safe.append(flow)
     return safe, kept
+
+
+def map_gates(romfs: Path, codec: ZsCodec) -> dict[str, set[str]]:
+    """{scene: events that map actors start only while HavePlayedEvent.<scene> is false}.
+
+    E.g. FieldAndDungeonEntranceEventRequestActor FrontDekuTree: InitEventFlag = HavePlayedEvent.Dm_Deku_0000,
+    InitEventName = InsideTheDekuTree_Arrive, which plays Dm_Deku_0000 and then Navi's "Talk to Navi" tutorial
+    (it unlocks the D-pad guide under the hearts) and a quest step. Marking such a scene as seen up front skips
+    the whole event, so it must go through timeline_skips instead (only the transition step is replaced)."""
+    gates: dict[str, set[str]] = {}
+    for path in sorted((romfs / "Banc").rglob("*.bcett.byml.zs")):
+        for actor in read_byml(codec.decompress(path)).get("Actors") or []:
+            dynamic = actor.get("Dynamic") or {}
+            for key, flag in dynamic.items():
+                if not (key.endswith("Flag") and isinstance(flag, str) and flag.startswith("HavePlayedEvent.")):
+                    continue
+                scene, event = flag.split(".", 1)[1], dynamic.get(key[:-4] + "Name")
+                if isinstance(event, str) and event and event != scene:
+                    gates.setdefault(scene, set()).add(event)
+    return gates
 
 
 def _component_list(romfs: Path, name: str) -> tuple[str | None, dict]:
@@ -173,8 +196,10 @@ def main(argv=None) -> int:
     skippable_in_game, no_skip = game_skippable(romfs)
     codec = ZsCodec(romfs)
     idx = index(read_byml(codec.decompress(next((romfs / "GameData").glob("GameDataList*.byml.zs")))))
-    candidates = [s for s in skippable_in_game if s not in safe and s not in TIMELINE_KEPT
-                  and murmur3_32(f"HavePlayedEvent.{s}") in idx]
+    # scenes with no effect of their own whose flag gates a map event: only their transition step is replaced
+    gated = [s for s, why in kept.items() if all(w.startswith("gates:") for w in why)]
+    candidates = sorted({s for s in skippable_in_game if s not in safe and s not in TIMELINE_KEPT
+                         and murmur3_32(f"HavePlayedEvent.{s}") in idx} | set(gated))
     parents, fade_in = timeline_parents(romfs, candidates)
     played = {s for scenes in parents.values() for s in scenes}
     OUT.write_text(json.dumps({
@@ -195,6 +220,11 @@ def main(argv=None) -> int:
                            "for the scenes of timeline_fade_in). Scenes of 'skippable' are not repeated here.",
         "timeline_skips": parents,
         "timeline_fade_in": [s for s in fade_in],
+        "_timeline_gated": "Scenes with no effect of their own whose HavePlayedEvent flag gates another event on a "
+                           "map (e.g. Dm_Deku_0000 -> InsideTheDekuTree_Arrive: Navi's tutorial, which unlocks the "
+                           "D-pad guide). Not marked as seen at the start: their transition is replaced instead, even "
+                           "when the game does not let the player skip them.",
+        "timeline_gated": gated,
         "timeline_kept": TIMELINE_KEPT,
         "timeline_unplayed": sorted(set(candidates) - played),
     }, indent=1, ensure_ascii=False), encoding="utf-8")

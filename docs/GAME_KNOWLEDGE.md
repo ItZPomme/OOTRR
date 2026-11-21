@@ -582,10 +582,22 @@ not change) **[game]**.
   set its flag.
 - `skip_cutscenes=safe` (and the in-game menu): in each parent script, the transition step of a skippable timeline is
   replaced with `HavePlayedEvent.<scene> = true` (+ a fade-in when `FadeInTypeEventEnd` != 2), see
-  `ModBuilder._skip_timelines`: 73 scenes in 19 scripts (boss defeats, sages' awakenings, Ganon's castle, Epona,
+  `ModBuilder._skip_timelines`: 81 scenes in 21 scripts (boss defeats, sages' awakenings, Ganon's castle, Epona,
   Sun's Song, Door of Time...) **[files; to validate in game]**. Still played (`timeline_kept`): ending and credits,
   the last two Ganondorf / Ganon fights, `Dm_InsideGanonCastle_0110` (AI schedule), and the five scenes that set the
   time. Scenes already marked as seen at the start (`skippable`, Rauru, Kaepora...) are not touched.
+- **A scene's flag can gate a whole event on a map**: map actors (e.g. `FieldAndDungeonEntranceEventRequestActor`)
+  start `InitEventName` only while `InitEventFlag` (`HavePlayedEvent.<scene>`) is false. `FrontDekuTree` (Kokiri
+  Forest) starts `Dm_SY_BancChangeArrive` / `InsideTheDekuTree_Arrive`: `Dm_Deku_0000`, then Navi's "Talk to Navi"
+  tutorial (`NaviHint:Hint_Dungeon_Tutorial_Event`, action guide 14), then the quest step `MeetBoss`. **The D-pad
+  guide under the hearts (`PaGuideCross_00` in `PlayerStatus_00`) only appears after that tutorial** **[game,
+  2026-11-21]**: the HUD (0xa77ff0) hides it until action guide 14 "Navi" has been opened (0xa76b10 reads the Bools
+  of GameData struct `0x57f52eb8`, member = guide name; "Navi" -> entry `2078637232`, name unknown) **[files]**.
+  `World.start_flags` sets it from the start (`NAVI_GUIDE_FLAG`) so the D-pad shows at once **[validated in game,
+  2026-11-21]**. Marking `Dm_Deku_0000` as seen up front skipped all of it: no D-pad guide for the whole seed. Same for
+  7 other arrival scenes (`Dm_DeathMtTrail_0000` also gated `Get_StoneOfFire_DeathMtTrailIn`). `tools.cutscenes`
+  (`map_gates`) now keeps such scenes out of `skippable` and replaces only their transition step (`timeline_skips`)
+  **[files; to validate in game]**.
 
 ## In-game menu (title sequence)
 
