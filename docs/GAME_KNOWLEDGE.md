@@ -193,8 +193,9 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   (sets `Get_StoneOfWater_GetRutoLetter`, Step05_01) when the obtained actor has the tag `LetterBottle`, which both
   `Obj_Bottle_Letter` and `Item_Bottle_Letter` carry (RSDB `Tag`). So the letter given from elsewhere should still
   advance the quest, *if* that gift goes through `Dm_SY_Get` (unknown for chests and NPC gifts).
-- **Potion shop bug tutorial softlock** **[files]** (2026-11-20, fix not validated in game; softlock seen in game in
-  Longshot): after the gift, `Item_Bottle_TutorialEvent_Talk` sets `Market_Item_Bottle_TutorialEvent_Started` (19) and
+- **Potion shop bug tutorial softlock** **[game]** (2026-11-21, Longshot, PC-built mod: with a Piece of Heart as the
+  gift and no bottle, the door opens after the gift; native menu mod not tested):
+  after the gift, `Item_Bottle_TutorialEvent_Talk` sets `Market_Item_Bottle_TutorialEvent_Started` (19) and
   starts the challenge `Market_Item_Bottle_TutorialEvent`, step `Playing` (50, `IsMiniGame`; its `GameSafetySetting`
   is a no-escape area `NoEscapeArea_Market_Item_Bottle_TutorialEvent` / `StartPos_..._TutorialEvent`). The door's AI
   module (`Logic/Obj_Door_ShopMedicine_9089`) only opens from inside once `Market_Item_Bottle_TutorialEvent_Cleared`
