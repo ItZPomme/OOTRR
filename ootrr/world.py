@@ -442,6 +442,10 @@ class World:
         # dungeon keys: only loaded when small_keys or boss_keys is not vanilla (vanilla = keys out of the logic)
         self.key_dungeons: dict[str, keys_mod.KeyDungeon] = keys_mod.load(data_dir) if keys_mod.active(settings) else {}
         self.key_rooms: dict[str, int] = keys_mod.load_rooms(data_dir) if self.key_dungeons else {}
+        # small keys owned from the start (keys.json start_keys), given whatever the key settings
+        self.start_keys: dict[str, int] = keys_mod.start_keys(data_dir)
+        # chain-locked doors unlocked from the start (keys.json unlocked_doors), whatever the key settings
+        self.door_flags: dict[str, bool] = keys_mod.door_flags(data_dir)
         self._key_region = {r: kd for kd in self.key_dungeons.values() for r in kd.regions}
         self._key_game = {kd.game: kd for kd in self.key_dungeons.values()}
         self._key_events: set[str] = set()  # events added by data/keys.json (no key requirement)
@@ -517,14 +521,28 @@ class World:
             if self.key_mode(keys_mod.SMALL) != "vanilla":
                 for i, chest in enumerate(kd.small):
                     extra_locations[kd.small_location(i)] = {
-                        "region": kd.region, "rule": kd.rule, "hashes": [chest["hash"]],
+                        "region": kd.region, "rule": self._key_chest_rule(kd, chest, kd.small_location(i)),
+                        "hashes": [chest["hash"]],
                         "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game), "key_room": chest["room"]}
             if self.key_mode(keys_mod.BOSS) != "vanilla" and kd.boss_key:
                 # the chest's event (Navi's line, ForesetTemple_GetBossKey) belongs to the boss key: "drop"
                 extra_locations[kd.boss_location] = {
-                    "region": kd.region, "rule": kd.rule, "hashes": [kd.boss_key["hash"]],
+                    "region": kd.region, "rule": self._key_chest_rule(kd, kd.boss_key, kd.boss_location),
+                    "hashes": [kd.boss_key["hash"]],
                     "vanilla": keys_mod.item_name(keys_mod.BOSS, kd.game), "event": "drop",
                     "key_room": kd.boss_key["room"]}
+
+    @staticmethod
+    def _key_chest_rule(kd: keys_mod.KeyDungeon, chest: dict, lname: str) -> str:
+        """Rule of a key chest: its own "rule" in keys.json, else the dungeon's. Without its key terms it must ask
+        nothing more than the dungeon's rule: with small_keys=own_dungeon the key chests are the key spots."""
+        rule = str(chest.get("rule", kd.rule))
+        if kd.layout:  # the key spots do not depend on the rules there
+            return rule
+        if not keys_mod.conjuncts(keys_mod.without_key_terms(rule)) <= keys_mod.conjuncts(kd.rule):
+            raise DataError(f"{lname} : règle « {rule} » plus exigeante que celle du donjon ({kd.rule}), "
+                            "data/keys.json")
+        return rule
 
     def _is_key_spot(self, lname: str, rname: str, lbody: dict, src: str, kd: keys_mod.KeyDungeon) -> bool:
         """small_keys=own_dungeon: may this chest hold one of the dungeon's small keys?
@@ -532,31 +550,54 @@ class World:
         Prudent rule without the door layout: a key only moves to a chest of the same room as a vanilla key
         chest (the number of keys per room stays the vanilla one, so the doors open in the vanilla order),
         in the key chests' region, whose rule asks nothing more than the key chests' rule. Then every key can
-        be collected with that rule, and only the other locations of the dungeon need its keys."""
-        if self.key_mode(keys_mod.SMALL) != "own_dungeon" or rname != kd.region:
-            return False
-        room = lbody.get("key_room", self.key_rooms.get(lname))
-        if room is None or room not in kd.key_rooms:
+        be collected with that rule, and only the other locations of the dungeon need its keys.
+
+        Dungeon with its layout written (keys.json "layout"): any chest of the dungeon, the logic places the keys."""
+        if self.key_mode(keys_mod.SMALL) != "own_dungeon":
             return False
         if not lbody.get("hashes") or lbody.get("kind", "general") != "general" or any(
                 lbody.get(f) for f in ("pickup", "scrub", "skulltula", "shop", "gift", "ocarina")):
             return False
+        if kd.layout:
+            return rname in kd.regions
+        if rname != kd.region:
+            return False
+        room = lbody.get("key_room", self.key_rooms.get(lname))
+        if room is None or room not in kd.key_rooms:
+            return False
+        # a key count in the rule does not matter here: a key spot needs the key chests' rule instead
+        src = keys_mod.without_key_terms(src, (keys_mod.SMALL,))
         return src.strip() == "True" or keys_mod.conjuncts(src) <= keys_mod.conjuncts(kd.rule)
 
-    def _key_rule(self, kd: keys_mod.KeyDungeon, key_spot: bool, boss: bool) -> str:
+    def _key_terms(self, src) -> str:
+        """Key terms of a rule (has(Small_Key_<Dungeon>, n), Boss_Key_<Dungeon>): true for keys that are not items
+        of this world (vanilla or removed), and a small key count above the keys of the logic asks for all of them
+        (the data writes the dungeon's total, ground keys included: those only join the pool with any_dungeon /
+        random)."""
+        src = keys_mod.without_key_terms(
+            src, tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS) if self.key_mode(k) not in keys_mod.SHUFFLED))
+        if self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED:
+            for kd in self.key_dungeons.values():
+                src = keys_mod.clamp_counts(src, kd.name, self.small_key_count(kd), kd.start_keys)
+        return str(src)
+
+    def _key_rule(self, kd: keys_mod.KeyDungeon, key_spot: bool, boss: bool, src: str = "True") -> str:
         """Extra requirement of a location or event of a dungeon with keys (prudent: no door layout).
 
         Small keys placed by the fill: every location needs all the dungeon's small keys, except the key spots
-        of own_dungeon (they need the key chests' rule instead). Boss keys placed by the fill: the locations
-        behind the boss door need the boss key."""
+        of own_dungeon (they need the key chests' rule instead) and the locations whose rule asks for a number of
+        keys itself (src: has(Small_Key_<Dungeon>, n)). Boss keys placed by the fill: the locations behind the boss
+        door need the boss key (unless src already asks for it). Dungeon with its layout written: its rules say
+        how many small keys they need, nothing is added for them."""
         parts = []
         small = self.key_mode(keys_mod.SMALL)
-        if small in keys_mod.SHUFFLED:
+        if small in keys_mod.SHUFFLED and not kd.layout:
             if key_spot:
                 parts.append(f"({kd.rule})")
-            else:
+            elif not keys_mod.mentions(src, keys_mod.SMALL, kd.name):
                 parts.append(f"has({keys_mod.logic_name(keys_mod.SMALL, kd.name)}, {self.small_key_count(kd)})")
-        if boss and kd.boss_key and self.key_mode(keys_mod.BOSS) in keys_mod.SHUFFLED:
+        if (boss and kd.boss_key and self.key_mode(keys_mod.BOSS) in keys_mod.SHUFFLED
+                and not keys_mod.mentions(src, keys_mod.BOSS, kd.name)):
             parts.append(keys_mod.logic_name(keys_mod.BOSS, kd.name))
         return " and ".join(parts)
 
@@ -612,10 +653,14 @@ class World:
             # objet donné dès la nouvelle partie : le lieu est atteint d'office
             rname, src = self.ROOT, "True"
         region = self.regions[rname]
+        written = str(src)  # the data's rule: does it give its own key count? (_key_terms may turn it into True)
+        src = self._key_terms(src)
         kd = self._key_region.get(rname)
         key_spot = bool(kd) and self._is_key_spot(lname, rname, lbody, str(src), kd)
+        if key_spot and not kd.layout:  # the key chests' rule replaces the key count (see _key_rule)
+            src = keys_mod.without_key_terms(src, (keys_mod.SMALL,))
         if kd:
-            extra = self._key_rule(kd, key_spot, boss=lname in kd.boss)
+            extra = self._key_rule(kd, key_spot, boss=lname in kd.boss, src=written)
             if extra:
                 src = f"({src}) and {extra}"
         loc = Location(
@@ -682,11 +727,14 @@ class World:
         for rname, body in regions_raw.items():
             region = Region(rname, body.get("dungeon"))
             for target, src in body.get("exits", {}).items():
+                src = self._key_terms(src)
                 region.exits.append(Exit(rname, target, c.compile(src, f"sortie {rname} -> {target}"), str(src)))
             for ename, src in body.get("events", {}).items():
+                written = str(src)  # its own key count, before _key_terms may turn it into True
+                src = self._key_terms(src)
                 kd = self._key_region.get(rname)
                 if kd and ename not in self._key_events:
-                    extra = self._key_rule(kd, False, boss=ename in kd.boss_events)
+                    extra = self._key_rule(kd, False, boss=ename in kd.boss_events, src=written)
                     if extra:
                         src = f"({src}) and {extra}"
                 ev = Event(ename, rname, c.compile(src, f"événement {ename}"), str(src))
@@ -789,10 +837,16 @@ class World:
                 if loc.dungeon_item:
                     field_name = "IsGetMap" if loc.dungeon_item == "map" else "IsGetCompass"
                     flags[f"DungeonInfo.{GAME_DUNGEONS[loc.dungeon]}.{field_name}"] = True
-        # removed keys: each dungeon's counter starts with all its small keys (chests and ground), boss keys owned
+        # small keys owned from the start (keys.json start_keys, e.g. the Fire Temple key whose chest holds an item)
+        for game, n in self.start_keys.items():
+            flags[keys_mod.COUNTER[keys_mod.SMALL].format(game=game)] = n
+        # doors unlocked from the start: the door's saved "unlocked" Bool (e.g. the Fire Temple hammer door)
+        flags.update(self.door_flags)
+        # removed keys: each dungeon's counter starts with all its small keys (chests, ground, start), boss keys owned
         for kd in self.key_dungeons.values():
             if self.key_mode(keys_mod.SMALL) == "removed":
-                flags[keys_mod.COUNTER[keys_mod.SMALL].format(game=kd.game)] = len(kd.small) + len(kd.freestanding)
+                flags[keys_mod.COUNTER[keys_mod.SMALL].format(game=kd.game)] = (len(kd.small) + len(kd.freestanding)
+                                                                                 + kd.start_keys)
             if self.key_mode(keys_mod.BOSS) == "removed" and kd.boss_key:
                 flags[keys_mod.COUNTER[keys_mod.BOSS].format(game=kd.game)] = True
         # forêt ouverte : ces drapeaux font apparaître les murs invisibles devant les passages

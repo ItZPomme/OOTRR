@@ -47,6 +47,11 @@ def _read(path: Path):
         return json.load(fh)
 
 
+def _is_key(name: str) -> bool:
+    """Small_Key_<Dungeon> / Boss_Key_<Dungeon> of a rule (see ootrr.keys: key counts in location rules)."""
+    return name.startswith(("Small_Key_", "Boss_Key_"))
+
+
 class Exporter:
     def __init__(self, data_dir: Path = DATA_DIR) -> None:
         items_raw = _read(data_dir / "items.json")
@@ -113,7 +118,7 @@ class Exporter:
 
     def _name(self, name: str, where, src) -> None:
         c = self.code
-        if name in ("true", "True"):
+        if name in ("true", "True") or _is_key(name):  # keys: never shuffled by the native generator
             c.append(OP["T_TRUE"])
         elif name in ("false", "False"):
             c.append(OP["T_FALSE"])
@@ -135,7 +140,9 @@ class Exporter:
     def _call(self, node: ast.Call, where, src) -> None:
         c = self.code
         fname, args = node.func.id, node.args
-        if fname == "has":
+        if fname == "has" and isinstance(args[0], ast.Name) and _is_key(args[0].id):
+            c.append(OP["T_TRUE"])  # the native generator never shuffles keys: they are always "owned"
+        elif fname == "has":
             c += [OP["T_HAS"], self._thing(args[0], where, src), args[1].value]
         elif fname == "can_use":
             item = args[0].id

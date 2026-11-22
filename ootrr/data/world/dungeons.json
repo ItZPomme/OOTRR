@@ -37,28 +37,22 @@
     "Forest Temple": {
       "dungeon": "Forest Temple",
       "locations": {
-        "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
-        "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and can_use(Progressive_Hookshot)", "vanilla": "Item_Medal_Forest"}
+        "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
+        "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 5)", "vanilla": "Item_Medal_Forest"}
       },
       "exits": {
         "Sacred Forest Meadow": "True"
       }
     },
-    "Fire Temple Lower": {
-      "dungeon": "Fire Temple",
-      "exits": {
-        "DMC Central": "True",
-        "Fire Temple Upper": "has_explosives or can_use(Megaton_Hammer) or can_use(Progressive_Hookshot)"
-      }
-    },
-    "Fire Temple Upper": {
+    "Fire Temple": {
       "dungeon": "Fire Temple",
       "locations": {
-        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
-        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer)", "vanilla": "Item_Medal_Fire"}
+        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 8)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
+        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 8)", "vanilla": "Item_Medal_Fire"}
       },
       "exits": {
-        "Fire Temple Lower": "True"
+        "DMC Central": "True",
+        "Fire Temple": "has_explosives or can_use(Megaton_Hammer) or can_use(Progressive_Hookshot)"
       }
     },
     "Ice Cavern": {
@@ -76,8 +70,8 @@
     "Water Temple": {
       "dungeon": "Water Temple",
       "locations": {
-        "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
-        "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot", "vanilla": "Item_Medal_Water"}
+        "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot and has(Small_Key_Water_Temple, 4)", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
+        "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and has(Small_Key_Water_Temple, 4)", "vanilla": "Item_Medal_Water"}
       },
       "exits": {
         "Lake Hylia": "True"
@@ -86,8 +80,8 @@
     "Shadow Temple": {
       "dungeon": "Shadow Temple",
       "locations": {
-        "Shadow Temple Bongo Bongo Heart": {"rule": "shadow_boss", "vanilla": "Obj_Heart_Container", "hashes": [17599164808183510748], "pickup": "boss"},
-        "Bongo Bongo":                     {"kind": "reward", "rule": "shadow_boss", "vanilla": "Item_Medal_Shadow"}
+        "Shadow Temple Bongo Bongo Heart": {"rule": "shadow_boss and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [17599164808183510748], "pickup": "boss"},
+        "Bongo Bongo":                     {"kind": "reward", "rule": "shadow_boss and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Item_Medal_Shadow"}
       },
       "exits": {
         "Graveyard Warp Pad": "True"
@@ -122,8 +116,8 @@
     "Spirit Temple Adult": {
       "dungeon": "Spirit Temple",
       "locations": {
-        "Spirit Temple Twinrova Heart": {"rule": "spirit_boss", "vanilla": "Obj_Heart_Container", "hashes": [4720088048159616469], "pickup": "boss"},
-        "Twinrova":                     {"kind": "reward", "rule": "spirit_boss", "vanilla": "Item_Medal_Spirit"}
+        "Spirit Temple Twinrova Heart": {"rule": "spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [4720088048159616469], "pickup": "boss"},
+        "Twinrova":                     {"kind": "reward", "rule": "spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Item_Medal_Spirit"}
       },
       "exits": {
         "Spirit Temple Lobby": "True"

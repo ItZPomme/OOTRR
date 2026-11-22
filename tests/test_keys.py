@@ -35,9 +35,11 @@ class KeysTest(unittest.TestCase):
 
     def test_key_chests_and_counts(self):
         world = World(settings.build({"small_keys": "random", "boss_keys": "random"}))
-        small = [l for l in world.locations.values() if " Small Key Chest " in l.name]
-        boss = [l for l in world.locations.values() if l.name.endswith(" Boss Key Chest")]
-        self.assertEqual(len(small), 37)
+        small_names = {kd.small_location(i) for kd in world.key_dungeons.values() for i in range(len(kd.small))}
+        boss_names = {kd.boss_location for kd in world.key_dungeons.values() if kd.boss_key}
+        small = [world.locations[n] for n in small_names]
+        boss = [world.locations[n] for n in boss_names]
+        self.assertEqual(len(small), 36)  # Fire Temple: 7 chests + 1 key owned from the start (keys.json)
         self.assertEqual(len(boss), 6)
         hashes = [h for l in small + boss for h in l.hashes]
         self.assertEqual(len(hashes), len(set(hashes)))
@@ -53,7 +55,12 @@ class KeysTest(unittest.TestCase):
 
     def test_prudent_rules(self):
         world = World(settings.build({"small_keys": "any_dungeon", "boss_keys": "any_dungeon"}))
-        self.assertIn("has(Small_Key_Forest_Temple, 5)", world.locations["Forest Temple Bow Chest"].rule_src)
+        # every location of a key dungeon asks for its keys (its own count from the data, or all of them)
+        for loc in world.locations.values():
+            kd = world.key_dungeons.get(loc.key_dungeon)
+            if kd and not kd.layout and loc.name != kd.boss_location:  # layout: rules used as written
+                key = keys_mod.logic_name(keys_mod.SMALL, loc.key_dungeon)
+                self.assertTrue(key in loc.rule_src or kd.start_keys, loc.name)
         self.assertIn("Boss_Key_Forest_Temple", world.locations["Phantom Ganon"].rule_src)
         triforce = next(e for e in world.events if e.name == "Triforce")
         self.assertIn("Boss_Key_Ganons_Castle", triforce.rule_src)
@@ -65,12 +72,15 @@ class KeysTest(unittest.TestCase):
     def test_own_dungeon_key_spots(self):
         world = World(settings.build({"small_keys": "own_dungeon"}))
         for loc in world.locations.values():
+            kd = world.key_dungeons.get(loc.key_dungeon)
+            if not kd or kd.layout:  # layout: keys anywhere in the dungeon, rules as written
+                continue
             if loc.key_spot:
-                kd = world.key_dungeons[loc.key_dungeon]
                 self.assertEqual(loc.region, kd.region)
                 self.assertIn(loc.key_room, kd.key_rooms)
                 self.assertNotIn("Small_Key", loc.rule_src)
-            elif loc.key_dungeon:
+            elif not kd.start_keys:
+                # (with keys owned from the start, a location may need no key left to find)
                 self.assertIn("Small_Key", loc.rule_src, loc.name)
 
     def test_removed(self):
@@ -106,6 +116,8 @@ class KeysTest(unittest.TestCase):
                     self.assertNotEqual(loc.event, "keep", name)
             if world.key_mode(keys_mod.SMALL) == "own_dungeon":
                 for kd in world.key_dungeons.values():  # vanilla number of keys per room
+                    if kd.layout:
+                        continue
                     rooms = {}
                     for name, item in result.placements.items():
                         if item == keys_mod.item_name(keys_mod.SMALL, kd.game):

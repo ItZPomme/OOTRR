@@ -9,12 +9,17 @@ How the game handles keys (read in the files, see docs/GAME_KNOWLEDGE.md "Dungeo
   chest's `GetEventName` runs a copy of the boss key chest event (`ForesetTemple_GetBossKey`: opening sequence,
   then Navi's line) where Navi's line is replaced by "DungeonInfo.A.SmallKeyNum + 1" or "IsGetBossKey = true".
 
-The logic is prudent (the repository has no door layout): see `World` (`_key_rule`) and fill.py.
+The logic is prudent (the repository has no door layout): see `World` (`_key_rule`) and fill.py. With shuffled small
+keys, a location of the dungeon needs all of its small keys, unless its rule asks for a number itself
+(`has(Small_Key_Forest_Temple, 2)`). A key chest may have its own `rule` in keys.json (default: the dungeon's).
+A dungeon marked `"layout": true` in keys.json has all its key counts written: its rules are used as they are, and
+small_keys=own_dungeon places its keys anywhere in the dungeon by the logic (otherwise in their vanilla rooms).
 """
 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -53,6 +58,15 @@ class KeyDungeon:
     boss: list[str]
     boss_events: list[str]
     events: dict[str, dict[str, str]] = field(default_factory=dict)  # {region: {event: rule}} added to the world
+    # the data describes the doors: every rule of the dungeon that needs small keys says how many (worst case), a
+    # rule without a key count needs none; own_dungeon then places the keys anywhere in the dungeon by the logic
+    layout: bool = False
+    # small keys the player owns from the start (GameData counter), counted in the rules' key numbers: a rule's
+    # has(Small_Key_<Dungeon>, n) counts the game's keys, the logic needs n - start_keys of the item pool
+    start_keys: int = 0
+    # chain-locked doors unlocked from the start (keys.json unlocked_doors): their saved Bool is set at the new game,
+    # so the door loads as already unlocked and needs no key
+    unlocked_doors: list[dict] = field(default_factory=list)
 
     @property
     def key_rooms(self) -> dict[int, int]:
@@ -63,11 +77,13 @@ class KeyDungeon:
         return out
 
     def small_location(self, i: int) -> str:
-        return f"{self.name} Small Key Chest {i + 1}"
+        """Location name of a small key chest: its "name" in keys.json, else "<Dungeon> Small Key Chest <n>"."""
+        return self.small[i].get("name") or f"{self.name} Small Key Chest {i + 1}"
 
     @property
     def boss_location(self) -> str:
-        return f"{self.name} Boss Key Chest"
+        """Location name of the boss key chest: its "name" in keys.json, else "<Dungeon> Boss Key Chest"."""
+        return (self.boss_key or {}).get("name") or f"{self.name} Boss Key Chest"
 
 
 def active(settings: dict[str, Any]) -> bool:
@@ -109,11 +125,28 @@ def load(data_dir: Path) -> dict[str, KeyDungeon]:
     out = {}
     for name, body in raw["dungeons"].items():
         out[name] = KeyDungeon(
-            name=name, game=body["game"], regions=list(body["regions"]), region=body["region"], rule=body["rule"],
+            name=name, game=body["game"], regions=list(body["regions"]), region=body["region"],
+            rule=body.get("rule") or _chests_rule(body),
             small=list(body["small"]), freestanding=list(body.get("freestanding", [])),
             boss_key=body.get("boss_key"), boss=list(body.get("boss", [])),
-            boss_events=list(body.get("boss_events", [])), events=dict(body.get("events", {})))
+            boss_events=list(body.get("boss_events", [])), events=dict(body.get("events", {})),
+            layout=bool(body.get("layout", False)), start_keys=int(body.get("start_keys", 0)),
+            unlocked_doors=list(body.get("unlocked_doors", [])))
     return out
+
+
+def _chests_rule(body: dict) -> str:
+    """Dungeon rule when keys.json gives none: everything its key chests ask for (key terms left out), i.e.
+    what collecting all of its keys needs."""
+    parts: list[str] = []
+    for chest in body["small"] + ([body["boss_key"]] if body.get("boss_key") else []):
+        if "rule" not in chest:
+            raise ValueError(f"keys.json: {body['game']}: a key chest without rule needs the dungeon's rule")
+        for part in sorted(conjuncts(without_key_terms(chest["rule"]))):
+            part = f"({part})" if " or " in part else part  # a whole "a or b" rule stays one requirement
+            if part not in parts:
+                parts.append(part)
+    return " and ".join(parts) or "True"
 
 
 def load_rooms(data_dir: Path) -> dict[str, int]:
@@ -122,7 +155,88 @@ def load_rooms(data_dir: Path) -> dict[str, int]:
 
 
 def conjuncts(rule: str) -> set[str]:
-    return {part.strip() for part in str(rule).split(" and ") if part.strip()}
+    """Parts of an "a and b and c" rule, split at the top level only (an "and" inside parentheses stays in its
+    part, e.g. "x and (y and z or w)" -> {"x", "(y and z or w)"}). A rule with a top-level "or" is one part.
+    "True" parts are dropped: they ask nothing."""
+    text = _unwrap(str(rule))
+    parts, depth, start, i = [], 0, 0, 0
+    while i < len(text):
+        c = text[i]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and text.startswith(" or ", i):
+            return {text} if _unwrap(text) != "True" else set()
+        elif depth == 0 and text.startswith(" and ", i):
+            parts.append(text[start:i])
+            i += len(" and ")
+            start = i
+            continue
+        i += 1
+    parts.append(text[start:])
+    return {p for p in (_unwrap(part) for part in parts) if p and p != "True"}
+
+
+def _unwrap(part: str) -> str:
+    """The part without parentheses around the whole of it: "(a or b)" -> "a or b", "(a) or (b)" kept."""
+    part = part.strip()
+    while part.startswith("(") and part.endswith(")"):
+        depth = 0
+        for i, c in enumerate(part):
+            depth += c == "("
+            depth -= c == ")"
+            if depth == 0 and i < len(part) - 1:
+                return part  # the first parenthesis closes before the end
+        part = part[1:-1].strip()
+    return part
+
+
+# a key term of a rule: has(Small_Key_<Dungeon>, n), or a bare Small_Key_<Dungeon> / Boss_Key_<Dungeon>
+KEY_TERM = re.compile(r"has\(\s*(Small|Boss)_Key_(\w+)\s*,\s*\d+\s*\)|\b(Small|Boss)_Key_(\w+)\b")
+
+
+def _term_kind(match: re.Match) -> str:
+    return SMALL if (match.group(1) or match.group(3)) == "Small" else BOSS
+
+
+def without_key_terms(rule: str, kinds: tuple[str, ...] = (SMALL, BOSS)) -> str:
+    """The rule with its key terms of these kinds replaced by True (keys that are not items of the world: vanilla
+    or removed keys, or the native generator, which never shuffles keys)."""
+    return KEY_TERM.sub(lambda m: "True" if _term_kind(m) in kinds else m.group(0), str(rule))
+
+
+def clamp_counts(rule: str, dungeon: str, limit: int, owned: int = 0) -> str:
+    """has(Small_Key_<dungeon>, n) counts the game's keys: the `owned` start keys are taken off (none left to find:
+    True), and n above the keys the logic knows (e.g. ground keys that stay on the ground with own_dungeon) asks
+    for all of them instead."""
+    name = logic_name(SMALL, dungeon)
+
+    def count(m: re.Match) -> str:
+        n = min(int(m.group(1)) - owned, limit)
+        return f"has({name}, {n})" if n > 0 else "True"
+    return re.sub(rf"has\(\s*{name}\s*,\s*(\d+)\s*\)", count, str(rule))
+
+
+def start_keys(data_dir: Path) -> dict[str, int]:
+    """{game dungeon: small keys owned from the start} (keys.json start_keys), whatever the key settings."""
+    with (data_dir / "keys.json").open(encoding="utf-8") as fh:
+        raw = json.load(fh)
+    return {body["game"]: int(body["start_keys"]) for body in raw["dungeons"].values() if body.get("start_keys")}
+
+
+def door_flags(data_dir: Path) -> dict[str, bool]:
+    """{saved Bool: True} of the doors unlocked from the start (keys.json unlocked_doors), whatever the key settings."""
+    with (data_dir / "keys.json").open(encoding="utf-8") as fh:
+        raw = json.load(fh)
+    return {door["flag"]: True for body in raw["dungeons"].values() for door in body.get("unlocked_doors", [])}
+
+
+def mentions(rule: str, kind: str, dungeon: str) -> bool:
+    """Does the rule ask for this dungeon's keys itself (e.g. has(Small_Key_Forest_Temple, 2))?"""
+    name = logic_name(kind, dungeon)
+    return any(_term_kind(m) == kind and f"{(m.group(1) or m.group(3))}_Key_{m.group(2) or m.group(4)}" == name
+               for m in KEY_TERM.finditer(str(rule)))
 
 
 def chest_change(item: str, location_game: str | None) -> dict[str, Any] | None:

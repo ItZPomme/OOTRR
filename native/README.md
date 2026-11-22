@@ -155,7 +155,7 @@ Module injected into the game with [exlaunch](https://github.com/shadowninja108/
   hook of `0xbd1c00` replaces **the value at the source**, in the dynamic parameters in memory, before the original
   call: `*(*(*(info+0x40)+0x270))+0x10` -> { u32 key count, const char** keys (+8), u32 value count (+0x10),
   const char** values (+0x18) }.
-- Tokens are placed in the 132 shuffleable chests (`native_logic.chest_tokens`, index = rank in `logic_data.hpp`).
+- Tokens are placed in the 134 shuffleable chests (`native_logic.chest_tokens`, index = rank in `logic_data.hpp`).
   "Drop" chest whose item changes: `GetEventName` emptied at the source; conditional chest: `Drop__CheckActor` and
   `Drop__DropActor_Substitute` emptied.
 

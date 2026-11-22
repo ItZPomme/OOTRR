@@ -67,7 +67,7 @@
       },
       "exits": {
         "DMC Lower": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)",
-        "Fire Temple Lower": "is_adult and can_use(Goron_Tunic)"
+        "Fire Temple": "is_adult and can_use(Goron_Tunic)"
       }
     },
     "DMC Lower": {
@@ -93,7 +93,7 @@
     "Ganons Castle": {
       "_doc": "Nothing randomized here",
       "events": {
-        "Triforce": "can_use(Light_Arrows)"
+        "Triforce": "can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"
       },
       "exits": {
         "Ganons Castle Grounds": "True"

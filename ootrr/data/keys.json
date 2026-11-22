@@ -2,6 +2,12 @@
   "_doc": [
     "Small keys and boss keys (settings small_keys and boss_keys). Only loaded when one of them is not vanilla: with vanilla keys the key chests stay out of the world and the logic ignores keys (as before).",
     "Per dungeon: game = DungeonInfo.<game> (GameData counter SmallKeyNum, flag IsGetBossKey) and the Banc folder; regions = logic regions of the dungeon (Ganon's Castle is an overworld region); region = region of the key chests; rule = prudent rule of every key chest (everything the dungeon may need, as the boss rules); small = small key chests (hash, room = DefaultDungeonRoomIndex in the map); freestanding = small keys lying on the ground (Obj_Dungeon_SmallKey: they stay with own_dungeon and removed, and are removed from the map with any_dungeon and random, their keys going to the item pool); boss_key = boss key chest; boss = locations behind the boss door; boss_events = events behind it.",
+    "Rule of one key chest: optional \"rule\" in its small / boss_key entry (default: the dungeon's rule). Without its key terms it must ask nothing more than the dungeon's rule (with own_dungeon the key chests are the key spots); a key count in it is used with any_dungeon and random.",
+    "Key counts: any location, event or exit rule may ask for keys itself, e.g. has(Small_Key_Forest_Temple, 2) or Boss_Key_Forest_Temple. With shuffled keys this replaces the prudent 'all the dungeon's small keys' (or the boss key) of its location; with vanilla or removed keys, and in the native generator, the term is always true.",
+    "layout: true once every rule of the dungeon that needs small keys says how many, in the worst case (the player may have opened other doors first): a rule without a key count then needs no key, nothing prudent is added, and small_keys=own_dungeon places the dungeon's keys anywhere in it by the logic. Without it (default) the logic stays prudent and own_dungeon keeps each key in a chest of its vanilla room.",
+    "name (optional, in a small / boss_key entry): the location name of that key chest, as shown in the plandomizer, the spoiler log and plando files; without it: <Dungeon> Small Key Chest <n> (n = rank in the list, not the order in the dungeon) or <Dungeon> Boss Key Chest. Names must be unique; a plando file using the old name must be updated.",
+    "start_keys: small keys owned from the start (GameData counter set at the new game, whatever the key settings; removed adds them to the full counter). Rule counts are the game's keys: has(Small_Key_<Dungeon>, n) asks for n - start_keys keys of the item pool (none: true).",
+    "unlocked_doors: chain-locked doors unlocked from the start, whatever the key settings: flag = the door's saved Bool (unnamed, #hash, found with tools.checkwatch while opening the door), set to true at the new game so the door loads as already unlocked; door = its map hash. Such a door is open in key_graph.json and needs no key. Fire Temple: the hammer-blocked door of the first room (room 0 -> 15), whose 8th key chest (room 22) is a normal location.",
     "rooms: room of the other chests of these dungeons (own_dungeon: a small key may move to a chest of the same room, see World._key_spots).",
     "Hashes and rooms read in the maps (tools.inventory, Banc/<game>/*.bcett.byml.zs); rules are prudent, not checked in game."
   ],
@@ -10,91 +16,91 @@
       "game": "ForestTemple",
       "regions": ["Forest Temple"],
       "region": "Forest Temple",
-      "rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has_explosives",
+      "layout": true,
       "small": [
-        {"hash": 1171460703078800858, "room": 0},
-        {"hash": 14776684749746592758, "room": 4},
-        {"hash": 6449977980406424425, "room": 15},
-        {"hash": 3433400840978782007, "room": 16},
-        {"hash": 7535137041266964235, "room": 22}
+        {"hash": 1171460703078800858, "room": 0, "rule": "True"},
+        {"hash": 14776684749746592758, "room": 4, "rule": "has(Small_Key_Forest_Temple, 1)"},
+        {"hash": 6449977980406424425, "room": 15, "rule": "can_play(Song_of_Time) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 1)"},
+        {"hash": 3433400840978782007, "room": 16, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 2)"},
+        {"hash": 7535137041266964235, "room": 22, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 5)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 5306318520835485827, "room": null},
+      "boss_key": {"hash": 5306318520835485827, "room": null, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 5)"},
       "boss": ["Forest Temple Phantom Ganon Heart", "Phantom Ganon"]
     },
     "Fire Temple": {
       "game": "FireTemple",
-      "regions": ["Fire Temple Lower", "Fire Temple Upper"],
-      "region": "Fire Temple Upper",
-      "rule": "can_use(Megaton_Hammer) and can_use(Progressive_Hookshot) and has_explosives and can_use(Bow) and can_play(Song_of_Time)",
+      "regions": ["Fire Temple"],
+      "region": "Fire Temple",
+      "layout": true,
+      "unlocked_doors": [{"flag": "#749909151", "door": 4189300454150217955, "rooms": [0, 15]}],
       "small": [
-        {"hash": 3949488292768750868, "room": 1},
-        {"hash": 5634724236470386190, "room": 2},
-        {"hash": 16785682308850448108, "room": 4},
-        {"hash": 9634924691849556346, "room": 5},
-        {"hash": 12567412825200613393, "room": 5},
-        {"hash": 12945617941305968586, "room": 10},
-        {"hash": 10521366928524045067, "room": 11},
-        {"hash": 1705064956286753527, "room": 22}
+        {"hash": 3949488292768750868, "room": 1, "name": "Fire Temple Small Key Chest 3", "rule": "has(Small_Key_Fire_Temple, 3)"},
+        {"hash": 5634724236470386190, "room": 2, "name": "Fire Temple Small Key Chest 1", "rule": "True"},
+        {"hash": 16785682308850448108, "room": 4, "name": "Fire Temple Small Key Chest 6", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 2)"},
+        {"hash": 9634924691849556346, "room": 5, "name": "Fire Temple Small Key Chest 5", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 3)"},
+        {"hash": 12567412825200613393, "room": 5, "name": "Fire Temple Small Key Chest 4", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 2)) or has(Small_Key_Fire_Temple, 4)"},
+        {"hash": 12945617941305968586, "room": 10, "name": "Fire Temple Small Key Chest 7", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 2) and can_blast_or_smash) or (can_blast_or_smash and has(Small_Key_Fire_Temple, 4))"},
+        {"hash": 10521366928524045067, "room": 11, "name": "Fire Temple Small Key Chest 8", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 6)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 14060099092170010696, "room": 17},
+      "boss_key": {"hash": 14060099092170010696, "room": 17, "rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 0)"},
       "boss": ["Fire Temple Volvagia Heart", "Volvagia"]
     },
     "Water Temple": {
       "game": "WaterTemple",
       "regions": ["Water Temple"],
       "region": "Water Temple",
-      "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength",
+      "layout": false,
       "small": [
-        {"hash": 16490222392193949581, "room": 4},
-        {"hash": 2503861086004941173, "room": 8},
-        {"hash": 18099019250896853049, "room": 18},
-        {"hash": 3693930347660122883, "room": 20}
+        {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
+        {"hash": 2503861086004941173, "room": 8, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
+        {"hash": 18099019250896853049, "room": 18, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
+        {"hash": 3693930347660122883, "room": 20, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 10378828369334876242, "room": 15},
+      "boss_key": {"hash": 10378828369334876242, "room": 15, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
       "boss": ["Water Temple Morpha Heart", "Morpha"]
     },
     "Shadow Temple": {
       "game": "ShadowTemple",
       "regions": ["Shadow Temple"],
       "region": "Shadow Temple",
-      "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives",
+      "layout": false,
       "small": [
-        {"hash": 1111717451118505545, "room": 6},
-        {"hash": 5781953901224064730, "room": 11},
-        {"hash": 169081039115821925, "room": 16},
-        {"hash": 17902550525792072472, "room": 21}
+        {"hash": 1111717451118505545, "room": 6, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
+        {"hash": 5781953901224064730, "room": 11, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
+        {"hash": 169081039115821925, "room": 16, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
+        {"hash": 17902550525792072472, "room": 21, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"}
       ],
       "freestanding": [{"hash": 12562389953863361839, "room": 13}],
-      "boss_key": {"hash": 9221365632831348137, "room": 19},
+      "boss_key": {"hash": 9221365632831348137, "room": 19, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
       "boss": ["Shadow Temple Bongo Bongo Heart", "Bongo Bongo"]
     },
     "Spirit Temple": {
       "game": "SpiritTemple",
       "regions": ["Spirit Temple Lobby", "Spirit Temple Child", "Spirit Temple Adult"],
       "region": "Spirit Temple Adult",
-      "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side",
+      "layout": false,
       "events": {"Spirit Temple Child": {"Spirit_Child_Side": "child_ranged"}},
       "small": [
-        {"hash": 5703423643219134246, "room": 4},
-        {"hash": 2203243501006528435, "room": 7},
-        {"hash": 17407066694905911064, "room": 9},
-        {"hash": 4277978357934400600, "room": 16},
-        {"hash": 12042193296697281461, "room": 26}
+        {"hash": 5703423643219134246, "room": 4, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
+        {"hash": 2203243501006528435, "room": 7, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
+        {"hash": 17407066694905911064, "room": 9, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
+        {"hash": 4277978357934400600, "room": 16, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
+        {"hash": 12042193296697281461, "room": 26, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 16272168033146555902, "room": 29},
+      "boss_key": {"hash": 16272168033146555902, "room": 29, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
       "boss": ["Spirit Temple Twinrova Heart", "Twinrova"]
     },
     "Bottom of the Well": {
       "game": "BottomOfTheWell",
       "regions": ["Bottom of the Well"],
       "region": "Bottom of the Well",
-      "rule": "can_play(Zeldas_Lullaby) and can_see_invisible and has_explosives",
+      "layout": false,
       "small": [
-        {"hash": 8397646530660039355, "room": 1}
+        {"hash": 8397646530660039355, "room": 1, "rule": "can_play(Zeldas_Lullaby) and can_see_invisible and has_explosives and has(Small_Key_Bottom_of_the_Well, 2)"}
       ],
       "freestanding": [{"hash": 17649154319341333603, "room": 3}],
       "boss_key": null,
@@ -104,17 +110,17 @@
       "game": "GerudoTrainingGround",
       "regions": ["Gerudo Training Ground"],
       "region": "Gerudo Training Ground",
-      "rule": "gtg_chests",
+      "layout": false,
       "small": [
-        {"hash": 13501407288943710656, "room": 1},
-        {"hash": 11563468890171962383, "room": 4},
-        {"hash": 4372363658229299619, "room": 5},
-        {"hash": 4709724720801091788, "room": 7},
-        {"hash": 1883068192328530224, "room": 8},
-        {"hash": 4320448574091221496, "room": 8},
-        {"hash": 9911316961118170383, "room": 8},
-        {"hash": 3717705376223508790, "room": 9},
-        {"hash": 5329807728555596183, "room": 10}
+        {"hash": 13501407288943710656, "room": 1, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 11563468890171962383, "room": 4, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 4372363658229299619, "room": 5, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 4709724720801091788, "room": 7, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 1883068192328530224, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 4320448574091221496, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 9911316961118170383, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 3717705376223508790, "room": 9, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
+        {"hash": 5329807728555596183, "room": 10, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"}
       ],
       "freestanding": [],
       "boss_key": null,
@@ -124,22 +130,22 @@
       "game": "InsideGanonCastle",
       "regions": ["Ganons Castle"],
       "region": "Ganons Castle",
-      "rule": "ganon_castle_chests and can_use(Light_Arrows)",
+      "layout": false,
       "small": [
-        {"hash": 15320975652699461295, "room": 13}
+        {"hash": 15320975652699461295, "room": 13, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 17092385671602176550, "room": 24},
+      "boss_key": {"hash": 17092385671602176550, "room": 24, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"},
       "boss": [],
       "boss_events": ["Triforce"]
     }
   },
   "rooms": {
     "Forest Temple Purple Rupee Chest": 8, "Forest Temple Bow Chest": 17, "Forest Temple Arrow Chest": 27,
-    "Forest Temple Map Chest": 14, "Forest Temple Compass Chest": 18,
+    "Forest Temple Map Chest": 14, "Forest Temple Compass Chest": 18, "Forest Temple Falling Ceiling Chest": 24,
     "Fire Temple Red Rupee Chest": 3, "Fire Temple High Chest 1": 8, "Fire Temple High Chest 2": 8,
     "Fire Temple High Chest 3": 8, "Fire Temple Megaton Hammer Chest": 13, "Fire Temple Map Chest": 5,
-    "Fire Temple Compass Chest": 16,
+    "Fire Temple Compass Chest": 16, "Fire Temple Room 22 Chest": 22,
     "Water Temple Red Rupee Chest": 2, "Water Temple Longshot Chest": 7, "Water Temple Map Chest": 17,
     "Water Temple Compass Chest": 3,
     "Shadow Temple Hover Boots Chest": 4, "Shadow Temple Red Rupee Chest 1": 11, "Shadow Temple Scrub Seed Chest": 15,

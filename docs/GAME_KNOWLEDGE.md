@@ -415,6 +415,36 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   door, Fire Temple `_A_04`, Spirit Temple `Obj_SpiritTemple_DoorChainLock_A_01`), driven by logic modules
   `DungeonDoorSingleWithChainLockSet_*` (`ActorLogicDoorChainLock` input `OpenKey`, output `IsKeyOpen`). No room
   connection table was found (RSDB `DungeonParam` only lists rooms), so the logic does not know the door layout.
+  The layout can be written by hand instead (2026-11-21): a key chest may have its own `rule` in `keys.json`, and
+  any location / event / exit rule may ask for a number of keys (`has(Small_Key_Forest_Temple, 2)`), which replaces
+  the prudent "all the dungeon's small keys" (see the `_doc` of `keys.json`, `World._key_rule`). A dungeon marked
+  `"layout": true` has all its counts written (worst case): rules without a count need no key, and
+  `small_keys=own_dungeon` places its keys anywhere in it by the logic instead of in their vanilla rooms.
+- Locked doors **[files]**: the door (`DungeonDoor`, or a `SwitchShutterWithChainLock` shutter) links to its chain
+  locks; both locks carry the door's own `DefaultDungeonRoomIndex`, so the map does not say which two rooms a door
+  joins. Boss doors use `Obj_DoorChainLock_A_02` (Fire Temple: `Dm_Obj_DoorChainLock_A_01`); every other chain-locked
+  door is one small key, and each dungeon has exactly as many as small keys (chests + ground). `Obj_Door_Hinge_A_01`
+  is a part of a door. `tools.key_graph propose` guesses the room graph from that (to check by hand: open passages,
+  ladders, elevators and holes have no door actor); `counts` then gives the worst-case keys per location.
+- Unlocking a chain-locked door without a key failed **[game, 2026-11-21, 7 tries on the Fire Temple hammer door,
+  room 0 -> 15]**: removing the locks (the builder's `__delete` also drops the whole AiGroup that references them),
+  swapping the door to the plain `DungeonDoorSingleSetLarge_bda0` module, removing its `PushAirWall_DoorFront`, or
+  feeding the locks' `OpenKey` from logic (at creation, `Logic_Alive` edge, pillar destroyed) all leave the door
+  impassable (it opens, Link is sent back) or still locked. The door's AI (`Obj_DungeonDoor.root.ainb`) opens through
+  an event: after a key, `Common_Dungeon_OpenDungeonDoorSingleChainLockMove` / `UnlockMoveTo` plays
+  `EventDoorUnlockChain` before `EventPlayerOpenDoor`; the normal path skips it (untested lead: `NomralEvent` set to
+  the chain event). Note: the `ainb` library rewrites `DungeonDoorSingleWithChainLockSetLarge_f25d` 24 bytes shorter
+  even without changes, so patch that module in place.
+- A chain-locked door's unlocked state is a saved, unnamed GameData **Bool** (not a `Bool64bitKey`: no door or chain
+  lock of any dungeon has one). Fire Temple hammer door (room 0 -> 15): `#749909151` (ResetTypeValue 24), set as the
+  chain event starts, before `SmallKeyNum` drops **[game, 2026-11-22, tools.checkwatch]**. Writing it true (control
+  pipe, with the door still locked and the key kept) then reloading the room leaves the door unlocked **[game,
+  2026-11-22]**. Other Bools set at the same time, not needed: `#2695376648` (during the chain event),
+  `FireTemple_NaviHelp_Room0_02` (`#3238202950`, end of it), `#2560034628` and `#631556084` (the normal opening
+  that follows). So the door is unlocked from the start (`keys.json` `unlocked_doors`, flag set at the new game), no
+  key is owned from the start, and its key chest (room 22) is a normal location. **Validated in game** on a new game
+  (2026-11-22, seed 2211, own_dungeon keys, adult start in the crater): the hammer door opens without a key. To find
+  another door's Bool: run `tools.checkwatch` and open that door with a key.
 
 ## Messages (Mals)
 

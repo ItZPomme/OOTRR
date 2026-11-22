@@ -77,7 +77,8 @@ def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | No
     """Dungeon keys first (data/keys.json), returns the rest of the pool.
 
     small_keys=own_dungeon: in each vanilla small key room, as many keys as in the vanilla game, among the room's
-    key spots (no logic needed, see World._is_key_spot). Other placed keys: assumed fill, all the other
+    key spots (no logic needed, see World._is_key_spot); a dungeon with its layout written (keys.json "layout")
+    goes to the assumed fill instead, among all its chests. Other placed keys: assumed fill, all the other
     progression items assumed owned. Without keys in the pool, nothing is drawn (same draws as before)."""
     keys = [item for item, _ in pool if keys_mod.parse_item(item)]
     if not keys:
@@ -86,7 +87,7 @@ def _place_keys(world: World, rng: random.Random, pool: list[tuple[str, str | No
     own_small = world.key_mode(keys_mod.SMALL) == "own_dungeon"
     for kd in world.key_dungeons.values():
         item = keys_mod.item_name(keys_mod.SMALL, kd.game)
-        if not own_small or item not in keys:
+        if not own_small or item not in keys or kd.layout:  # layout written: assumed fill in the dungeon below
             continue
         for room, count in sorted(kd.key_rooms.items()):
             count = min(count, keys.count(item))  # fewer only when a plando placed some keys itself
