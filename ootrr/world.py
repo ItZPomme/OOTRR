@@ -158,6 +158,10 @@ SKIP_FLAGS = (
 # (DoorOfTime >= Step01), donc avec « Zelda enfant passée » ou la porte ouverte il n'est plus là
 TALON_CASTLE = 5439531180495276262
 TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False, "IsNegation": True}
+# Air wall around the Hookshot switch of the Water Temple gate (Lake Hylia, HyruleField_Adult_Dynamic): present
+# until SageOfWater is after Step03 (Water Serenade), it makes the switch an invalid Hookshot target. The logic only
+# asks for the Hookshot, Iron Boots and Zora Tunic, so it is removed in every seed.
+LAKE_SWITCH_AIR_WALL = 2935529029587700987
 KOKIRI_INTERRUPTIONS = (
     15690126774393333419,  # KokiriForest_Kokiri_011_StopInFrontOfShop_00 (toit de la boutique)
     18383848770792576395,  # SubEvent_Kokiri_011_FocusOnNPC
@@ -555,11 +559,14 @@ class World:
         Dungeon with its layout written (keys.json "layout"): any chest of the dungeon, the logic places the keys."""
         if self.key_mode(keys_mod.SMALL) != "own_dungeon":
             return False
+        ground = ("pickup", "skulltula") if self.keys_on_ground else ()
         if not lbody.get("hashes") or lbody.get("kind", "general") != "general" or any(
-                lbody.get(f) for f in ("pickup", "scrub", "skulltula", "shop", "gift", "ocarina")):
+                lbody.get(f) for f in ("pickup", "scrub", "skulltula", "shop", "gift", "ocarina") if f not in ground):
             return False
         if kd.layout:
             return rname in kd.regions
+        if any(lbody.get(f) for f in ground):
+            return False  # without the door layout, key spots are the vanilla key rooms' chests
         if rname != kd.region:
             return False
         room = lbody.get("key_room", self.key_rooms.get(lname))
@@ -613,6 +620,25 @@ class World:
             return self.key_dungeons[loc.key_dungeon].game
         return GAME_DUNGEONS.get(loc.dungeon) if loc.dungeon else None
 
+    @property
+    def keys_on_ground(self) -> bool:
+        """key_locations = ground: ground items (Heart Containers, Pieces of Heart, Gold Skulltula drops) may hold
+        a small key of their own dungeon."""
+        return self.settings.get("key_locations", "chests") == "ground"
+
+    def ground_key(self, item: str, loc: Location) -> bool:
+        """Is this a small key lying on the ground in its own dungeon? The game adds a ground key (the item
+        Item_Dungeon_SmallKey picked up) to the dungeon of the current map, so only there [game, 2026-11-22]. With
+        own_dungeon the location must also be one of the dungeon's key spots."""
+        key = keys_mod.parse_item(item)
+        if key is None or key[0] != keys_mod.SMALL or not self.keys_on_ground:
+            return False
+        if not (loc.pickup or loc.skulltula) or loc.kind != "general":
+            return False
+        if self.location_game_dungeon(loc) != key[1]:
+            return False
+        return loc.key_spot or self.key_mode(keys_mod.SMALL) != "own_dungeon"
+
     def _can_hold_key(self, item: str, loc: Location) -> bool | None:
         """Placement rule of a key item (None: not a key). Keys only go to chests (the PC-built mod gives a key
         of another dungeon through the chest's event, so not to a chest whose event is kept)."""
@@ -620,6 +646,8 @@ class World:
         if key is None:
             return None
         kind, game = key
+        if self.ground_key(item, loc):
+            return True  # a small key lying in its own dungeon (key_locations = ground)
         if not loc.is_chest or loc.kind != "general" or loc.gift or loc.ocarina:
             return False
         kd = self._key_game[game]
@@ -1033,6 +1061,7 @@ class World:
             for h in OPEN_FOREST_REMOVALS["deku"]:
                 out[h] = {"Presence": {"FlagName": FOREST_FLAGS["deku"], "IsCheckLazy": False, "IsNegation": False}}
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
+        out[LAKE_SWITCH_AIR_WALL] = {"__delete": True}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}

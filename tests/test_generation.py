@@ -149,8 +149,15 @@ class WorldTests(unittest.TestCase):
         self.assertFalse(replaced & set(data["timeline_kept"]))
         seen = {k for k, v in world.start_flags().items() if k.startswith("HavePlayedEvent.") and v is True}
         self.assertFalse({f"HavePlayedEvent.{s}" for s in replaced} & seen)
-        # every skippable timeline is either replaced, marked as seen at the start, or deliberately kept
-        covered = replaced | set(data["timeline_kept"]) | {k[len("HavePlayedEvent."):] for k in seen}
+        # a scene a logic module names is never marked as seen at the start (Dm_FireTemple_BossIn: no floor to
+        # Volvagia's arena) nor replaced
+        self.assertIn("Dm_FireTemple_BossIn", data["logic_played"])
+        self.assertFalse({f"HavePlayedEvent.{s}" for s in data["logic_played"]} & seen)
+        self.assertFalse(replaced & set(data["logic_played"]))
+        # every skippable timeline is either replaced, marked as seen at the start, played by a logic module or
+        # deliberately kept
+        covered = (replaced | set(data["timeline_kept"]) | set(data["logic_played"])
+                   | {k[len("HavePlayedEvent."):] for k in seen})
         self.assertEqual(set(data["game_skippable"]) - covered, set(data["timeline_unplayed"]))
 
     def test_no_logic(self):

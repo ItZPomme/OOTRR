@@ -37,8 +37,8 @@
     "Forest Temple": {
       "dungeon": "Forest Temple",
       "locations": {
-        "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
-        "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 5)", "vanilla": "Item_Medal_Forest"}
+        "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and Boss_Key_Forest_Temple", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
+        "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and Boss_Key_Forest_Temple", "vanilla": "Item_Medal_Forest"}
       },
       "exits": {
         "Sacred Forest Meadow": "True"
@@ -47,8 +47,8 @@
     "Fire Temple": {
       "dungeon": "Fire Temple",
       "locations": {
-        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 8)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
-        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 8)", "vanilla": "Item_Medal_Fire"}
+        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
+        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple", "vanilla": "Item_Medal_Fire"}
       },
       "exits": {
         "DMC Central": "True",

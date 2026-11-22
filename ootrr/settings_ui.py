@@ -19,7 +19,7 @@ PAGES: list[tuple[str, list[str]]] = [
                "bridge", "bridge_count", "gerudo_fortress"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
                  "shuffle_skulltulas", "adult_trade_sequence", "gerudo_card"]),
-    ("Dungeons", ["maps_compasses", "small_keys", "boss_keys"]),
+    ("Dungeons", ["maps_compasses", "small_keys", "boss_keys", "key_locations"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
                  "complete_mask_quest", "fast_bunny_hood", "blue_fire_arrows"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
@@ -65,6 +65,10 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
                    "every dungeon starts with all its keys. Random: anywhere.", {}),
     "boss_keys": ("Boss Keys", "Vanilla: in their chest. Own Dungeon: anywhere in their dungeon. Any Dungeon: in "
                   "any dungeon. Removed: owned from the start. Random: anywhere, Ganon's Castle included.", {}),
+    # PC-only: ground items given as dungeon keys (see small_keys)
+    "key_locations": ("Key Locations", "Chests: shuffled small keys only go to chests. Ground: also to ground "
+                      "items (Heart Containers, Pieces of Heart, Gold Skulltula drops) inside their own dungeon. "
+                      "Boss keys stay in chests.", {"chests": "Chests", "ground": "Chests + Ground"}),
     # PC-only: the native menu's generator always shuffles the card with the gifts (no row)
     "gerudo_card": ("Gerudo Card", "Random: the Gerudo Membership Card is in the item pool and the Gerudo who gives "
                     "it gives a seed item. Vanilla: she gives the card, as in the original game.",

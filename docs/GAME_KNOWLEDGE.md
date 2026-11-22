@@ -390,7 +390,17 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   `GerudoTrainingGround`, `InsideGanonCastle`) and `GerudoFortress`. The struct has 4 more members, names unknown.
 - Key chests (`tools.inventory`): `Drop__DropActor` = `Item_Dungeon_SmallKey` (37 chests) or `Item_Dungeon_BossKey`
   (6 chests, Ganon's Castle included). Ground keys `Obj_Dungeon_SmallKey`: one in Bottom of the Well (room 3), one in
-  the Shadow Temple (room 13). Gerudo Fortress carpenters drop `Obj_Dungeon_SmallKey_GerudoFortress_0N` (untouched).
+  the Shadow Temple (room 13). Gerudo Fortress carpenters drop `Obj_Dungeon_SmallKey_GerudoFortress_0N` (untouched):
+  same actor plus an AI that only sets `IsGet_SmallKey_GerudoFortress.SmallKey0N` on pickup.
+- Keys on the ground **[game, 2026-11-22]**: a custom ground item (copy of `Obj_Heart_Container`, see "Custom ground
+  items") giving `Item_Dungeon_SmallKey` adds 1 to `SmallKeyNum` of the dungeon of the current map (Fire Temple test).
+  One giving `Item_Dungeon_BossKey` is picked up but leaves `IsGetBossKey` false (the boss door stays shut): the
+  chest event sets it, not the pouch add. So `key_locations = ground` puts only small keys, and only in ground items
+  of their own dungeon's map (every boss Heart Container and dungeon Gold Skulltula lies in its dungeon's Banc,
+  checked in the maps). **Validated in game** with a seed (plando, 2026-11-22): a small key placed in the Fire
+  Temple Volvagia Heart is given after the fight. Gold Skulltula drops use the same item but are not tested (dungeon
+  Skulltulas never hold progression anyway). Untested lead for boss keys: a copy of the Gerudo key actor whose AI sets
+  `DungeonInfo.<game>.IsGetBossKey` instead.
   Hashes and rooms (`DefaultDungeonRoomIndex`) are in `data/keys.json`.
 - A chest gives a key through `Dm_SY_Treasurebox` (`Success_AddContent`): `EventQueryTreasureBoxIsDungeonCommonItemInside`
   (0 map, 1 compass, 2 boss key, 3 small key, 4 other) -> `GameSystemActor.EventGetDungeonSmallKey` /
@@ -610,6 +620,14 @@ not change) **[game]**.
   `EventName`), AI schedules and scripts: e.g. `Dm_Kokiri_0050` (Kokiri Forest), `Dm_LakeHrl_0020` (lake water),
   `Dm_DodongoCave_BossOut` (Gorons), `Dm_Kakariko_0025` (Death Mountain) **[files]**. So a skipped timeline must still
   set its flag.
+- **A flag set up front is not the same as the scene played [game, 2026-11-22]**: with
+  `HavePlayedEvent.Dm_FireTemple_BossIn` true from the new game (it was in the "skippable" list), the floor between
+  Volvagia's door and the arena (`Obj_FireTemple_SinkFloor_A_02`, room 33, boss group of
+  `FireTemple_Level_Room_26_Prefab_80f5`, which plays that scene) never appears and the boss cannot be reached.
+  With the flag false, it appears (the 9 Gorons' flags play no part). So `tools.cutscenes` no longer marks as seen a
+  scene that a logic module names (`logic_played`, 26 scenes: `Dm_Deku_BossIn`, Hyrule Field, Ganon's Castle...):
+  they play as in the original game. Replacing a transition in a parent script (`timeline_skips`) is kept: it sets
+  the flag when the scene would have played.
 - `skip_cutscenes=safe` (and the in-game menu): in each parent script, the transition step of a skippable timeline is
   replaced with `HavePlayedEvent.<scene> = true` (+ a fade-in when `FadeInTypeEventEnd` != 2), see
   `ModBuilder._skip_timelines`: 81 scenes in 21 scripts (boss defeats, sages' awakenings, Ganon's castle, Epona,
@@ -639,6 +657,17 @@ not change) **[game]**.
 
 ## Pitfalls met
 
+- **Quest-gated invisible walls.** The Water Temple gate switch at the bottom of Lake Hylia
+  (`Obj_LakeHrl_SwitchHit_A_01` 4869016827644661009) is wrapped in a `FldObj_AirWall_All` (2935529029587700987,
+  `HyruleField_Adult_Dynamic`, scale 1.5) whose `Presence` is `SageOfWater_IsAfter_Step03_Exp` negated. Without the
+  Water Serenade, the Hookshot aim state (Enum `#1049225769`) reads `HookshotInvalid` on the switch and the reticle
+  stays red **[game, 2026-11-22, plando save, checkwatch]**. The wall's `Presence` was found in the files.
+  `World.actor_changes` deletes the wall in every seed (removal **not validated in game yet**). What the switch
+  drives (logic module `HyruleField_LakeHylia_Common_Prefab_6a9d`): hitting it plays `Dm_WaterTemple_0000` (a
+  scripted Hookshot pull, which sets `WaterTemple_EmitGatePillar`). The gate opens when
+  `HavePlayedEvent.Dm_WaterTemple_0000` is set or SageOfWater is after Step05 (Enum `#1443521711`, `NotReady` ...
+  `Complete`; Step05 = Serenade from Sheik with the Zora Tunic, else Step04). Other actors may be gated the same
+  way: look for `Presence` on air walls near a blocked check.
 - Changing an actor's type through `Gyaml` (heart -> chest): nothing appears. A chest copied into a static map
   (`Obj_TBox_A_01_NoBake`) could not be opened.
 - A copy of the Heart Container that gives HP (custom Piece of Heart) blocks the game.

@@ -122,6 +122,12 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     "gerudo_fortress": ("normal", ("normal", "fast"),
                         "Gerudo Fortress carpenters: normal = free the 4 carpenters to get the Gerudo Membership "
                         "Card check; fast = the first carpenter freed is enough (the rescue counter starts at 3)"),
+    # PC-built mod only (key items given by ground items); added last, see small_keys
+    "key_locations": ("chests", ("chests", "ground"),
+                      "Where shuffled small keys may go: chests = chests only; ground = chests and ground items "
+                      "(freestanding and boss Heart Containers, Pieces of Heart, Gold Skulltula drops), a ground "
+                      "item only holding a small key of the dungeon it lies in (the game adds a ground key to the "
+                      "dungeon of the current map). Boss keys stay in chests"),
 }
 
 

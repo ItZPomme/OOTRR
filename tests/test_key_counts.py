@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from ootrr import keys as keys_mod
+from ootrr import patch as patch_mod
 from ootrr import settings
 from ootrr.fill import generate
 from ootrr.native_logic import Exporter
@@ -82,6 +83,7 @@ class KeyChestNamesTest(unittest.TestCase):
             shutil.rmtree(data, ignore_errors=True)
 
 
+FLARE_DANCER_CHEST = 8757492004108970488  # Fire Temple, behind the hammer door
 ROOM_22_CHEST = 1705064956286753527  # Fire Temple, room 22: was the 8th small key chest
 
 
@@ -122,12 +124,14 @@ class StartKeysTest(unittest.TestCase):
         """A count covered by the start key becomes True, and the prudent 'all the keys' is not added back."""
         def one_key(chests, keys):
             keys["Fire Temple"]["start_keys"] = 1
-            chests["Fire Temple Red Rupee Chest"]["rule"] = "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 1)"
+            name = next(n for n, body in chests.items() if FLARE_DANCER_CHEST in body.get("hashes", []))
+            chests[name]["rule"] = "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 1)"
         data = data_copy(one_key)
         try:
             world = World(settings.build({"small_keys": "any_dungeon"}), data)
             self.assertEqual(world.start_flags()["DungeonInfo.FireTemple.SmallKeyNum"], 1)
-            self.assertNotIn("Small_Key_Fire_Temple", world.locations["Fire Temple Red Rupee Chest"].rule_src)
+            chest = next(l for l in world.locations.values() if FLARE_DANCER_CHEST in l.hashes)
+            self.assertNotIn("Small_Key_Fire_Temple", chest.rule_src)
         finally:
             shutil.rmtree(data, ignore_errors=True)
 
@@ -248,3 +252,49 @@ class LayoutTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GroundKeysTest(unittest.TestCase):
+    """key_locations = ground: a small key may lie on the ground (Heart Container, Piece of Heart, Gold Skulltula
+    drop) in its own dungeon, given as the game's key item."""
+
+    FIRE = keys_mod.item_name(keys_mod.SMALL, "FireTemple")
+    FOREST = keys_mod.item_name(keys_mod.SMALL, "ForestTemple")
+    FIRE_BOSS = keys_mod.item_name(keys_mod.BOSS, "FireTemple")
+
+    def test_placement(self):
+        chests = World(settings.build({"small_keys": "any_dungeon"}))
+        heart = chests.locations["Fire Temple Volvagia Heart"]
+        self.assertFalse(chests.can_place(self.FIRE, heart))  # default: chests only
+        for mode in ("own_dungeon", "any_dungeon", "random"):
+            world = World(settings.build({"small_keys": mode, "boss_keys": mode, "key_locations": "ground"}))
+            heart = world.locations["Fire Temple Volvagia Heart"]
+            self.assertTrue(world.can_place(self.FIRE, heart), mode)
+            self.assertFalse(world.can_place(self.FOREST, heart), mode)  # another dungeon's key: wrong counter
+            self.assertFalse(world.can_place(self.FIRE_BOSS, heart), mode)  # boss keys stay in chests
+            for loc in world.locations.values():
+                if (loc.pickup or loc.skulltula) and world.location_game_dungeon(loc) is None:
+                    self.assertFalse(world.can_place(self.FIRE, loc), loc.name)  # outside the dungeons
+
+    def test_ground_item(self):
+        loc = {"location": "Fire Temple Volvagia Heart", "item": self.FIRE, "key_dungeon": "FireTemple",
+               "pickup": "boss", "hashes": [1], "vanilla": "Obj_Heart_Container"}
+        self.assertEqual(patch_mod.ground_item(loc), "Item_Dungeon_SmallKey")
+        self.assertEqual(patch_mod.ground_item({**loc, "item": "Item_Bow"}), "Item_Bow")
+        with self.assertRaises(ValueError):
+            patch_mod.ground_item({**loc, "item": self.FOREST})
+
+    def test_seeds_place_ground_keys(self):
+        world = World(settings.build({"small_keys": "own_dungeon", "key_locations": "ground"}))
+        found = False
+        for seed in range(10):
+            result = generate(world, seed=seed)
+            patch = patch_mod.build_patch(world, result, "0" * 10)
+            _, pickups = patch_mod.pickup_changes(patch)
+            ground = [l for l in patch["chests"] if (l["pickup"] or l["skulltula"]) and keys_mod.parse_item(l["item"])]
+            for loc in ground:
+                self.assertEqual(keys_mod.parse_item(loc["item"])[1], loc["key_dungeon"])
+            if ground:
+                found = True
+                self.assertIn("Item_Dungeon_SmallKey", pickups.values())
+        self.assertTrue(found)

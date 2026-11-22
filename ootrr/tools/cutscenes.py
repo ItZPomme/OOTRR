@@ -10,7 +10,8 @@ Two lists, both used by the skip_cutscenes=safe setting:
      - give or take an item (GetPouchContent*, AddOrRemovePouchContent, or an item name);
      - change the time, save, or change scene (title, credits...);
    and its flag does not gate another event on a map (e.g. InitEventFlag of an entrance actor: the event it
-   starts would be skipped too, see map_gates).
+   starts would be skipped too, see map_gates), and no logic module plays it (see logic_scenes: e.g. the Fire
+   Temple boss room's module plays Dm_FireTemple_BossIn and raises the floor to Volvagia's arena only then).
 
 2. "timeline_skips": the scenes the game itself lets the player skip (+ / X). The game decides it in RSDB
    EventSetting: an event whose EventSettingComponentList has the category "TimelineEvent" can be skipped,
@@ -96,16 +97,31 @@ def classify(romfs: Path) -> tuple[list[str], dict[str, list[str]]]:
         return why
 
     gates = map_gates(romfs, codec)
+    logic = logic_scenes(romfs)
     safe, kept = [], {}
     for flow in sorted(f for f in flows if f.startswith("Dm_")):
         if murmur3_32(f"HavePlayedEvent.{flow}") not in idx:
             continue
         why = reasons(flow) + [f"gates:{e}" for e in sorted(gates.get(flow, ()))]
+        if not any(flow in v for v in EVENT_SKIPS.values()):  # the start event plays these first anyway
+            why += [f"logic:{m}" for m in sorted(logic.get(flow, ()))]
         if why:
             kept[flow] = why
         else:
             safe.append(flow)
     return safe, kept
+
+
+def logic_scenes(romfs: Path) -> dict[str, set[str]]:
+    """{scene: logic modules (Logic/*.ainb) that name it}. Such a module plays the scene itself and reads its
+    HavePlayedEvent flag: marked as seen up front, the module skips what goes with it. E.g.
+    FireTemple_Level_Room_26_Prefab_80f5 plays Dm_FireTemple_BossIn when Link reaches the boss room, and the
+    floor to Volvagia's arena only rises then [game, 2026-11-22: with the flag set at the start, no floor]."""
+    out: dict[str, set[str]] = {}
+    for path in sorted((romfs / "Logic").rglob("*.ainb")):
+        for m in re.findall(rb"Dm_[A-Za-z0-9_]+", path.read_bytes()):
+            out.setdefault(m.decode(), set()).add(path.name.removesuffix(".logic.module.ainb"))
+    return out
 
 
 def map_gates(romfs: Path, codec: ZsCodec) -> dict[str, set[str]]:
@@ -197,9 +213,13 @@ def main(argv=None) -> int:
     codec = ZsCodec(romfs)
     idx = index(read_byml(codec.decompress(next((romfs / "GameData").glob("GameDataList*.byml.zs")))))
     # scenes with no effect of their own whose flag gates a map event: only their transition step is replaced
-    gated = [s for s, why in kept.items() if all(w.startswith("gates:") for w in why)]
+    gated = [s for s, why in kept.items() if all(w.startswith(("gates:", "logic:")) for w in why)
+             and any(w.startswith("gates:") for w in why)]
+    # scenes kept only because a logic module plays them (see logic_scenes): played as they are, not replaced
+    # either (Dm_FireTemple_BossIn: not known whether the floor rises with the flag or with the timeline)
+    logic_only = {s for s, why in kept.items() if why and all(w.startswith("logic:") for w in why)}
     candidates = sorted({s for s in skippable_in_game if s not in safe and s not in TIMELINE_KEPT
-                         and murmur3_32(f"HavePlayedEvent.{s}") in idx} | set(gated))
+                         and s not in logic_only and murmur3_32(f"HavePlayedEvent.{s}") in idx} | set(gated))
     parents, fade_in = timeline_parents(romfs, candidates)
     played = {s for scenes in parents.values() for s in scenes}
     OUT.write_text(json.dumps({
@@ -226,6 +246,10 @@ def main(argv=None) -> int:
                            "when the game does not let the player skip them.",
         "timeline_gated": gated,
         "timeline_kept": TIMELINE_KEPT,
+        "_logic_played": "Scenes with no effect of their own that a logic module names (Logic/*.ainb plays them or "
+                         "reads their flag): never marked as seen at the start, played as they are (e.g. "
+                         "Dm_FireTemple_BossIn: the floor to Volvagia's arena only rises after it).",
+        "logic_played": sorted(logic_only),
         "timeline_unplayed": sorted(set(candidates) - played),
     }, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"{len(safe)} cutscenes marked as seen, {len(kept)} kept; {len(skippable_in_game)} skippable in game, "

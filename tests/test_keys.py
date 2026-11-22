@@ -5,7 +5,7 @@ import unittest
 
 from ootrr import keys as keys_mod
 from ootrr import settings
-from ootrr.patch import build_patch, chest_changes
+from ootrr.patch import build_patch, chest_changes, pickup_changes, skulltula_changes
 from ootrr.search import State
 from ootrr.world import World
 from seed_pool import submit_cases
@@ -19,6 +19,10 @@ PRESETS = {
     "own / random": {"small_keys": "own_dungeon", "boss_keys": "random", "open_forest": "open"},
     "random / vanilla, beatable": {"small_keys": "random", "accessibility": "beatable"},
     "no logic": {"small_keys": "random", "boss_keys": "any_dungeon", "logic": "none"},
+    "own / own, ground keys": {"small_keys": "own_dungeon", "boss_keys": "own_dungeon", "key_locations": "ground",
+                               "shuffle_skulltulas": "all"},
+    "random / any, ground keys": {"small_keys": "random", "boss_keys": "any_dungeon", "key_locations": "ground",
+                                  "shuffle_hearts": "all"},
 }
 
 
@@ -107,7 +111,10 @@ class KeysTest(unittest.TestCase):
                 kd = world._key_game[game]
                 mode = world.key_mode(kind)
                 self.assertTrue(world.can_place(item, loc), (item, name))
-                self.assertTrue(loc.is_chest, name)
+                if world.ground_key(item, loc):  # key_locations = ground: a small key in its own dungeon's map
+                    self.assertEqual((kind, world.location_game_dungeon(loc)), (keys_mod.SMALL, game), name)
+                else:
+                    self.assertTrue(loc.is_chest, name)
                 if mode == "own_dungeon":
                     self.assertEqual(loc.key_dungeon, kd.name, (item, name))
                 if mode == "any_dungeon":
@@ -127,9 +134,16 @@ class KeysTest(unittest.TestCase):
             # patch: the game's key in its own dungeon, a "door key" + chest event elsewhere
             patch = build_patch(world, result, "0" * 10)
             changes = chest_changes(patch)
+            ground, pickups = pickup_changes(patch)
+            drops = skulltula_changes(patch, pickups)
             for chest in patch["chests"]:
                 key = keys_mod.parse_item(chest["item"])
                 if not key or chest["item"] == chest["vanilla"]:
+                    continue
+                if chest["pickup"] or chest["skulltula"]:  # a ground item giving the game's key
+                    h = chest["hashes"][0]
+                    actor = ground[h]["Gyaml"] if chest["pickup"] else drops[h]["Drop__DropActor"]
+                    self.assertEqual(pickups[actor], keys_mod.GAME_ITEM[keys_mod.SMALL], chest["location"])
                     continue
                 change = changes[chest["hashes"][0]]
                 if chest["key_dungeon"] == key[1]:

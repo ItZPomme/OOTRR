@@ -264,20 +264,32 @@ def skulltula_changes(patch: dict[str, Any], pickups: dict[str, str]) -> dict[in
     for loc in patch["chests"]:
         if not loc.get("skulltula") or loc["item"] == loc["vanilla"]:
             continue
-        if loc["item"] in native:
-            actor = native[loc["item"]]
-        elif loc["item"] in made:
-            actor = made[loc["item"]]
+        item = ground_item(loc)
+        if item in native:
+            actor = native[item]
+        elif item in made:
+            actor = made[item]
         else:
             actor = f"{PICKUP_PREFIX}{len(pickups):03d}"
-            pickups[actor] = loc["item"]
-            made[loc["item"]] = actor
+            pickups[actor] = item
+            made[item] = actor
         for h in loc["hashes"]:
             changes[int(h)] = {"Drop__DropActor": actor}
     return changes
 
 
 PICKUP_PREFIX = "Obj_OoTRR_Pickup_"
+
+
+def ground_item(loc: dict[str, Any]) -> str:
+    """Item given by a ground item (pickup, Gold Skulltula drop): a small key is the game's key item, added by the
+    game to the dungeon of the current map (World.ground_key only puts a key in its own dungeon) [game]."""
+    key = keys_mod.parse_item(loc["item"])
+    if key is None:
+        return loc["item"]
+    if key[0] != keys_mod.SMALL or loc.get("key_dungeon") != key[1]:
+        raise ValueError(f"{loc['location']}: {loc['item']} cannot be given by a ground item")
+    return keys_mod.GAME_ITEM[keys_mod.SMALL]
 
 
 def pickup_changes(patch: dict[str, Any]) -> tuple[dict[int, dict], dict[str, str]]:
@@ -291,11 +303,12 @@ def pickup_changes(patch: dict[str, Any]) -> tuple[dict[int, dict], dict[str, st
     for loc in patch["chests"]:
         if not loc.get("pickup") or loc["item"] == loc["vanilla"]:
             continue
-        if loc["item"] in native:
-            actor = native[loc["item"]]
+        item = ground_item(loc)
+        if item in native:
+            actor = native[item]
         else:
             actor = f"{PICKUP_PREFIX}{len(pickups):03d}"
-            pickups[actor] = loc["item"]
+            pickups[actor] = item
         for h in loc["hashes"]:
             changes[int(h)] = {"Gyaml": actor}
     return changes, pickups

@@ -222,6 +222,8 @@ Shuffled shops are only available with the in-game menu. The other way round, th
 - `any_dungeon`: in any dungeon; `random`: in any chest of the world;
 - `removed`: small keys: no key in the chests, every dungeon starts with all its keys (go and open the locked doors);
   boss keys: owned from the start;
+- `key_locations = ground`: a small key may also lie on the ground in its own dungeon (a boss's Heart Container, a
+  Gold Skulltula's drop); boss keys stay in chests;
 - a key found outside its dungeon says "You got a door key!" (the key of the Treasure Chest Shop): it still counts
   for its own dungeon (the spoiler log tells which one, e.g. `OoTRR_SmallKey_ForestTemple`).
 

@@ -18,14 +18,14 @@
       "region": "Forest Temple",
       "layout": true,
       "small": [
-        {"hash": 1171460703078800858, "room": 0, "rule": "True"},
-        {"hash": 14776684749746592758, "room": 4, "rule": "has(Small_Key_Forest_Temple, 1)"},
-        {"hash": 6449977980406424425, "room": 15, "rule": "can_play(Song_of_Time) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 1)"},
-        {"hash": 3433400840978782007, "room": 16, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 2)"},
-        {"hash": 7535137041266964235, "room": 22, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 5)"}
+        {"hash": 1171460703078800858, "room": 0, "name": "Forest Temple Small Key Chest 1", "rule": "True"},
+        {"hash": 14776684749746592758, "room": 4, "name": "Forest Temple Small Key Chest 2", "rule": "has(Small_Key_Forest_Temple, 1)"},
+        {"hash": 6449977980406424425, "room": 15, "name": "Forest Temple Small Key Chest 3", "rule": "can_play(Song_of_Time) and can_use(Progressive_Hookshot) and has(Small_Key_Forest_Temple, 1)"},
+        {"hash": 3433400840978782007, "room": 16, "name": "Forest Temple Small Key Chest 4", "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 3)"},
+        {"hash": 7535137041266964235, "room": 22, "name": "Forest Temple Small Key Chest 5", "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 3)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 5306318520835485827, "room": null, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 5)"},
+      "boss_key": {"hash": 5306318520835485827, "room": null, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 3)"},
       "boss": ["Forest Temple Phantom Ganon Heart", "Phantom Ganon"]
     },
     "Fire Temple": {
@@ -35,16 +35,16 @@
       "layout": true,
       "unlocked_doors": [{"flag": "#749909151", "door": 4189300454150217955, "rooms": [0, 15]}],
       "small": [
-        {"hash": 3949488292768750868, "room": 1, "name": "Fire Temple Small Key Chest 3", "rule": "has(Small_Key_Fire_Temple, 3)"},
+        {"hash": 3949488292768750868, "room": 1, "name": "Fire Temple Small Key Chest 3", "rule": "has(Small_Key_Fire_Temple, 1)"},
         {"hash": 5634724236470386190, "room": 2, "name": "Fire Temple Small Key Chest 1", "rule": "True"},
-        {"hash": 16785682308850448108, "room": 4, "name": "Fire Temple Small Key Chest 6", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 2)"},
-        {"hash": 9634924691849556346, "room": 5, "name": "Fire Temple Small Key Chest 5", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 3)"},
-        {"hash": 12567412825200613393, "room": 5, "name": "Fire Temple Small Key Chest 4", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 2)) or has(Small_Key_Fire_Temple, 4)"},
-        {"hash": 12945617941305968586, "room": 10, "name": "Fire Temple Small Key Chest 7", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 2) and can_blast_or_smash) or (can_blast_or_smash and has(Small_Key_Fire_Temple, 4))"},
-        {"hash": 10521366928524045067, "room": 11, "name": "Fire Temple Small Key Chest 8", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 6)"}
+        {"hash": 16785682308850448108, "room": 4, "name": "Fire Temple Small Key Chest 6", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 3) and can_blast_or_smash) or (can_blast_or_smash and has(Small_Key_Fire_Temple, 4))"},
+        {"hash": 9634924691849556346, "room": 5, "name": "Fire Temple Small Key Chest 5", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 3)) or has(Small_Key_Fire_Temple, 4)"},
+        {"hash": 12567412825200613393, "room": 5, "name": "Fire Temple Small Key Chest 4", "rule": "has(Small_Key_Fire_Temple, 3)"},
+        {"hash": 12945617941305968586, "room": 10, "name": "Fire Temple Small Key Chest 7", "rule": "(can_use(Hover_Boots) and has(Small_Key_Fire_Temple, 4)) or has(Small_Key_Fire_Temple, 5)"},
+        {"hash": 10521366928524045067, "room": 11, "name": "Fire Temple Small Key Chest 8", "rule": "(can_use(Hover_Boots) and can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 5)) or (can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 6))"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 14060099092170010696, "room": 17, "rule": "can_use(Megaton_Hammer) and has(Small_Key_Fire_Temple, 0)"},
+      "boss_key": {"hash": 14060099092170010696, "room": 17, "rule": "can_use(Megaton_Hammer)"},
       "boss": ["Fire Temple Volvagia Heart", "Volvagia"]
     },
     "Water Temple": {
