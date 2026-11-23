@@ -74,8 +74,8 @@
     "Fire Temple Megaton Hammer Chest":  {"region": "Fire Temple", "rule": "has_explosives and has(Small_Key_Fire_Temple, 6)", "hashes": [12083259659219538030], "vanilla": "Item_Hammer", "event": "drop"},
     "Fire Temple Small Key Chest 2":        {"region": "Fire Temple", "rule": "can_blast_or_smash and has(Small_Key_Fire_Temple, 1)", "hashes": [1705064956286753527], "vanilla": "TBox_Rupee_Red"},
 
-    "Water Temple Red Rupee Chest":      {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 4)", "hashes": [11682974908842171598], "vanilla": "TBox_Rupee_Red"},
-    "Water Temple Longshot Chest":       {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 4)", "hashes": [18059711820131847165], "vanilla": "Item_Longshot", "event": "keep"},
+    "Water Temple Red Rupee Chest":      {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 0)", "hashes": [11682974908842171598], "vanilla": "TBox_Rupee_Red"},
+    "Water Temple Longshot Chest":       {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 3)", "hashes": [18059711820131847165], "vanilla": "Item_Longshot", "event": "keep"},
 
     "Shadow Temple Hover Boots Chest":   {"region": "Shadow Temple", "rule": "has(Small_Key_Shadow_Temple, 5)", "hashes": [14535080241831873137], "vanilla": "Item_HoverBoot", "event": "drop"},
     "Shadow Temple Red Rupee Chest 1":   {"region": "Shadow Temple", "rule": "can_use(Hover_Boots) and has(Small_Key_Shadow_Temple, 5)", "hashes": [8858270325665149688], "vanilla": "TBox_Rupee_Red"},
@@ -116,8 +116,9 @@
     "Forest Temple Compass Chest":      {"region": "Forest Temple", "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 3)", "hashes": [6948525240950728236], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
     "Fire Temple Map Chest":            {"region": "Fire Temple", "rule": "has(Small_Key_Fire_Temple, 3)", "hashes": [3688520809244472975], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
     "Fire Temple Compass Chest":        {"region": "Fire Temple", "rule": "(can_use(Hover_Boots) and can_use(Progressive_Hookshot) and has(Small_Key_Fire_Temple, 3)) or ((can_use(Progressive_Hookshot) or can_use(Bow)) and has(Small_Key_Fire_Temple, 4))", "hashes": [16713240760352215634], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
-    "Water Temple Map Chest":           {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 4)", "hashes": [16384925224245172970], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
-    "Water Temple Compass Chest":       {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 4)", "hashes": [16424266294822218796], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
+    "Water Temple Map Chest":           {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 0)", "hashes": [16384925224245172970], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
+    "Water Temple Compass Chest":       {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 0)", "hashes": [16424266294822218796], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
+    "Water Temple Small Key Chest 4":     {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)", "hashes": [3693930347660122883], "vanilla": "TBox_Rupee_Red"},
     "Shadow Temple Map Chest":          {"region": "Shadow Temple", "rule": "has(Small_Key_Shadow_Temple, 5)", "hashes": [13528903653876646082], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
     "Shadow Temple Compass Chest":      {"region": "Shadow Temple", "rule": "can_use(Hover_Boots) and has(Small_Key_Shadow_Temple, 5)", "hashes": [1733372171176975157], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
     "Spirit Temple Map Chest":          {"region": "Spirit Temple Adult", "rule": "can_use(Progressive_Hookshot) and has(Small_Key_Spirit_Temple, 5)", "hashes": [13852283723126411131], "vanilla": "Item_Dungeon_Map", "dungeon_item": "map", "_note": "prudent"},

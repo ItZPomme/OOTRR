@@ -51,15 +51,15 @@
       "game": "WaterTemple",
       "regions": ["Water Temple"],
       "region": "Water Temple",
-      "layout": false,
+      "layout": true,
+      "unlocked_doors": [{"flag": "#3955751124", "door": 15319553007255647544, "rooms": [0, 1]}],
       "small": [
-        {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
-        {"hash": 2503861086004941173, "room": 8, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
-        {"hash": 18099019250896853049, "room": 18, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
-        {"hash": 3693930347660122883, "room": 20, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"}
+        {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"},
+        {"hash": 2503861086004941173, "room": 8, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"},
+        {"hash": 18099019250896853049, "room": 18, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 10378828369334876242, "room": 15, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 4)"},
+      "boss_key": {"hash": 10378828369334876242, "room": 15, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 3)"},
       "boss": ["Water Temple Morpha Heart", "Morpha"]
     },
     "Shadow Temple": {
@@ -147,7 +147,7 @@
     "Fire Temple High Chest 3": 8, "Fire Temple Megaton Hammer Chest": 13, "Fire Temple Map Chest": 5,
     "Fire Temple Compass Chest": 16, "Fire Temple Room 22 Chest": 22,
     "Water Temple Red Rupee Chest": 2, "Water Temple Longshot Chest": 7, "Water Temple Map Chest": 17,
-    "Water Temple Compass Chest": 3,
+    "Water Temple Compass Chest": 3, "Water Temple Small Key Chest 4": 20,
     "Shadow Temple Hover Boots Chest": 4, "Shadow Temple Red Rupee Chest 1": 11, "Shadow Temple Scrub Seed Chest": 15,
     "Shadow Temple Green Rupee Chest": 16, "Shadow Temple Magic Jar Chest": 19, "Shadow Temple Red Rupee Chest 2": 31,
     "Shadow Temple Red Rupee Chest 3": 31, "Shadow Temple Map Chest": 3, "Shadow Temple Compass Chest": 7,

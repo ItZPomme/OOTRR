@@ -1,14 +1,26 @@
 """Dungeon keys (small_keys, boss_keys): key chests, prudent logic, placement rules, patch and start flags."""
 
 import os
+import re
 import unittest
 
 from ootrr import keys as keys_mod
 from ootrr import settings
 from ootrr.patch import build_patch, chest_changes, pickup_changes, skulltula_changes
 from ootrr.search import State
-from ootrr.world import World
+from ootrr.world import DATA_DIR, World
 from seed_pool import submit_cases
+
+def written_zero(loc, dungeon: str) -> bool:
+    """The data gives this location a key count of 0 (key_graph worst case: no key door on its way)."""
+    key = keys_mod.logic_name(keys_mod.SMALL, dungeon)
+    marks = [f'"{loc.name}":'] + [str(h) for h in loc.hashes]
+    for path in [DATA_DIR / "keys.json", *sorted((DATA_DIR / "world").glob("*.json"))]:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if any(m in line for m in marks) and re.search(rf"has\(\s*{key}\s*,\s*0\s*\)", line):
+                return True
+    return False
+
 
 N_SEEDS = max(3, int(os.environ.get("OOTRR_TEST_SEEDS", "100")) // 5)
 
@@ -43,7 +55,8 @@ class KeysTest(unittest.TestCase):
         boss_names = {kd.boss_location for kd in world.key_dungeons.values() if kd.boss_key}
         small = [world.locations[n] for n in small_names]
         boss = [world.locations[n] for n in boss_names]
-        self.assertEqual(len(small), 36)  # Fire Temple: 7 chests + 1 key owned from the start (keys.json)
+        # Fire Temple: 7 chests, Water Temple: 3 (one door unlocked from the start in each, keys.json)
+        self.assertEqual(len(small), 35)
         self.assertEqual(len(boss), 6)
         hashes = [h for l in small + boss for h in l.hashes]
         self.assertEqual(len(hashes), len(set(hashes)))
@@ -64,7 +77,7 @@ class KeysTest(unittest.TestCase):
             kd = world.key_dungeons.get(loc.key_dungeon)
             if kd and not kd.layout and loc.name != kd.boss_location:  # layout: rules used as written
                 key = keys_mod.logic_name(keys_mod.SMALL, loc.key_dungeon)
-                self.assertTrue(key in loc.rule_src or kd.start_keys, loc.name)
+                self.assertTrue(key in loc.rule_src or kd.start_keys or written_zero(loc, loc.key_dungeon), loc.name)
         self.assertIn("Boss_Key_Forest_Temple", world.locations["Phantom Ganon"].rule_src)
         triforce = next(e for e in world.events if e.name == "Triforce")
         self.assertIn("Boss_Key_Ganons_Castle", triforce.rule_src)
@@ -83,8 +96,8 @@ class KeysTest(unittest.TestCase):
                 self.assertEqual(loc.region, kd.region)
                 self.assertIn(loc.key_room, kd.key_rooms)
                 self.assertNotIn("Small_Key", loc.rule_src)
-            elif not kd.start_keys:
-                # (with keys owned from the start, a location may need no key left to find)
+            elif not kd.start_keys and not written_zero(loc, loc.key_dungeon):
+                # (with keys owned from the start, or a count of 0 written, a location may need no key)
                 self.assertIn("Small_Key", loc.rule_src, loc.name)
 
     def test_removed(self):

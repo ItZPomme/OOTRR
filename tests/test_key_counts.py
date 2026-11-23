@@ -230,8 +230,8 @@ class LayoutTest(unittest.TestCase):
         self.assertIn("Forest Temple Bow Chest", spots)
         self.assertIn("Forest Temple Purple Rupee Chest", spots)
         # the other dungeons stay prudent
-        water = [l for l in locs.values() if l.key_dungeon == "Water Temple" and not l.key_spot]
-        self.assertTrue(water and all("Small_Key_Water_Temple" in l.rule_src for l in water))
+        shadow = [l for l in locs.values() if l.key_dungeon == "Shadow Temple" and not l.key_spot]
+        self.assertTrue(shadow and all("Small_Key_Shadow_Temple" in l.rule_src for l in shadow))
 
     def test_keys_anywhere_in_the_dungeon(self):
         world = World(settings.build({"small_keys": "own_dungeon"}), self.data)

@@ -436,6 +436,24 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   door is one small key, and each dungeon has exactly as many as small keys (chests + ground). `Obj_Door_Hinge_A_01`
   is a part of a door. `tools.key_graph propose` guesses the room graph from that (to check by hand: open passages,
   ladders, elevators and holes have no door actor); `counts` then gives the worst-case keys per location.
+- Water Temple door layout **[game, 2026-11-22, described by the player; rooms matched in the files]**: the 4
+  chain-locked doors are all in the hub (room 0), at the height of a water level, and are only reached with the
+  water at that level, except the boss key door. The water is at 3F on entering. Tablets (Zelda's Lullaby): two at
+  3F, one in room 17 (sets 1F, no key, beside the Map Chest) and one in room 10 (sets 3F, behind the 2F door); the
+  central tower's one (room 1) sets 2F, behind the tower's 1F door. So 2F water needs the tower door. Doors: 3F
+  `14915175233807466033` (Y 119.3, towards Dark Link and the Longshot), 2F `2202807660383340401` (Y 111.4, 3F
+  tablet), tower 1F `15319553007255647544` (Y 100.8; its 2F exit is the switch shutter `1311186950182408800`),
+  boss key wing 1F `8936252369722474095` (Y 100.0, any level). In `key_graph.json` with `water` levels:
+  0 keys for the Map / Compass Chests, the key chests of rooms 8 and 18 and Morpha's Heart; 3 for everything that
+  needs 2F water (tower, B1, the keys of rooms 4 and 20, GS 1-3); 4 for the Longshot, the boss key and GS 4-5.
+  Only 2 chests with no key door hold a key when the map and compass stay in place, so a player could waste both
+  keys on the 3F and boss key doors and be stuck, and `own_dungeon` had no safe placement. So the tower door is
+  unlocked from the start (`keys.json` `unlocked_doors`): its saved Bool is `#3955751124` (ResetTypeValue 24, like
+  the Fire Temple one), set as the door's chain event plays **[game, 2026-11-22, tools.checkwatch]**; `#2781265563`
+  (same moment) and `#2864701182`, `#35229712` (normal opening) are ResetTypeValue 8. The key chest of room 20
+  (`3693930347660122883`) is a normal location (Red Rupee as its vanilla item): 3 keys for 3 doors. Counts then:
+  0 for everything up to 2F water, 3 for the Longshot, the boss key and GS 4-5; `layout: true`. **Validated in
+  game** on a new game (Longshot, 2026-11-22, `small_keys=own_dungeon` test mod): the tower door opens without a key.
 - Unlocking a chain-locked door without a key failed **[game, 2026-11-21, 7 tries on the Fire Temple hammer door,
   room 0 -> 15]**: removing the locks (the builder's `__delete` also drops the whole AiGroup that references them),
   swapping the door to the plain `DungeonDoorSingleSetLarge_bda0` module, removing its `PushAirWall_DoorFront`, or

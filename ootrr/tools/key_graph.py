@@ -14,6 +14,12 @@ Worst case, for a location in room R: the player may open every locked door reac
 the door that leads to R. So R needs 0 keys when it is reachable from the entrance by open links; otherwise
 (locked doors reachable without entering R) + 1 when R itself is behind a locked door, at most the dungeon's keys.
 A missing link makes this count too low (unsafe): that is why only checked graphs are used.
+
+Water levels (Water Temple): a dungeon may have "water": {"start": LEVEL, "tablets": [{"room": R, "level": LEVEL}]}.
+The search then runs on (room, level) states: a link with "levels": [...] is only usable at those levels (no
+"levels": any level), and playing Zelda's Lullaby at a tablet in room R sets the level. Items are not part of the
+graph (the worst case assumes the player has them all); only the dungeon's own state (the water level) can keep
+doors out of reach.
 """
 
 from __future__ import annotations
@@ -128,6 +134,8 @@ def write_graph(graph: dict) -> None:
         d = graph["dungeons"][name]
         out.append(f"    {json.dumps(name)}: {{")
         out.append(f'      "checked": {json.dumps(d["checked"])}, "entrance": {json.dumps(d["entrance"])},')
+        if d.get("water"):
+            out.append(f'      "water": {json.dumps(d["water"], ensure_ascii=False)},')
         out.append('      "links": [')
         for j, link in enumerate(d["links"]):
             out.append("        " + json.dumps(link, ensure_ascii=False) + ("," if j < len(d["links"]) - 1 else ""))
@@ -148,6 +156,8 @@ DOC = [
     "propose guesses the links from the maps (doors, rooms that touch): every guess must be checked by hand, missing "
     "links added (open passages, ladders, elevators, holes have no door), wrong ones removed. A missing link makes "
     "the counts too low. Then set checked to true: only checked dungeons get counts.",
+    "water (Water Temple): start = water level on entering, tablets = [{room, level}] where Zelda's Lullaby sets "
+    "the level; a link with levels = [...] is only usable at those levels (no levels: any level).",
 ]
 
 
@@ -162,6 +172,8 @@ def cmd_propose(romfs: Path) -> int:
             continue
         links = propose_links(load_maps(romfs, kd.game))
         graph["dungeons"][name] = {"checked": False, "entrance": (old or {}).get("entrance", 0), "links": links}
+        if (old or {}).get("water"):
+            graph["dungeons"][name]["water"] = old["water"]
         locked = sum(1 for l in links if l["door"] == "locked")
         print(f"{name}: {len(links)} links proposed, {locked} locked (the dungeon has "
               f"{len(kd.small) + len(kd.freestanding)} small keys)")
@@ -172,33 +184,66 @@ def cmd_propose(romfs: Path) -> int:
 
 
 # ----------------------------------------------------------------------------------------------------------- counts
-def worst_case(entrance: int, links: list[dict], room: int, total: int) -> int:
-    """Small keys needed to surely reach room `room` (see the module doc)."""
-    def reach(allow_locked: bool, forbid: int | None) -> set[int]:
-        seen, todo = {entrance}, [entrance]
+def _usable(link: dict, level) -> bool:
+    return level is None or "levels" not in link or level in link["levels"]
+
+
+def _ends(link: dict) -> tuple[tuple[int, int], ...]:
+    """(from, to) room pairs a link can be crossed in."""
+    a, b = link["rooms"]
+    return ((a, b),) if link["door"] == "oneway" else ((a, b), (b, a))
+
+
+def worst_case(entrance: int, links: list[dict], room: int, total: int, water: dict | None = None) -> int:
+    """Small keys needed to surely reach room `room` (see the module doc).
+
+    Search over the sets of opened doors: the player may open, in any order, any door within reach as long as
+    `room` is not reached. The count is 1 + the largest such set (at most `total`)."""
+    tablets: dict[int, set] = collections.defaultdict(set)
+    for t in (water or {}).get("tablets", []):
+        tablets[t["room"]].add(t["level"])
+    start = (entrance, (water or {}).get("start"))
+    locked = [i for i, l in enumerate(links) if l["door"] == "locked"]
+
+    def reach(opened: frozenset) -> set[tuple]:
+        """(room, level) states reachable with the locked doors `opened` (indexes in links)."""
+        seen, todo = {start}, [start]
         while todo:
-            r = todo.pop()
-            for l in links:
-                a, b = l["rooms"]
-                if l["door"] == "locked" and not allow_locked:
+            r, lv = todo.pop()
+            nxt = [(r, new) for new in tablets.get(r, ())]
+            for i, l in enumerate(links):
+                if (l["door"] == "locked" and i not in opened) or not _usable(l, lv):
                     continue
-                for src, dst in ((a, b), (b, a)) if l["door"] != "oneway" else ((a, b),):
-                    if src == r and dst not in seen and dst != forbid:
-                        seen.add(dst)
-                        todo.append(dst)
+                nxt += [(dst, lv) for src, dst in _ends(l) if src == r]
+            for state in nxt:
+                if state not in seen:
+                    seen.add(state)
+                    todo.append(state)
         return seen
 
-    if room == entrance or room in reach(False, None):
-        return 0
-    if room not in reach(True, None):
+    def openable(i: int, states: set[tuple]) -> bool:
+        return any((src, lv) in states and _usable(links[i], lv) for src, _ in _ends(links[i])
+                   for lv in {lv for _, lv in states})
+
+    if room not in {r for r, _ in reach(frozenset(locked))}:
         return total  # not joined to the entrance in the graph: a link is missing, stay prudent
-    seen = reach(True, room)
-    doors = [l for l in links if l["door"] == "locked" and room not in l["rooms"]
-             and any(r in seen for r in l["rooms"])]
-    open_into = any(l["door"] != "locked" and room in l["rooms"] and
-                    (l["rooms"][0] in seen if l["door"] == "oneway" else any(r in seen for r in l["rooms"] if r != room))
-                    for l in links)
-    return min(total, len(doors) + (0 if open_into else 1))
+    best, done = -1, set()
+
+    def explore(opened: frozenset) -> None:
+        nonlocal best
+        if opened in done:
+            return
+        done.add(opened)
+        states = reach(opened)
+        if room in {r for r, _ in states}:
+            return
+        best = max(best, len(opened))
+        for i in locked:
+            if i not in opened and openable(i, states):
+                explore(opened | {i})
+
+    explore(frozenset())
+    return 0 if best < 0 else min(total, best + 1)
 
 
 def location_rooms(romfs: Path, kd) -> dict[str, int | None]:
@@ -216,14 +261,17 @@ def location_rooms(romfs: Path, kd) -> dict[str, int | None]:
 
 
 def set_count(text: str, line_key: str, dungeon: str, n: int) -> tuple[str, bool]:
-    """Sets has(Small_Key_<dungeon>, N) on the line holding line_key (a "name": or a hash)."""
+    """Sets has(Small_Key_<dungeon>, N) on the line holding line_key (a "name": or a hash) and a key count. Other
+    lines naming the location (e.g. the "rooms" of keys.json) are skipped; text is returned as is when no line
+    matches."""
     name = keys_mod.logic_name(keys_mod.SMALL, dungeon)
+    count = rf"has\(\s*{name}\s*,\s*\d+\s*\)"
     lines = text.split("\n")
-    hits = [i for i, l in enumerate(lines) if line_key in l]
+    hits = [i for i, l in enumerate(lines) if line_key in l and re.search(count, l)]
     if len(hits) != 1:
         return text, False
     i = hits[0]
-    new = re.sub(rf"has\(\s*{name}\s*,\s*\d+\s*\)", f"has({name}, {n})", lines[i])
+    new = re.sub(count, f"has({name}, {n})", lines[i])
     changed = new != lines[i]
     lines[i] = new
     return "\n".join(lines), changed
@@ -249,7 +297,7 @@ def cmd_counts(romfs: Path, write: bool) -> int:
             hash_of[kd.boss_location] = kd.boss_key["hash"]
         joined = {r for l in g["links"] for r in l["rooms"]} | {g["entrance"]}
         for loc, room in sorted(location_rooms(romfs, kd).items(), key=lambda x: (x[1] is None, x[1] or 0, x[0])):
-            n = total if room is None else worst_case(g["entrance"], g["links"], room, total)
+            n = total if room is None else worst_case(g["entrance"], g["links"], room, total, g.get("water"))
             why = ("no room in the maps: all the keys" if room is None else
                    "room not in the graph: all the keys" if room not in joined else "")
             print(f"  {n}  room {room if room is not None else '?':>3}  {loc}" + (f"  ({why})" if why else ""))
@@ -257,8 +305,9 @@ def cmd_counts(romfs: Path, write: bool) -> int:
                 continue
             key = str(hash_of[loc]) if loc in hash_of else json.dumps(loc) + ":"
             for path, text in files.items():
-                if key in text:
-                    files[path], changed = set_count(text, key, name, n)
+                new_text, changed = set_count(text, key, name, n)
+                if new_text is not text:  # this file holds the location's rule
+                    files[path] = new_text
                     changes += changed
                     break
     if write:
