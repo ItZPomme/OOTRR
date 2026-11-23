@@ -67,6 +67,7 @@
     "Water Temple": {
       "checked": true, "entrance": 0,
       "water": {"start": "high", "tablets": [{"room": 10, "level": "high"}, {"room": 17, "level": "low"}, {"room": 1, "level": "mid"}]},
+      "location_rooms": {"Morpha": 23},
       "links": [
         {"rooms": [0, 1], "door": "open", "levels": ["low"], "why": "1F door of the central tower 15319553007255647544 (Y 100.8), leads to the 2F tablet (room 1); chain-locked, but unlocked from the start (keys.json unlocked_doors) (in game, 2026-11-22)"},
         {"rooms": [0, 1], "door": "open", "levels": ["mid"], "why": "tower exit at 2F, SwitchShutter 1311186950182408800 (Y 111.4); mid water exists only through the tower tablet (in game, 2026-11-22)"},
@@ -75,7 +76,7 @@
         {"rooms": [0, 5], "door": "locked", "why": "3F door 14915175233807466033 (Y 119.3), towards the Longshot (rooms 5, 6, 22, 7) (in game, 2026-11-22)", "levels": ["high"]},
         {"rooms": [0, 8], "door": "open", "levels": ["low"], "why": "Small Key Chest 2 (room 8): water at 1F, pushed block, no key door (in game, 2026-11-22)"},
         {"rooms": [0, 10], "door": "locked", "why": "2F door 2202807660383340401 (Y 111.4), leads to the 3F tablet (room 10) (in game, 2026-11-22)", "levels": ["mid"]},
-        {"rooms": [0, 11], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 14062407736726262408 in room 0, nearest other room 11 at 9 m"},
+        {"rooms": [0, 11], "door": "open", "why": "way to the boss door, water at 3F only; SwitchShutter 14062407736726262408 (Y 124.8) (in game, 2026-11-22)", "levels": ["high"]},
         {"rooms": [0, 12], "door": "locked", "why": "1F door 8936252369722474095 (Y 100.0) towards the boss key, at any water level (in game, 2026-11-22)"},
         {"rooms": [0, 17], "door": "open", "why": "room of the Map Chest and of the tablet that sets the water to 1F, reached without a key; the chest itself needs the water at 3F (Iron Boots) (in game, 2026-11-22)"},
         {"rooms": [0, 20], "door": "open", "why": "key behind a breakable wall, water at 2F (in game, 2026-11-22); SwitchShutter_A_02 7238950244846384309 (Y 113.5)", "levels": ["mid"]},
@@ -85,7 +86,7 @@
         {"rooms": [5, 6], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 5734886677530684296 in room 6, nearest other room 5 at 5 m"},
         {"rooms": [6, 22], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 7273086900439047433 in room 6, nearest other room 22 at 0 m"},
         {"rooms": [7, 22], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 849026435548697533 in room 7, nearest other room 22 at 0 m"},
-        {"rooms": [10, 0], "door": "oneway", "levels": ["high"], "why": "way out of the 3F tablet room once the water is raised (assumed: the 2F door is only reached at 2F) (in game, 2026-11-22)"},
+        {"rooms": [10, 0], "door": "oneway", "levels": ["high"], "why": "way out of the 3F tablet room once the water is raised (in game, 2026-11-22)"},
         {"rooms": [11, 23], "door": "boss", "why": "Obj_WaterTemple_SwitchShutter_A_04 16702516366265541739 in room 23, nearest other room 11 at 11 m"},
         {"rooms": [12, 14], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 14982193920499738205 in room 14, nearest other room 12 at 0 m"},
         {"rooms": [14, 24], "door": "open", "why": "boss key wing behind the 1F key door (Boss Key Chest room 15, GS 4 room 24): no water change, Longshot; exact rooms between 12 and 15 not checked (in game, 2026-11-22)"},

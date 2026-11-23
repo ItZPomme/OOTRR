@@ -70,8 +70,8 @@
     "Water Temple": {
       "dungeon": "Water Temple",
       "locations": {
-        "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
-        "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple", "vanilla": "Item_Medal_Water"}
+        "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple and has(Small_Key_Water_Temple, 3)", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
+        "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple and has(Small_Key_Water_Temple, 3)", "vanilla": "Item_Medal_Water"}
       },
       "exits": {
         "Lake Hylia": "True"

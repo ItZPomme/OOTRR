@@ -452,7 +452,8 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   the Fire Temple one), set as the door's chain event plays **[game, 2026-11-22, tools.checkwatch]**; `#2781265563`
   (same moment) and `#2864701182`, `#35229712` (normal opening) are ResetTypeValue 8. The key chest of room 20
   (`3693930347660122883`) is a normal location (Red Rupee as its vanilla item): 3 keys for 3 doors. Counts then:
-  0 for everything up to 2F water, 3 for the Longshot, the boss key and GS 4-5; `layout: true`. **Validated in
+  0 for everything up to 2F water, 3 for the Longshot, the boss key, GS 4-5 and Morpha (the boss door is only
+  reached with the water at 3F, which comes back only through the 2F door once lowered); `layout: true`. **Validated in
   game** on a new game (Longshot, 2026-11-22, `small_keys=own_dungeon` test mod): the tower door opens without a key.
 - Unlocking a chain-locked door without a key failed **[game, 2026-11-21, 7 tries on the Fire Temple hammer door,
   room 0 -> 15]**: removing the locks (the builder's `__delete` also drops the whole AiGroup that references them),
