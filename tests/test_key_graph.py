@@ -53,6 +53,7 @@ class WaterLevelTest(unittest.TestCase):
         dict(link(0, 1, "locked"), levels=["low"]),   # central tower: mid tablet
         dict(link(0, 1), levels=["mid"]),             # its exit at mid water (mid exists only through the tower)
         dict(link(0, 10, "locked"), levels=["mid"]),  # high tablet
+        dict(link(10, 0, "oneway"), levels=["high"]),  # its way out once the water is high
         dict(link(0, 5, "locked"), levels=["high"]),  # towards the Longshot
         link(0, 12, "locked"),                        # boss key, any level
         dict(link(0, 20), levels=["mid"]),            # open, mid water only
@@ -70,6 +71,15 @@ class WaterLevelTest(unittest.TestCase):
         self.assertEqual(self.count(10), 4)
         self.assertEqual(self.count(5), 4)
         self.assertEqual(self.count(12), 4)
+
+    def test_water_does_not_come_back(self):
+        # a ledge of room 9 only reached at high water: the player may lower the water first (tablet of room 9),
+        # then high comes back only through room 10, behind the mid door, maybe after the other doors
+        links = self.LINKS + [dict(link(9, 109), levels=["high"])]
+        self.assertEqual(worst_case(0, links, 109, 4, self.WATER), 4)
+        # without the tablet beside it, nothing lowers the water before the ledge: no key
+        water = {"start": "high", "tablets": [t for t in self.WATER["tablets"] if t["room"] != 9]}
+        self.assertEqual(worst_case(0, links, 109, 4, water), 0)
 
     def test_without_levels_all_parallel(self):
         # levels ignored: the tower's exit becomes a free way in, the other doors are parallel

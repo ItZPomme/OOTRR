@@ -19,7 +19,9 @@ Water levels (Water Temple): a dungeon may have "water": {"start": LEVEL, "table
 The search then runs on (room, level) states: a link with "levels": [...] is only usable at those levels (no
 "levels": any level), and playing Zelda's Lullaby at a tablet in room R sets the level. Items are not part of the
 graph (the worst case assumes the player has them all); only the dungeon's own state (the water level) can keep
-doors out of reach.
+doors out of reach. The level does not come back by itself: the worst case also covers the player who changes it
+at the wrong time. "location_rooms": {location: room} sets a location's room by hand (e.g. a made-up room for a
+chest that needs one water level, apart from the tablet beside it).
 """
 
 from __future__ import annotations
@@ -136,6 +138,8 @@ def write_graph(graph: dict) -> None:
         out.append(f'      "checked": {json.dumps(d["checked"])}, "entrance": {json.dumps(d["entrance"])},')
         if d.get("water"):
             out.append(f'      "water": {json.dumps(d["water"], ensure_ascii=False)},')
+        if d.get("location_rooms"):
+            out.append(f'      "location_rooms": {json.dumps(d["location_rooms"], ensure_ascii=False)},')
         out.append('      "links": [')
         for j, link in enumerate(d["links"]):
             out.append("        " + json.dumps(link, ensure_ascii=False) + ("," if j < len(d["links"]) - 1 else ""))
@@ -174,6 +178,8 @@ def cmd_propose(romfs: Path) -> int:
         graph["dungeons"][name] = {"checked": False, "entrance": (old or {}).get("entrance", 0), "links": links}
         if (old or {}).get("water"):
             graph["dungeons"][name]["water"] = old["water"]
+        if (old or {}).get("location_rooms"):
+            graph["dungeons"][name]["location_rooms"] = old["location_rooms"]
         locked = sum(1 for l in links if l["door"] == "locked")
         print(f"{name}: {len(links)} links proposed, {locked} locked (the dungeon has "
               f"{len(kd.small) + len(kd.freestanding)} small keys)")
@@ -194,11 +200,80 @@ def _ends(link: dict) -> tuple[tuple[int, int], ...]:
     return ((a, b),) if link["door"] == "oneway" else ((a, b), (b, a))
 
 
+def _worst_case_water(entrance: int, links: list[dict], room: int, total: int, water: dict) -> int:
+    """worst_case with water levels: the level does not come back by itself, so the player's choices of water
+    matter as much as the doors opened. N keys are enough when, from every state (opened doors, room, level) the
+    player can reach without opening more than N doors and without reaching the goal, the goal can still be
+    reached with the keys left."""
+    tablets: dict[int, set] = collections.defaultdict(set)
+    for t in water.get("tablets", []):
+        tablets[t["room"]].add(t["level"])
+    start = (frozenset(), (entrance, water.get("start")))
+
+    def goal(pos) -> bool:
+        return pos[0] == room
+
+    def moves(state):
+        opened, (r, lv) = state
+        out = [(opened, (r, new)) for new in tablets.get(r, ())]
+        for i, l in enumerate(links):
+            if not _usable(l, lv):
+                continue
+            ends = [dst for src, dst in _ends(l) if src == r]
+            if not ends:
+                continue
+            if l["door"] == "locked" and i not in opened:
+                out.append((opened | {i}, (r, lv)))  # spend a key on this door
+            else:
+                out += [(opened, (dst, lv)) for dst in ends]
+        return out
+
+    finish_memo: dict = {}
+
+    def can_finish(state, left: int) -> bool:
+        key = (state, left)
+        if key not in finish_memo:
+            base = len(state[0])
+            seen, todo, found = {state}, [state], False
+            while todo and not found:
+                s = todo.pop()
+                if goal(s[1]):
+                    found = True
+                    break
+                for n in moves(s):
+                    if len(n[0]) - base <= left and n not in seen:
+                        seen.add(n)
+                        todo.append(n)
+            finish_memo[key] = found
+        return finish_memo[key]
+
+    def enough(n: int) -> bool:
+        seen, todo = {start}, [start]
+        while todo:
+            s = todo.pop()
+            if goal(s[1]):
+                continue  # reached: this way is fine
+            if not can_finish(s, n - len(s[0])):
+                return False
+            for nxt in moves(s):
+                if len(nxt[0]) <= n and nxt not in seen:
+                    seen.add(nxt)
+                    todo.append(nxt)
+        return True
+
+    if not can_finish(start, len([l for l in links if l["door"] == "locked"])):
+        return total  # not joined to the entrance in the graph: a link is missing, stay prudent
+    return next((n for n in range(total + 1) if enough(n)), total)
+
+
 def worst_case(entrance: int, links: list[dict], room: int, total: int, water: dict | None = None) -> int:
     """Small keys needed to surely reach room `room` (see the module doc).
 
     Search over the sets of opened doors: the player may open, in any order, any door within reach as long as
-    `room` is not reached. The count is 1 + the largest such set (at most `total`)."""
+    `room` is not reached. The count is 1 + the largest such set (at most `total`). With water levels, see
+    _worst_case_water."""
+    if water:
+        return _worst_case_water(entrance, links, room, total, water)
     tablets: dict[int, set] = collections.defaultdict(set)
     for t in (water or {}).get("tablets", []):
         tablets[t["room"]].add(t["level"])
@@ -296,7 +371,8 @@ def cmd_counts(romfs: Path, write: bool) -> int:
         if kd.boss_key:
             hash_of[kd.boss_location] = kd.boss_key["hash"]
         joined = {r for l in g["links"] for r in l["rooms"]} | {g["entrance"]}
-        for loc, room in sorted(location_rooms(romfs, kd).items(), key=lambda x: (x[1] is None, x[1] or 0, x[0])):
+        found = {**location_rooms(romfs, kd), **g.get("location_rooms", {})}  # hand-set rooms win
+        for loc, room in sorted(found.items(), key=lambda x: (x[1] is None, x[1] or 0, x[0])):
             n = total if room is None else worst_case(g["entrance"], g["links"], room, total, g.get("water"))
             why = ("no room in the maps: all the keys" if room is None else
                    "room not in the graph: all the keys" if room not in joined else "")

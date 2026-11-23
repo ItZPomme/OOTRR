@@ -85,6 +85,7 @@
         {"rooms": [5, 6], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 5734886677530684296 in room 6, nearest other room 5 at 5 m"},
         {"rooms": [6, 22], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 7273086900439047433 in room 6, nearest other room 22 at 0 m"},
         {"rooms": [7, 22], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 849026435548697533 in room 7, nearest other room 22 at 0 m"},
+        {"rooms": [10, 0], "door": "oneway", "levels": ["high"], "why": "way out of the 3F tablet room once the water is raised (assumed: the 2F door is only reached at 2F) (in game, 2026-11-22)"},
         {"rooms": [11, 23], "door": "boss", "why": "Obj_WaterTemple_SwitchShutter_A_04 16702516366265541739 in room 23, nearest other room 11 at 11 m"},
         {"rooms": [12, 14], "door": "open", "why": "Obj_WaterTemple_SwitchShutter_A_01 14982193920499738205 in room 14, nearest other room 12 at 0 m"},
         {"rooms": [14, 24], "door": "open", "why": "boss key wing behind the 1F key door (Boss Key Chest room 15, GS 4 room 24): no water change, Longshot; exact rooms between 12 and 15 not checked (in game, 2026-11-22)"},

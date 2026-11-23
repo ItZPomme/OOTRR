@@ -54,12 +54,12 @@
       "layout": true,
       "unlocked_doors": [{"flag": "#3955751124", "door": 15319553007255647544, "rooms": [0, 1]}],
       "small": [
-        {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"},
-        {"hash": 2503861086004941173, "room": 8, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"},
-        {"hash": 18099019250896853049, "room": 18, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 0)"}
+        {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Bow) and has(Small_Key_Water_Temple, 0)"},
+        {"hash": 2503861086004941173, "room": 8, "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 0)"},
+        {"hash": 18099019250896853049, "room": 18, "rule": "can_play(Zeldas_Lullaby) and (can_use(Bow) or has_fire) and has(Small_Key_Water_Temple, 0)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 10378828369334876242, "room": 15, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Iron_Boots) and can_use(Bow) and has_explosives and can_play(Song_of_Time) and Progressive_Strength and has(Small_Key_Water_Temple, 3)"},
+      "boss_key": {"hash": 10378828369334876242, "room": 15, "rule": "can_use_longshot and has(Small_Key_Water_Temple, 3)"},
       "boss": ["Water Temple Morpha Heart", "Morpha"]
     },
     "Shadow Temple": {
