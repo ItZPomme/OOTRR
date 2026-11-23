@@ -662,7 +662,12 @@ not change) **[game]**.
   `HyruleField_Adult_Dynamic`, scale 1.5) whose `Presence` is `SageOfWater_IsAfter_Step03_Exp` negated. Without the
   Water Serenade, the Hookshot aim state (Enum `#1049225769`) reads `HookshotInvalid` on the switch and the reticle
   stays red **[game, 2026-11-22, plando save, checkwatch]**. The wall's `Presence` was found in the files.
-  `World.actor_changes` deletes the wall in every seed (removal **not validated in game yet**). What the switch
+  Deleting the wall from the map (`__delete`) did **not** help: the switch stayed an invalid target, even after the
+  Serenade, while the same map without the deletion worked **[game, 2026-11-22, Longshot, mod variants]**.
+  `World.actor_changes` now keeps the wall and gives it an always-false `Presence` (`UI_IsFinishChallengeMenuOpenEvent`
+  negated, a flag set at the start of every game): the reticle turns green without the Serenade **[game, 2026-11-22,
+  Longshot, test mod]**. Lesson: to hide an actor next to a gimmick, prefer an always-false `Presence` to
+  `__delete`. What the switch
   drives (logic module `HyruleField_LakeHylia_Common_Prefab_6a9d`): hitting it plays `Dm_WaterTemple_0000` (a
   scripted Hookshot pull, which sets `WaterTemple_EmitGatePillar`). The gate opens when
   `HavePlayedEvent.Dm_WaterTemple_0000` is set or SageOfWater is after Step05 (Enum `#1443521711`, `NotReady` ...

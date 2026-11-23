@@ -160,7 +160,9 @@ TALON_CASTLE = 5439531180495276262
 TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False, "IsNegation": True}
 # Air wall around the Hookshot switch of the Water Temple gate (Lake Hylia, HyruleField_Adult_Dynamic): present
 # until SageOfWater is after Step03 (Water Serenade), it makes the switch an invalid Hookshot target. The logic only
-# asks for the Hookshot, Iron Boots and Zora Tunic, so it is removed in every seed.
+# asks for the Hookshot, Iron Boots and Zora Tunic, so it is made absent in every seed. It stays in the map with a
+# presence that is always false (CHALLENGE_MENU_FLAG is set at the start of every game): deleting it from the map
+# left the switch an invalid target even after the Serenade (2026-11-22, Longshot).
 LAKE_SWITCH_AIR_WALL = 2935529029587700987
 KOKIRI_INTERRUPTIONS = (
     15690126774393333419,  # KokiriForest_Kokiri_011_StopInFrontOfShop_00 (toit de la boutique)
@@ -1061,7 +1063,8 @@ class World:
             for h in OPEN_FOREST_REMOVALS["deku"]:
                 out[h] = {"Presence": {"FlagName": FOREST_FLAGS["deku"], "IsCheckLazy": False, "IsNegation": False}}
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
-        out[LAKE_SWITCH_AIR_WALL] = {"__delete": True}
+        out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
+                                                  "IsNegation": True}}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}
