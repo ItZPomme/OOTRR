@@ -77,7 +77,7 @@
     "Water Temple Red Rupee Chest":      {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 0)", "hashes": [11682974908842171598], "vanilla": "TBox_Rupee_Red"},
     "Water Temple Longshot Chest":       {"region": "Water Temple", "rule": "can_play(Zeldas_Lullaby) and has(Small_Key_Water_Temple, 3)", "hashes": [18059711820131847165], "vanilla": "Item_Longshot", "event": "keep"},
 
-    "Shadow Temple Hover Boots Chest":   {"region": "Shadow Temple", "rule": "has(Small_Key_Shadow_Temple, 5)", "hashes": [14535080241831873137], "vanilla": "Item_HoverBoot", "event": "drop"},
+    "Shadow Temple Hover Boots Chest":   {"region": "Shadow Temple", "rule": "can_use(Progressive_Hookshot)", "hashes": [14535080241831873137], "vanilla": "Item_HoverBoot", "event": "drop"},
     "Shadow Temple Red Rupee Chest 1":   {"region": "Shadow Temple", "rule": "can_use(Hover_Boots) and has(Small_Key_Shadow_Temple, 5)", "hashes": [8858270325665149688], "vanilla": "TBox_Rupee_Red"},
     "Shadow Temple Scrub Seed Chest":    {"region": "Shadow Temple", "rule": "can_use(Hover_Boots) and has(Small_Key_Shadow_Temple, 5)", "hashes": [12345747231768877602], "vanilla": "Item_ScrubBusinessSeed"},
     "Shadow Temple Green Rupee Chest":   {"region": "Shadow Temple", "rule": "can_use(Hover_Boots) and has(Small_Key_Shadow_Temple, 5)", "hashes": [5681107746948738726], "vanilla": "TBox_Rupee_Green"},

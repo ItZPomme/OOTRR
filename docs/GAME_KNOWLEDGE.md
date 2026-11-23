@@ -692,6 +692,16 @@ not change) **[game]**.
   `HavePlayedEvent.Dm_WaterTemple_0000` is set or SageOfWater is after Step05 (Enum `#1443521711`, `NotReady` ...
   `Complete`; Step05 = Serenade from Sheik with the Zora Tunic, else Step04). Other actors may be gated the same
   way: look for `Presence` on air walls near a blocked check.
+- **Shadow Temple falling floor (Hover Boots tutorial).** On the way to the Hover Boots, the floor
+  `Obj_ShadowTemple_FallingFloor_A_01` (1947304115190709465, `ShadowTemple_Static`, room 26, fog
+  `ShadowTemple_HoverBootsPracticeRoom`) collapses to teach the boots, which cuts the way back without them. Its AI
+  (`Obj_ShadowTemple_FallingFloor_A_01.root.ainb`, shared with the Deku Tree floors) waits for the player on it
+  (`QueryPhysicsIsSpreadSupportActive`), counts `PreFallTime` seconds, then switches to the `PhysicalFalled` body
+  and moves to the `DestinationAnchor` its `Reference` link names (8969531763233689982, where the fallen floor model
+  `Obj_ShadowTemple_FallingFloor_A_03` stands). `PreFallTime` is a blackboard instance parameter (default 1.0), so a
+  map `Dynamic` entry overrides it **[files]**. `World.actor_changes` sets it to 100000.0 (an F32, not an integer):
+  the floor still makes its first small drop but never falls, and the player can walk back
+  **[game, 2026-11-22, Longshot, test mod]**.
 - Changing an actor's type through `Gyaml` (heart -> chest): nothing appears. A chest copied into a static map
   (`Obj_TBox_A_01_NoBake`) could not be opened.
 - A copy of the Heart Container that gives HP (custom Piece of Heart) blocks the game.

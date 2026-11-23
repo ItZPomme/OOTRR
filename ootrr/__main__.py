@@ -33,7 +33,7 @@ def seed_to_int(seed: str | None) -> int:
 
 
 def _parse_value(text: str):
-    """« true » / « false » / nombre entier, « none » (field removed), sinon texte."""
+    """"true" / "false", integer, decimal number (F32 field), "none" (field removed), otherwise text."""
     low = text.strip().lower()
     if low == "none":
         return None
@@ -41,6 +41,10 @@ def _parse_value(text: str):
         return low == "true"
     try:
         return int(text)
+    except ValueError:
+        pass
+    try:
+        return float(text)
     except ValueError:
         return text.strip()
 

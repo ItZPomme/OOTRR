@@ -164,6 +164,12 @@ TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False,
 # presence that is always false (CHALLENGE_MENU_FLAG is set at the start of every game): deleting it from the map
 # left the switch an invalid target even after the Serenade (2026-11-22, Longshot).
 LAKE_SWITCH_AIR_WALL = 2935529029587700987
+# Shadow Temple falling floor on the way to the Hover Boots (Obj_ShadowTemple_FallingFloor_A_01, room 26,
+# ShadowTemple_Static): its AI drops it PreFallTime seconds (instance parameter, 1 s) after the player stands on it,
+# which cuts the way back without the Hover Boots. With a huge delay it only does its first small drop and stays
+# walkable (validated in game, 2026-11-22, Longshot).
+SHADOW_FALLING_FLOOR = 1947304115190709465
+SHADOW_FALLING_FLOOR_DELAY = 100000.0
 KOKIRI_INTERRUPTIONS = (
     15690126774393333419,  # KokiriForest_Kokiri_011_StopInFrontOfShop_00 (toit de la boutique)
     18383848770792576395,  # SubEvent_Kokiri_011_FocusOnNPC
@@ -1065,6 +1071,7 @@ class World:
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
+        out[SHADOW_FALLING_FLOOR] = {"PreFallTime": SHADOW_FALLING_FLOOR_DELAY}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}
