@@ -632,6 +632,21 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   game** (2026-11-23, Longshot, test mod OoTRR-essai: bridge and quest text, tower barrier gone, tower up to
   Ganondorf, a trial room, saved and reloaded).
 
+## Ganon's Castle boss key condition **[files]** (2026-11-23, not validated in game)
+
+- The boss door locks (`Obj_DoorChainLock_A_02`, Fire Temple `Dm_Obj_DoorChainLock_A_01`) run
+  `AI/BossDoorChainLock.root.ainb`, which reads the boss key with `QueryDungeonIsGetBossKey` (dungeon of the current
+  map).
+- `TriggerGameDataSetBoolTrue` (logic modules) can write a member of `DungeonInfo`: the game does it for
+  `DungeonInfo.WaterTemple.IsGetCompass` (`WaterTemple_Level_Room_03_Prefab_d37d`, node 14).
+- Setting `ganon_boss_key`: `InsideGanonCastle_Level_Room_01_Prefab_4ab0` (main room, always crossed to reach the
+  tower) gets 3 nodes: the condition's expression, an AND with "Link is in this room" (copy of the module's own AND,
+  which clears the room at barrier count 0), and a `TriggerGameDataSetBoolTrue` of
+  `DungeonInfo.InsideGanonCastle.IsGetBossKey` (`ainb_graph.set_flag_in_room`). First nodes added to a logic module by
+  this project: its RESTBL entry is raised like those of the edited actor AIs.
+- In a logic module a node input with several sources (`OperateAND.BoolMulti`) has one plug only, to the first node of
+  its queries (every two-source AND of the game's modules).
+
 ## Boolean expressions (GameData `BoolExp`)
 
 Postfix notation: `0` Bool flag, `10` another expression, `1`/`12` Enum (equal / from) followed by `2` value, `15`

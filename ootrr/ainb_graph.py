@@ -1,4 +1,5 @@
-"""Adding nodes to actor AI modules (AINB) with the `ainb` library (fast Bunny Hood, Ice Arrows as Blue Fire).
+"""Adding nodes to actor AI modules (AINB) with the `ainb` library (fast Bunny Hood, Ice Arrows as Blue Fire), and
+to logic modules (Logic/*.ainb: `set_flag_in_room`).
 
 Validated in game (Longshot, 2026-11-14) for `Player.action.walk.module` (fast Bunny Hood). What matters:
 - every edited file INSIDE a pack has its own RESTBL entry (the game's margin is only ~0x190 bytes over the file
@@ -26,6 +27,67 @@ INNER_MARGIN = 0x2000  # RESTBL margin over the size of an edited file inside a 
 
 def inner_size_entry(restbl, inner: str, new_size: int) -> None:
     restbl.set(inner, max(restbl.get(inner), new_size + INNER_MARGIN))
+
+
+# logic module nodes copied by set_flag_in_room: {key: (module, node)}
+LOGIC_SOURCES = {
+    "bool_exp": ("DeathMountainTrail_Adult_Prefab_a3cd", 1, "HoldGameDataGetBoolExpSimple"),
+    # sets DungeonInfo.WaterTemple.IsGetCompass: the same GameData struct as the boss keys
+    "set_true": ("WaterTemple_Level_Room_03_Prefab_d37d", 14, "TriggerGameDataSetBoolTrue"),
+}
+
+
+def set_flag_in_room(raw: bytes, romfs: Path, bool_exp: str, flag: str) -> bytes:
+    """Logic module of a dungeon room: the Bool `flag` becomes true when Link is in the room AND `bool_exp` is true.
+
+    The module must hold a HoldDungeonRoomQueryIsInCurrentRoom node and an OperateAND that reads it (copied). New
+    nodes: expression, AND(in room, expression), TriggerGameDataSetBoolTrue driven by the AND (its output True), so
+    the trigger sees the AND become true when Link enters the room, as the module's own room clear does. A node
+    with several sources has one plug, to the first of its queries (every OperateAND of the game's modules)."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    room = next(n for n in script.nodes if n.name == "HoldDungeonRoomQueryIsInCurrentRoom")
+    gate = next(n for n in script.nodes if n.name == "OperateAND" and room.index in n.queries and len(n.queries) == 2)
+
+    def add(source):
+        n = copy.deepcopy(source)
+        n.index = len(script.nodes)
+        n.guid = str(uuid.UUID(int=(0x4F6F5452 << 96) | (0x4000 << 48) | (0x8000 << 32) | (0x2000 + n.index)))
+        script.nodes.append(n)
+        return n
+
+    def template(key):
+        module, index, name = LOGIC_SOURCES[key]
+        data = (Path(romfs) / "Logic" / f"{module}.logic.module.ainb").read_bytes()
+        n = ainb.AINB.from_binary(data).nodes[index]
+        if n.name != name:
+            raise ValueError(f"{module}: node {index} is {n.name}, expected {name}")
+        return n
+
+    def text(node, name, value):
+        next(p for p in node.params.string_inputs if p.name == name).default_value = value
+
+    exp = add(template("bool_exp"))
+    text(exp, "GameDataNameBoolExp", bool_exp)
+    both = add(gate)
+    sources = next(p for p in both.params.bool_inputs if p.name == "BoolMulti").source
+    (in_room, other) = sorted(sources, key=lambda s: s.src_node_index != room.index)
+    if in_room.src_node_index != room.index:
+        raise ValueError("room module: the AND does not read the room")
+    other.src_node_index, other.src_output_index = exp.index, 0
+    both.queries = [room.index, exp.index]
+    plug, = both.generic_plugs
+    plug.node_index = room.index
+    trigger = add(template("set_true"))
+    text(trigger, "GameDataNameBool", flag)
+    drive = next(p for p in trigger.params.bool_inputs if p.name == "IsDrive")
+    true_output = [p.name for p in both.params.bool_outputs].index("True")
+    drive.source.src_node_index, drive.source.src_output_index = both.index, true_output
+    trigger.queries = [both.index]
+    plug, = trigger.generic_plugs
+    plug.node_index = both.index
+    return script.to_binary()
 
 
 class Templates:

@@ -179,6 +179,8 @@ and play) is validated in game on one PC.
   mod, King Zora). To do: the native menu (its mod is built once: the arrow and red ice AIs would have to be in it
   and read the setting), the Ice Cavern red ice one by one with the generator-built mod, and the arrow-side
   countdown of the timer (not validated in game).
+- `ganon_boss_key` (Ganon's Castle boss key on its own: vanilla, removed, random or a condition): PC-built mod only, verified in the files, **to
+  validate in game** (key given in the main room, door of Ganondorf's room, nothing given below the count, hearts).
 - `skip_trials` (Ganon's Castle trials done from the start): PC-built mod only, validated in game (2026-11-23).
   To do: the native menu.
 - `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).

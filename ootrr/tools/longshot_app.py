@@ -757,8 +757,9 @@ class App:
             self.values[name] = min(hi, max(lo, cur + d))
         else:  # stops at both ends, like the menu's arrows
             self.values[name] = allowed[min(len(allowed) - 1, max(0, allowed.index(cur) + d))]
-        if name == "bridge" and self.values["bridge"] in BRIDGE_MAX:
-            self.values["bridge_count"] = min(self.values["bridge_count"], BRIDGE_MAX[self.values["bridge"]])
+        count = settings_mod.COUNT_SETTINGS.get(name)
+        if count and self.values[name] in BRIDGE_MAX:
+            self.values[count] = min(self.values[count], BRIDGE_MAX[self.values[name]])
         self.preset = "Custom"
 
     def next_page(self, d=1):

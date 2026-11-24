@@ -234,6 +234,9 @@ class ModBuilder:
             if kind == "blue_fire_arrows":
                 report += self._write_blue_fire_arrows(edit, out_romfs, templates, pack_changes)
                 continue
+            if kind == "ganon_boss_key":
+                report += self._write_flag_module(edit, out_romfs)
+                continue
             if kind != "fast_walk":
                 raise KeyError(f"unknown AINB edit: {kind}")
             clash = set(edit["actors"]) & set(pack_changes or {})
@@ -259,6 +262,20 @@ class ModBuilder:
                 dest.write_bytes(self.codec.compress(path.name, new))
                 report.append(f"  pack {actor}")
         return report
+
+    def _write_flag_module(self, edit: dict, out_romfs: Path) -> list[str]:
+        """Logic module that sets a Bool while Link is in its room and an expression is true (ganon_boss_key:
+        world.GANON_KEY_MODULE, ainb_graph.set_flag_in_room)."""
+        from . import ainb_graph
+
+        rel = f"Logic/{edit['module']}.logic.module.ainb"
+        raw = (self.romfs / rel).read_bytes()
+        new = ainb_graph.set_flag_in_room(raw, self.romfs, edit["bool_exp"], edit["flag"])
+        self.restbl.resize_like(rel, len(raw), len(new) + ainb_graph.INNER_MARGIN)
+        dest = out_romfs / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(new)
+        return [f"{rel}: {edit['flag']} set by {edit['bool_exp']} ({len(raw)} -> {len(new)} bytes)"]
 
     def _write_blue_fire_arrows(self, edit: dict, out_romfs: Path, templates,
                                 pack_changes: dict[str, dict[str, dict]] | None = None) -> list[str]:

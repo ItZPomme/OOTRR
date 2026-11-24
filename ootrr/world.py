@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Any
 
 from . import keys as keys_mod
 from .rules import Rule, RuleCompiler, RuleError
+from .settings import COUNT_LIMITS
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -295,6 +297,37 @@ def _at_least(flags: list[str], n: int, prefix: str) -> dict[str, list[tuple]]:
     return {name(0, n): exps[name(0, n)], **exps}
 
 
+# ganon_boss_key: the door of Ganondorf's room reads DungeonInfo.InsideGanonCastle.IsGetBossKey (AI
+# BossDoorChainLock.root, QueryDungeonIsGetBossKey). Nodes added to a logic module of the castle's main room set it
+# when Link is in that room and the condition's expression is true (ainb_graph.set_flag_in_room). The tower is only
+# reached through the main room.
+GANON_KEY_DUNGEON = "Ganons Castle"
+GANON_KEY_HELPER = "ganon_boss_key_condition"  # helpers.json: the condition in the logic
+GANON_KEY_EXP = "OoTRR_GanonBossKey_Exp"
+GANON_KEY_MODULE = "InsideGanonCastle_Level_Room_01_Prefab_4ab0"
+
+
+def ganon_key_exps(mode: str, count: int) -> dict[str, list[tuple]]:
+    """Boolean expressions of the ganon_boss_key condition (GANON_KEY_EXP), at most 26 elements each."""
+    if mode not in COUNT_LIMITS:
+        return {}
+    if count <= 0:
+        return {GANON_KEY_EXP: [("Bool", STONE_FLAGS[0]), ("Bool", STONE_FLAGS[0]), ("NOT",), ("OR",)]}
+    exps: dict[str, list[tuple]] = {}
+    if mode == "hearts":
+        # max life in quarters (always whole hearts): one of 4*count .. 80, in expressions of 8 values (2 elements each + the ORs)
+        terms = [("IntEq", MAX_LIFE, v) for v in range(4 * count, 81, 4)]
+        groups = [terms[i:i + 8] for i in range(0, len(terms), 8)]
+        for i, group in enumerate(groups):
+            exps[f"OoTRR_GanonKey_Hearts_{i}"] = group[:1] + [x for t in group[1:] for x in (t, ("OR",))]
+        names = list(exps)
+        exps[GANON_KEY_EXP] = [("Exp", names[0])] + [x for n in names[1:] for x in (("Exp", n), ("OR",))]
+        return exps
+    flags = {"stones": STONE_FLAGS, "medallions": MEDAL_FLAGS, "dungeons": STONE_FLAGS + MEDAL_FLAGS}[mode]
+    exps.update(_at_least(flags, min(count, len(flags)), "OoTRR_GanonKey"))
+    return {**exps, GANON_KEY_EXP: [("Exp", next(iter(exps)))]}
+
+
 def bridge_exps(mode: str, count: int) -> dict[str, list[tuple]]:
     """Expressions booléennes de la condition du pont (les deux noms de BRIDGE_EXP valent la condition)."""
     if mode == "vanilla":
@@ -471,9 +504,13 @@ class World:
         # dungeon keys: key_dungeons is empty when both key settings are vanilla. Vanilla keys are not items: each
         # one is an event, collected in its vanilla place (keys_mod.vanilla_events)
         self._all_key_dungeons = keys_mod.load(data_dir)
-        self._vanilla_kinds = tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS)
-                                    if keys_mod.mode(settings, k) == "vanilla")
-        self.key_dungeons: dict[str, keys_mod.KeyDungeon] = keys_mod.load(data_dir) if keys_mod.active(settings) else {}
+        self.ganon_key = settings.get("ganon_boss_key", "boss_keys")
+        self._vanilla_small = keys_mod.mode(settings, keys_mod.SMALL) == "vanilla"
+        self._vanilla_boss_dungeons = {name: kd for name, kd in self._all_key_dungeons.items()
+                                       if kd.boss_key and self.boss_mode(kd) == "vanilla"}
+        self.key_dungeons: dict[str, keys_mod.KeyDungeon] = (
+            keys_mod.load(data_dir) if keys_mod.active(settings) or self.ganon_key not in ("boss_keys", "vanilla")
+            else {})
         self.key_rooms: dict[str, int] = keys_mod.load_rooms(data_dir) if self.key_dungeons else {}
         # small keys owned from the start (keys.json start_keys), given whatever the key settings
         self.start_keys: dict[str, int] = keys_mod.start_keys(data_dir)
@@ -486,7 +523,9 @@ class World:
         if not self.key_dungeons:
             for kd in self._all_key_dungeons.values():
                 self._add_events(regions_raw, kd.events)
-        self._add_events(regions_raw, keys_mod.vanilla_events(self._all_key_dungeons, self._vanilla_kinds))
+        if self._vanilla_small:
+            self._add_events(regions_raw, keys_mod.vanilla_events(self._all_key_dungeons, (keys_mod.SMALL,)))
+        self._add_events(regions_raw, keys_mod.vanilla_events(self._vanilla_boss_dungeons, (keys_mod.BOSS,)))
 
         self.gift_edits: dict[str, list[tuple[str, int, str, str]]] = {
             name: [tuple(e) for e in edits]
@@ -499,8 +538,8 @@ class World:
             logic = body.get("logic")
             if logic is not None and logic not in self.logic_items:
                 raise DataError(f"items.json : {name} donne « {logic} », absent de la section logic")
-            if logic in ("Heart_Piece", "Heart_Container") and settings.get("bridge") != "hearts":
-                logic = None  # les cœurs ne comptent pour la logique qu'avec le pont « hearts »
+            if logic in ("Heart_Piece", "Heart_Container") and "hearts" not in (settings.get("bridge"), self.ganon_key):
+                logic = None  # hearts only count in the logic with a "hearts" condition
             if body.get("trade") and not settings.get("adult_trade_sequence"):
                 logic = None  # adult trade sequence items only count with adult_trade_sequence
             self.items[name] = Item(name, logic, body.get("level"))
@@ -546,6 +585,29 @@ class World:
     def key_mode(self, kind: str) -> str:
         return keys_mod.mode(self.settings, kind) if self.key_dungeons else "vanilla"
 
+    def boss_mode(self, kd: keys_mod.KeyDungeon) -> str:
+        """Mode of a dungeon's boss key: boss_keys, except Ganon's Castle's with its own setting (ganon_boss_key);
+        "condition": given by stones, medallions, dungeons or hearts."""
+        if kd.name != GANON_KEY_DUNGEON or self.ganon_key == "boss_keys":
+            return keys_mod.mode(self.settings, keys_mod.BOSS)
+        return "condition" if self.ganon_key in COUNT_LIMITS else self.ganon_key
+
+    def _key_item_mode(self, key: tuple[str, str]) -> str:
+        """Mode of a key item (keys_mod.parse_item)."""
+        return self.boss_mode(self._key_game[key[1]]) if key[0] == keys_mod.BOSS else self.key_mode(key[0])
+
+    def _boss_terms(self, src) -> str:
+        """Boss key terms of a rule: vanilla keys -> their events, removed -> True, Ganon's Castle's with a condition
+        -> the condition; shuffled keys stay items."""
+        src = keys_mod.vanilla_terms(src, self._vanilla_boss_dungeons, (keys_mod.BOSS,))
+        for kd in self._all_key_dungeons.values():
+            mode = self.boss_mode(kd)
+            if kd.boss_key and mode not in keys_mod.SHUFFLED:
+                name = keys_mod.logic_name(keys_mod.BOSS, kd.name)
+                src = re.sub(rf"has\(\s*{name}\s*,\s*1\s*\)|(?<!\w){name}(?!\w)",
+                             GANON_KEY_HELPER if mode == "condition" else "True", str(src))
+        return str(src)
+
     def _add_key_data(self, regions_raw: dict[str, dict], extra_locations: dict[str, dict]) -> None:
         """Key chests become locations (vanilla item: the dungeon's key item) when their setting is not
         vanilla, in their "region" (keys.json, default: the dungeon's "region"); the events of data/keys.json are
@@ -562,7 +624,7 @@ class World:
                         "region": chest.get("region", kd.region), "rule": self._key_chest_rule(kd, chest, kd.small_location(i)),
                         "hashes": [chest["hash"]],
                         "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game), "key_room": chest["room"]}
-            if self.key_mode(keys_mod.BOSS) != "vanilla" and kd.boss_key:
+            if kd.boss_key and self.boss_mode(kd) != "vanilla":
                 # the chest's event (Navi's line, ForesetTemple_GetBossKey) belongs to the boss key: "drop"
                 extra_locations[kd.boss_location] = {
                     "region": kd.boss_key.get("region", kd.region), "rule": self._key_chest_rule(kd, kd.boss_key, kd.boss_location),
@@ -622,9 +684,11 @@ class World:
         """Key terms of a rule (has(Small_Key_<Dungeon>, n), Boss_Key_<Dungeon>): counted on the vanilla key events
         (vanilla keys) or true (removed keys), and a small key count above the keys of the logic asks for all of them
         (the data writes the dungeon's total, ground keys included: those join the pool with shuffled small keys)."""
-        src = keys_mod.vanilla_terms(src, self._all_key_dungeons, self._vanilla_kinds, where)
-        src = keys_mod.without_key_terms(
-            src, tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS) if self.key_mode(k) not in keys_mod.SHUFFLED))
+        if self._vanilla_small:
+            src = keys_mod.vanilla_terms(src, self._all_key_dungeons, (keys_mod.SMALL,), where)
+        src = self._boss_terms(src)
+        if self.key_mode(keys_mod.SMALL) not in keys_mod.SHUFFLED:
+            src = keys_mod.without_key_terms(src, (keys_mod.SMALL,))
         if self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED:
             for kd in self.key_dungeons.values():
                 src = keys_mod.clamp_counts(src, kd.name, self.small_key_count(kd), kd.start_keys)
@@ -632,9 +696,7 @@ class World:
 
     def _vanilla_boss(self, src, name: str) -> str:
         """With vanilla boss keys, a location or event behind a boss door also asks for its boss key."""
-        if keys_mod.BOSS not in self._vanilla_kinds:
-            return src
-        return keys_mod.vanilla_boss_rule(src, name, self._all_key_dungeons)
+        return keys_mod.vanilla_boss_rule(src, name, self._vanilla_boss_dungeons)
 
     def _key_rule(self, kd: keys_mod.KeyDungeon, key_spot: bool, boss: bool, src: str = "True") -> str:
         """Extra requirement of a location or event of a dungeon with keys (prudent: no door layout).
@@ -651,9 +713,9 @@ class World:
                 parts.append(f"({kd.rule})")
             elif not keys_mod.mentions(src, keys_mod.SMALL, kd.name):
                 parts.append(f"has({keys_mod.logic_name(keys_mod.SMALL, kd.name)}, {self.small_key_count(kd)})")
-        if (boss and kd.boss_key and self.key_mode(keys_mod.BOSS) in keys_mod.SHUFFLED
+        if (boss and kd.boss_key and self.boss_mode(kd) in (*keys_mod.SHUFFLED, "condition")
                 and not keys_mod.mentions(src, keys_mod.BOSS, kd.name)):
-            parts.append(keys_mod.logic_name(keys_mod.BOSS, kd.name))
+            parts.append(self._boss_terms(keys_mod.logic_name(keys_mod.BOSS, kd.name)))
         return " and ".join(parts)
 
     def small_key_count(self, kd: keys_mod.KeyDungeon) -> int:
@@ -704,7 +766,7 @@ class World:
         if not loc.is_chest or loc.kind != "general" or loc.gift or loc.ocarina:
             return False
         kd = self._key_game[game]
-        mode = self.key_mode(kind)
+        mode = self._key_item_mode(key)
         if mode == "own_dungeon":
             if loc.key_dungeon != kd.name or (kind == keys_mod.SMALL and not loc.key_spot):
                 return False
@@ -887,7 +949,7 @@ class World:
             key = keys_mod.parse_item(loc.vanilla)
             if loc.dungeon_item and mode == "shuffle":
                 out.append((loc.vanilla, loc.dungeon))
-            elif loc.dungeon_item or (key and self.key_mode(key[0]) == "removed"):
+            elif loc.dungeon_item or (key and self._key_item_mode(key) in ("removed", "condition")):
                 out.append((JUNK_REPLACEMENT, None))  # removed keys: the counters start full (start_flags)
             else:
                 out.append((loc.vanilla, None))
@@ -928,7 +990,7 @@ class World:
             if self.key_mode(keys_mod.SMALL) == "removed":
                 flags[keys_mod.COUNTER[keys_mod.SMALL].format(game=kd.game)] = (len(kd.small) + len(kd.freestanding)
                                                                                  + kd.start_keys)
-            if self.key_mode(keys_mod.BOSS) == "removed" and kd.boss_key:
+            if kd.boss_key and self.boss_mode(kd) == "removed":
                 flags[keys_mod.COUNTER[keys_mod.BOSS].format(game=kd.game)] = True
         # forêt ouverte : ces drapeaux font apparaître les murs invisibles devant les passages
         forest = self.settings.get("open_forest", "closed")
@@ -1094,12 +1156,13 @@ class World:
         """Expressions booléennes ajoutées aux données de sauvegarde (non sauvegardées)."""
         out = dict(BOOL_EXPS) if self.settings.get("open_door_of_time") else {}
         out.update(bridge_exps(self.settings.get("bridge", "vanilla"), self.settings.get("bridge_count", 0)))
+        out.update(ganon_key_exps(self.ganon_key, self.settings.get("ganon_boss_key_count", 0)))
         if self.settings.get("fast_bunny_hood"):
             out[BUNNY_WORN_EXP] = [("Bool", BUNNY_WORN_FLAG)]
         return out
 
     def ainb_edits(self) -> dict[str, dict]:
-        """Nodes added to AI modules of actor packs (ModBuilder._write_ainb_edits)."""
+        """Nodes added to AI modules of actor packs or to logic modules (ModBuilder._write_ainb_edits)."""
         out: dict[str, dict] = {}
         if self.settings.get("fast_bunny_hood"):
             out["fast_walk"] = {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
@@ -1107,6 +1170,10 @@ class World:
         if self.settings.get("blue_fire_arrows"):
             out["blue_fire_arrows"] = {"timer": BLUE_FIRE_TIMER, "arrow": dict(BLUE_FIRE_ARROW),
                                        "red_ice": list(RED_ICE_PACKS), "file": RED_ICE_AI}
+        if self.ganon_key in COUNT_LIMITS:
+            game = self._all_key_dungeons[GANON_KEY_DUNGEON].game
+            out["ganon_boss_key"] = {"module": GANON_KEY_MODULE, "bool_exp": GANON_KEY_EXP,
+                                     "flag": keys_mod.COUNTER[keys_mod.BOSS].format(game=game)}
         return out
 
     def actor_changes(self) -> dict[int, dict]:

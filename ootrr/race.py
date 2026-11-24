@@ -20,7 +20,8 @@ generator's defaults, as in the app. Same string + same OoTRR version = same gen
 version changes the placement, see the hash symbols). Changing `FIELDS`, a setting's values or an integer range
 means a new format number (`tests/test_race.py` pins format 4, and format 2 reading). Format 1 (OoTRR before the
 dungeon key settings) had the same fields without `small_keys` and `boss_keys`, format 2 without `gerudo_card` and
-`gerudo_fortress`, format 3 without `key_locations` and `skip_trials`.
+`gerudo_fortress`, format 3 without `key_locations`, `skip_trials`,
+`ganon_boss_key` and `ganon_boss_key_count`.
 
 Hash symbols: the first 25 bits of the seed hash (`spoiler.seed_hash`, 10 hex digits, which covers the settings,
 the placement and the version) pick 5 of the 32 `SYMBOLS`. The desktop app draws them, the spoiler log names them.
@@ -41,7 +42,8 @@ _READ_AS = {"I": "1", "L": "1", "O": "0"}
 
 # every setting the app shows, in a fixed order; never reorder. Format 1 = the fields up to starting_age
 # (alphabetical when frozen); format 2 added small_keys and boss_keys at the end; format 3 added gerudo_card and
-# gerudo_fortress; format 4 added key_locations and skip_trials
+# gerudo_fortress; format 4 added key_locations, skip_trials,
+# ganon_boss_key and ganon_boss_key_count
 FIELDS: tuple[str, ...] = (
     "accessibility", "adult_trade_sequence", "big_poe_count", "blue_fire_arrows", "bridge", "bridge_count",
     "complete_mask_quest", "cucco_count", "fast_bunny_hood", "free_time_travel", "logic", "logic_lens_required",
@@ -50,13 +52,13 @@ FIELDS: tuple[str, ...] = (
     "start_with_consumables", "starting_age",
     "small_keys", "boss_keys",
     "gerudo_card", "gerudo_fortress",
-    "key_locations", "skip_trials",
+    "key_locations", "skip_trials", "ganon_boss_key", "ganon_boss_key_count",
 )
 # older formats still read (their missing settings keep the generator's defaults): format -> its fields
 OLD_FIELDS: dict[int, tuple[str, ...]] = {2: FIELDS[:FIELDS.index("gerudo_card")],
                                           3: FIELDS[:FIELDS.index("key_locations")]}
-# encoded range of the integer settings (bridge_count: the widest range `settings.build` accepts)
-INT_FIELDS = {"bridge_count": (0, 20), "cucco_count": (1, 7), "big_poe_count": (1, 5)}
+# encoded range of the integer settings (counts of a condition: the widest range `settings.build` accepts)
+INT_FIELDS = {"bridge_count": (0, 20), "ganon_boss_key_count": (0, 20), "cucco_count": (1, 7), "big_poe_count": (1, 5)}
 
 MAX_SEED_DIGITS = 20
 HASH_DIGITS = 10  # spoiler.seed_hash

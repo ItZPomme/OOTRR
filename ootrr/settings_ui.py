@@ -19,7 +19,8 @@ PAGES: list[tuple[str, list[str]]] = [
                "bridge", "bridge_count", "skip_trials", "gerudo_fortress"]),
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
                  "shuffle_skulltulas", "adult_trade_sequence", "gerudo_card"]),
-    ("Dungeons", ["maps_compasses", "small_keys", "boss_keys", "key_locations"]),
+    ("Dungeons", ["maps_compasses", "small_keys", "boss_keys", "key_locations", "ganon_boss_key",
+                  "ganon_boss_key_count"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
                  "complete_mask_quest", "fast_bunny_hood", "blue_fire_arrows"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
@@ -77,6 +78,12 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
     "gerudo_fortress": ("Carpenters", "Gerudo Fortress. Normal: free the 4 carpenters to get the Gerudo Membership "
                         "Card check. Fast: the first carpenter you free is enough.",
                         {"normal": "Normal", "fast": "Fast"}),
+    # PC-only: a logic module of Ganon's Castle and its key chest (the native menu's mod is built once)
+    "ganon_boss_key": ("Ganon's Boss Key", "Same as Boss Keys, or on its own. Vanilla: in its chest. Removed: owned "
+                       "from the start. Random: anywhere. Stones, Medallions, Dungeons, Hearts: given in the main room "
+                       "of Ganon's Castle once you own enough of them.", {"boss_keys": "Same"}),
+    "ganon_boss_key_count": ("Boss Key Count", "Number of stones, medallions, rewards or hearts that give Ganon's "
+                             "Castle boss key.", {}),
     # PC-only: start flags (the native menu's mod is built once and has no row)
     "skip_trials": ("Skip Trials", "Ganon's Castle: the six trials are completed from the start, the barrier around "
                     "the tower is down. The trial rooms can still be visited for their chests.", {}),
@@ -90,20 +97,21 @@ VALUE_OVERRIDES: dict[str, dict[str, str]] = {
 }
 
 SHOWN = [name for _, names in PAGES for name in names]
-BRIDGE_MAX = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 20}
+BRIDGE_MAX = settings_mod.COUNT_LIMITS  # highest count per condition (bridge and ganon_boss_key)
+CONDITION_OF = {count: name for name, count in settings_mod.COUNT_SETTINGS.items()}
 
 
 def int_range(name: str, values: dict[str, Any]) -> tuple[int, int]:
     """(lowest, highest) value the app offers for an integer setting."""
-    if name == "bridge_count":
-        return 1, BRIDGE_MAX.get(values["bridge"], 9)
+    if name in CONDITION_OF:
+        return 1, BRIDGE_MAX.get(values[CONDITION_OF[name]], 9)
     return settings_mod.INT_RANGES[name]
 
 
 def enabled(name: str, values: dict[str, Any]) -> bool:
     """False when the setting has no effect with the other values (row greyed out)."""
-    if name == "bridge_count":
-        return values["bridge"] in BRIDGE_MAX
+    if name in CONDITION_OF:
+        return values[CONDITION_OF[name]] in BRIDGE_MAX
     if name == "scrub_prices":
         return bool(values["shuffle_scrubs"])
     return True

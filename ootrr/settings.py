@@ -133,7 +133,19 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                     "Ganon's Castle trials completed from the new game: the six barriers and the one around the "
                     "tower are down (the trial rooms stay open for their chests); Light Arrows are still needed "
                     "for Ganondorf"),
+    # PC-built mod only (a logic module of Ganon's Castle and the key chest); added last, see small_keys
+    "ganon_boss_key": ("boss_keys", ("boss_keys", "vanilla", "removed", "random", "stones", "medallions", "dungeons",
+                                     "hearts"),
+                       "Ganon's Castle boss key: boss_keys = like the other boss keys; otherwise whatever boss_keys "
+                       "says: vanilla = in its chest; removed = owned from the start; random = anywhere in the world; "
+                       "stones, medallions, dungeons (stones + medallions) or hearts = given on entering the castle's "
+                       "main room once the player owns ganon_boss_key_count of them, its chest holds a seed item"),
+    "ganon_boss_key_count": (6, int, "Number of stones / medallions / rewards / hearts that give Ganon's Castle boss "
+                             "key (ganon_boss_key)"),
 }
+# settings that are a condition with a count: {condition: count setting}; the count's limit per condition
+COUNT_SETTINGS = {"bridge": "bridge_count", "ganon_boss_key": "ganon_boss_key_count"}
+COUNT_LIMITS = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 20}
 
 
 class SettingsError(ValueError):
@@ -174,17 +186,17 @@ def build(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         if name not in SETTINGS:
             raise SettingsError(f"réglage inconnu « {name} » (connus : {', '.join(SETTINGS)})")
         settings[name] = _coerce(name, value)
-    limits = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 20}
-    if settings["bridge"] in limits and not 0 <= settings["bridge_count"] <= limits[settings["bridge"]]:
-        raise SettingsError(
-            f"bridge_count doit être entre 0 et {limits[settings['bridge']]} pour bridge={settings['bridge']}")
+    for name, count in COUNT_SETTINGS.items():
+        limit = COUNT_LIMITS.get(settings[name])
+        if limit is not None and not 0 <= settings[count] <= limit:
+            raise SettingsError(f"{count} must be between 0 and {limit} for {name}={settings[name]}")
     for name, (lo, hi) in INT_RANGES.items():
         if not lo <= settings[name] <= hi:
             raise SettingsError(f"{name} must be between {lo} and {hi}")
     return settings
 
 
-# fixed ranges of integer settings (bridge_count depends on bridge, see build)
+# fixed ranges of integer settings (the COUNT_SETTINGS depend on their condition, see build)
 INT_RANGES = {"cucco_count": (1, 7), "big_poe_count": (1, 5)}
 
 

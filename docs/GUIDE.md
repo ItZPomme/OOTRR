@@ -238,6 +238,13 @@ the Gerudo Fortress to get the Gerudo Membership Card check; `fast`: the first c
 other three stay in their cells). Validated in game. Coming from Gerudo Valley, let the carpenter boss stop you in
 front of the fortress first: he starts the rescue quest.
 
+Also PC-only: `ganon_boss_key` ("Ganon's Boss Key" on the "Dungeons" page). `boss_keys` (default, "Same"): like the
+other boss keys. The other values ignore `boss_keys`: `vanilla`: in its chest; `removed`: owned from the start;
+`random`: in any chest of the world. The rainbow bridge's conditions also exist: `stones`, `medallions`, `dungeons` (stones + medallions) or `hearts`: you own
+Ganon's Castle boss key once you enter the castle's main room with `ganon_boss_key_count` of them; no message is shown,
+the key should appear on the dungeon's map screen. Its chest in the tower then holds a seed item.
+Verified in the files, **to validate in game**.
+
 Also PC-only: `skip_trials` ("Skip Trials" on the "World" page). On: the six trials of Ganon's Castle are completed
 from the start, so the barrier around the tower is down and you can go straight up to Ganondorf. The trial rooms can
 still be visited for their chests (and the castle's small key); Light Arrows are still needed for Ganondorf. Validated

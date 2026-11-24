@@ -11,9 +11,8 @@ def random_settings(rng: random.Random) -> dict:
     values = {}
     for name in race.FIELDS:
         values[name] = rng.choice(race._values(name))
-    limits = {"stones": 3, "medallions": 6, "dungeons": 9, "hearts": 20}
-    if values["bridge"] in limits:
-        values["bridge_count"] = min(values["bridge_count"], limits[values["bridge"]])
+    for name, count in settings.COUNT_SETTINGS.items():
+        values[count] = min(values[count], settings.COUNT_LIMITS.get(values[name], values[count]))
     return settings.build(values)
 
 
@@ -30,16 +29,17 @@ class SettingsStringTest(unittest.TestCase):
     def test_format_4_is_frozen(self):
         # changing FIELDS, a setting's values or a range breaks shared strings: bump race.FORMAT instead
         self.assertEqual(race.FORMAT, 4)
-        self.assertEqual(race.encode(settings.defaults()), "R4-0DZXGCD000VN")
-        self.assertEqual(race.encode(settings.defaults(), 727557), "R4-0DZXGCD0006G-727557")
-        self.assertEqual(race.encode({"small_keys": "random", "boss_keys": "own_dungeon"}), "R4-0DZXGCD0AGZ8")
-        self.assertEqual(race.encode({"gerudo_card": "vanilla"}), "R4-0DZXGCD008BX")
-        self.assertEqual(race.encode({"gerudo_fortress": "fast"}), "R4-0DZXGCD0048T")
-        self.assertEqual(race.encode({"key_locations": "ground"}), "R4-0DZXGCD0022X")
-        self.assertEqual(race.encode({"skip_trials": True}), "R4-0DZXGCD001C5")
+        self.assertEqual(race.encode(settings.defaults()), "R4-29FJY148006B8")
+        self.assertEqual(race.encode(settings.defaults(), 727557), "R4-29FJY1480065B-727557")
+        self.assertEqual(race.encode({"small_keys": "random", "boss_keys": "own_dungeon"}), "R4-29FJY149Q46Z4")
+        self.assertEqual(race.encode({"gerudo_card": "vanilla"}), "R4-29FJY1481A6G0")
+        self.assertEqual(race.encode({"gerudo_fortress": "fast"}), "R4-29FJY1480N6Q9")
+        self.assertEqual(race.encode({"key_locations": "ground"}), "R4-29FJY1480APP9")
+        self.assertEqual(race.encode({"skip_trials": True}), "R4-29FJY14805EZX")
+        self.assertEqual(race.encode({"ganon_boss_key": "stones", "ganon_boss_key_count": 3}), "R4-29FJY14802QSS")
 
     def test_format_3_still_read(self):
-        # strings shared with OoTRR 0.5.0 - 0.6.3: same settings, key_locations and skip_trials at their defaults
+        # strings shared with OoTRR 0.5.0 - 0.6.3: same settings, the settings of format 4 at their defaults
         self.assertEqual(race.decode("R3-3FZC33800V0-727557"), (settings.defaults(), "727557"))
         values, _ = race.decode("R3-3FZC3382M6Q")
         self.assertEqual((values["small_keys"], values["boss_keys"], values["key_locations"]),
@@ -96,14 +96,14 @@ class SettingsStringTest(unittest.TestCase):
     def test_host_seed_hash(self):
         # optional -H<hash> after the seed: covered by the check letters, strings without it are unchanged
         s = race.encode(settings.defaults(), 727557, "e668cbe6f0")
-        self.assertEqual(s, "R4-0DZXGCD000J0-727557-HE668CBE6F0")
+        self.assertEqual(s, "R4-29FJY148006QP-727557-HE668CBE6F0")
         self.assertEqual(race.decode_full(s), (settings.defaults(), "727557", "E668CBE6F0"))
         self.assertEqual(race.decode(s), (settings.defaults(), "727557"))
         self.assertEqual(race.decode_full(race.encode({}, 5)).seed_hash, None)
         self.assertEqual(race.decode_full(s.lower()).seed_hash, "E668CBE6F0")
         for bad in (s[:-1] + "1",  # hash changed: check fails
                     s[:-1],  # wrong length
-                    "R4-0DZXGCD000J0-HE668CBE6F0"):  # hash without seed
+                    "R4-29FJY148006QP-HE668CBE6F0"):  # hash without seed
             with self.assertRaises(race.SettingsStringError, msg=bad):
                 race.decode_full(bad)
         with self.assertRaises(race.SettingsStringError):
@@ -135,7 +135,7 @@ class SettingsStringTest(unittest.TestCase):
             with self.assertRaises(race.SettingsStringError, msg=s):
                 race.decode(s)
         with self.assertRaisesRegex(race.SettingsStringError, "format 5"):
-            race.decode("R5-0DZXGCD000VN")  # a string of a newer OoTRR version
+            race.decode("R5-29FJY148006B8")  # a string of a newer OoTRR version
         for s in bad:
             with self.assertRaises(race.SettingsStringError, msg=s):
                 race.decode(s)
