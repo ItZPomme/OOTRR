@@ -35,6 +35,8 @@ PRESETS = {
                                "shuffle_skulltulas": "all"},
     "random / any, ground keys": {"small_keys": "random", "boss_keys": "any_dungeon", "key_locations": "ground",
                                   "shuffle_hearts": "all"},
+    "random / random, trials skipped": {"small_keys": "random", "boss_keys": "random", "skip_trials": True,
+                                        "accessibility": "beatable"},
 }
 
 

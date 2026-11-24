@@ -238,6 +238,11 @@ the Gerudo Fortress to get the Gerudo Membership Card check; `fast`: the first c
 other three stay in their cells). Validated in game. Coming from Gerudo Valley, let the carpenter boss stop you in
 front of the fortress first: he starts the rescue quest.
 
+Also PC-only: `skip_trials` ("Skip Trials" on the "World" page). On: the six trials of Ganon's Castle are completed
+from the start, so the barrier around the tower is down and you can go straight up to Ganondorf. The trial rooms can
+still be visited for their chests (and the castle's small key); Light Arrows are still needed for Ganondorf. Validated
+in game.
+
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod

@@ -72,7 +72,8 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "start_items": world.start_items(result.placements) + result.starting_items,
         "rewards": {l.name: result.placements[l.name] for l in world.reward_locations()},
         "event_changes": _merge_events(world.reward_event_changes(result.placements),
-                                       world.ocarina_event_changes(result.placements)),
+                                       world.ocarina_event_changes(result.placements),
+                                       world.trial_event_changes()),
         "gift_changes": {f: [list(e) for e in v] for f, v in world.gift_event_changes(result.placements).items()},
         "gift_progressive": {},  # filled below (needs the chests)
         "moat_items": list(world.moat_items(result.placements)),

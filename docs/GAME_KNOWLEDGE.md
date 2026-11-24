@@ -611,6 +611,27 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
 - The game's BoolExp expressions: 26 elements at most; long conditions are split into sub-expressions (precaution,
   limit not verified).
 
+## Ganon's Castle trials **[files]** (2026-11-23)
+
+- Each trial ends with the script `Defeat_Ganon:InsideGanonCastle_Dungeon_BarrierRemove_<Trial>` (Forest, Water,
+  Shadow, Fire, Light, Spirit): Bool `InsideGanonCastle_Dungeon_BarrierRemove_<Trial>` = true, Int
+  `InsideGanonCastle_Dungeon_Barrier_Count` (default 6) - 1, then `..._BarrierRemove_All`: at count 0,
+  `InsideGanonCastle_IsAllBarrierClear` = true, scene `Dm_InsideGanonCastle_0090`, quest `Defeat_Ganon` Step04; last,
+  `InsideGanonCastle_Dungeon_SeeBarrierGuide` = true.
+- Readers (scan of `Logic`, `Event`, `Banc`, GameData expressions, actor packs), all plain saved state:
+  `InsideGanonCastle_Level_Room_01_Prefab_75af` deletes the tower barrier (`Obj_GanonCastle_Barrier_A_01`) while
+  `IsAllBarrierClear` is true (its pots need `HavePlayedEvent.Dm_InsideGanonCastle_0090`); `..._Room_01_Prefab_4ab0`
+  clears the main room at count 0; `InsideGanonCastle_Common_e780` removes each trial's flames and light beam;
+  each trial's last room deletes its core (the Light Arrow target) and does not start the scene again;
+  `..._Room_01_Prefab_e183` creates an elevator area once scene 0090 is seen.
+- Explanations: `SeeBarrierGuide` false -> Rauru's scene (`Dm_InsideGanonCastle_0005`) at the first trial door opened;
+  `HavePlayedEvent.GanonCastle_Dungeon_SeeTowerBarrier` false -> the tower scene (`Dm_InsideGanonCastle_0003`) at the
+  castle's first door, which moves the quest to Step03 (its text shows the count).
+- Setting `skip_trials`: start flags = the state after the six trials, both explanations included (`TRIAL_FLAGS`), and
+  the rainbow bridge scene moves the quest to Step04 instead of Step02 (only `Step02` of the script). **Validated in
+  game** (2026-11-23, Longshot, test mod OoTRR-essai: bridge and quest text, tower barrier gone, tower up to
+  Ganondorf, a trial room, saved and reloaded).
+
 ## Boolean expressions (GameData `BoolExp`)
 
 Postfix notation: `0` Bool flag, `10` another expression, `1`/`12` Enum (equal / from) followed by `2` value, `15`

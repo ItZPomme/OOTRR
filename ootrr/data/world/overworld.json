@@ -93,7 +93,7 @@
     "Ganons Castle": {
       "_doc": "Nothing randomized here",
       "events": {
-        "Triforce": "can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"
+        "Triforce": "can_use(Light_Arrows) and (skip_trials or has(Small_Key_Ganons_Castle, 1))"
       },
       "exits": {
         "Ganons Castle Grounds": "True"

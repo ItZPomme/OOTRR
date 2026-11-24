@@ -128,6 +128,11 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                       "(freestanding and boss Heart Containers, Pieces of Heart, Gold Skulltula drops), a ground "
                       "item only holding a small key of the dungeon it lies in (the game adds a ground key to the "
                       "dungeon of the current map). Boss keys stay in chests"),
+    # PC-built mod only (start flags of the mod); added last, see small_keys
+    "skip_trials": (False, bool,
+                    "Ganon's Castle trials completed from the new game: the six barriers and the one around the "
+                    "tower are down (the trial rooms stay open for their chests); Light Arrows are still needed "
+                    "for Ganondorf"),
 }
 
 

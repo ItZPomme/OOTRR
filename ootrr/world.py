@@ -63,6 +63,23 @@ ADULT_FLAG = "Sequence_IsChildhood"
 # Meet_FourCarpenter_ClearEvent (scene Dm_Gerudo_0025, the membership card); starting at 3 = one carpenter is enough
 CARPENTER_COUNTERS = {"GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped": 3,
                       "GerudoFortress_Meet_FourCarpenter_NumOfCarpenterHelped_02": 1}
+# skip_trials: saved state of Ganon's Castle once the six trials are done. The trial scenes (script Defeat_Ganon,
+# InsideGanonCastle_Dungeon_BarrierRemove_*) set the trial's flag, take 1 off the count (default 6) and at 0 set
+# IsAllBarrierClear (Logic InsideGanonCastle_Level_Room_01_Prefab_75af deletes the barrier actor while it is true)
+# and play Dm_InsideGanonCastle_0090. The last two flags belong to the scenes that show the barriers (Rauru's
+# explanation, the tower seen from the first door)
+TRIALS = ("Forest", "Water", "Shadow", "Fire", "Light", "Spirit")
+TRIAL_FLAGS: dict[str, bool | int] = {
+    **{f"InsideGanonCastle_Dungeon_BarrierRemove_{t}": True for t in TRIALS},
+    "InsideGanonCastle_Dungeon_Barrier_Count": 0,
+    "InsideGanonCastle_IsAllBarrierClear": True,
+    "HavePlayedEvent.Dm_InsideGanonCastle_0090": True,
+    "InsideGanonCastle_Dungeon_SeeBarrierGuide": True,
+    "HavePlayedEvent.GanonCastle_Dungeon_SeeTowerBarrier": True,
+}
+# the rainbow bridge scene moves the quest to Step02 (go to the castle), the only Step02 of the script: Step04 =
+# barriers down, go up the tower (Step03, the six areas to cleanse, is set by the scene that shows the barrier)
+TRIAL_QUEST_STEP = {"Defeat_Ganon": {"Step02": "Step04"}}
 ADULT_START_ITEMS = ("Weapon_Sword_Master",)
 # start_with_consumables : premier sac plein (10 bâtons, 20 noix). L'ajout à l'inventaire crée l'objet mais
 # laisse son stock à 0 (constaté en jeu) : le stock est l'entier PouchData.<objet>.StockNum
@@ -915,6 +932,8 @@ class World:
             flags[f"#{MASK_QUEST[1]}"] = MASK_QUEST[2]
         if self.settings.get("gerudo_fortress") == "fast":
             flags.update(CARPENTER_COUNTERS)
+        if self.settings.get("skip_trials"):
+            flags.update(TRIAL_FLAGS)
         if self.settings.get("starting_age") == "adult":
             # comme Market_Child_Field_ChildToAdult (l'âge suit ce drapeau et la carte d'arrivée)
             flags[ADULT_FLAG] = False
@@ -983,6 +1002,10 @@ class World:
                 for flow in flows:
                     out.setdefault(flow, {})[loc.vanilla] = placements[name]
         return out
+
+    def trial_event_changes(self) -> dict[str, dict[str, str]]:
+        """skip_trials: {script: {quest step: step with the trials done}}."""
+        return {f: dict(m) for f, m in TRIAL_QUEST_STEP.items()} if self.settings.get("skip_trials") else {}
 
     def ocarina_event_changes(self, placements: dict[str, str]) -> dict[str, dict[str, str]]:
         """shuffle_ocarinas (mod sans menu) : {scène: {ocarina d'origine: objet placé}} pour Saria et les
