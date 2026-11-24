@@ -51,6 +51,45 @@ class KeysTest(unittest.TestCase):
         self.assertFalse(key_items(world))
         self.assertFalse([l for l in world.locations.values() if l.key_dungeon])
 
+    def test_vanilla_keys_are_counted(self):
+        """Vanilla keys: events in their vanilla places, so a key count asks for what collecting the keys needs."""
+        world = World(settings.build())
+        everything = State(world, [n for n in world.items] * 9)
+        everything.can_return = True
+        everything.sweep({})
+        for kd in world._all_key_dungeons.values():  # every vanilla key can be collected with every item
+            for event in keys_mod.vanilla_small_events(kd):
+                self.assertIn(event, everything.events)
+            if kd.boss_key:
+                self.assertIn(keys_mod.vanilla_boss_event(kd), everything.events)
+        self.assertTrue(everything.beaten())
+        # the Gerudo Proving Grounds maze needs the items of its keys, not only the entrance
+        nothing = State(world)
+        nothing.reached["adult"].add("Gerudo Proving Grounds")
+        nothing.sweep({})
+        self.assertFalse(nothing.can_reach(world.locations["GPG Maze Final Chest"]))
+        self.assertNotIn("Twinrova", [n for n, l in world.locations.items() if nothing.can_reach(l)])
+        # removed keys: the counters start full, nothing to collect
+        removed = World(settings.build({"small_keys": "removed", "boss_keys": "removed"}))
+        self.assertFalse([e for e in removed.events if e.name.startswith(keys_mod.VANILLA_EVENT)])
+        self.assertNotIn("Small_Key", removed.locations["GPG Maze Final Chest"].rule_src)
+
+    def test_vanilla_counts(self):
+        """vanilla_counts only lowers the counts of the locations it names, and only for vanilla keys."""
+        world = World(settings.build())
+        fire = world._all_key_dungeons["Fire Temple"]
+        rule, small = "has(Small_Key_Fire_Temple, 3)", (keys_mod.SMALL,)
+        self.assertIn(">= 3", keys_mod.vanilla_terms(rule, {"Fire Temple": fire}, small, "Fire Temple Map Chest"))
+        self.assertIn(">= 2", keys_mod.vanilla_terms(rule, {"Fire Temple": fire}, small, "Fire Temple Small Key Chest 4"))
+        own = World(settings.build({"small_keys": "own_dungeon"}))
+        self.assertIn("has(Small_Key_Water_Temple, 3)", own.locations["Water Temple Longshot Chest"].rule_src)
+        for kd in world._all_key_dungeons.values():  # every name exists, every count is written in its rule
+            rules = {kd.small_location(i): str(c.get("rule", kd.rule)) for i, c in enumerate(kd.small)}
+            for name, counts in kd.vanilla_counts.items():
+                rule = rules.get(name) or own.locations[name].rule_src
+                for n in counts:
+                    self.assertIn(f", {n})", rule, name)
+
     def test_key_chests_and_counts(self):
         world = World(settings.build({"small_keys": "random", "boss_keys": "random"}))
         small_names = {kd.small_location(i) for kd in world.key_dungeons.values() for i in range(len(kd.small))}

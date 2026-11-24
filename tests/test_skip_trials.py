@@ -8,8 +8,7 @@ from ootrr.patch import build_patch
 from ootrr.search import State
 from ootrr.world import TRIAL_FLAGS, World
 
-OFF = {"small_keys": "any_dungeon"}
-ON = {**OFF, "skip_trials": True}
+SHUFFLED_KEYS = {"small_keys": "any_dungeon", "boss_keys": "any_dungeon"}
 KEY = "OoTRR_SmallKey_InsideGanonCastle"
 LIGHT_ARROWS = "Item_Arrow_Light"
 
@@ -33,17 +32,26 @@ class SkipTrialsTest(unittest.TestCase):
         self.assertEqual(changes["Defeat_Ganon"], {"Step02": "Step04"})
         self.assertGreater(len(changes), 1)  # the boss rewards' changes are kept
 
-    def test_castle_key_not_needed(self):
-        for values, needed in ((OFF, True), (ON, False)):
-            world = World(settings.build(values))
-            rule = next(e.rule for e in world.events if e.name == "Triforce")
-            items = [item for item, _ in world.pool()] + [loc.vanilla for loc in world.locations.values()]
-            with_key, without = State(world, items), State(world, [i for i in items if i != KEY])
-            self.assertTrue(rule(with_key, "adult"))
-            self.assertEqual(rule(without, "adult"), not needed)
-            # the Light Arrows are still needed for Ganondorf
-            unarmed = State(world, [i for i in items if i != LIGHT_ARROWS])
-            self.assertFalse(rule(unarmed, "adult"))
+    def beaten_without(self, values: dict, *missing: str) -> bool:
+        """Is Ganon reachable with every item except `missing` (key settings: any)?"""
+        world = World(settings.build(values))
+        items = [name for name in world.items if name not in missing] * 9
+        state = State(world, items)
+        state.can_return = True
+        return state.sweep({}).beaten()
+
+    def test_trials_not_needed(self):
+        # castle small key (Light Trial), Hover Boots (Forest, Shadow, Fire), Megaton Hammer (Water), Mirror Shield
+        # (Spirit)
+        values = {**SHUFFLED_KEYS, "bridge": "open"}
+        for missing in (KEY, "Item_HoverBoot", "Item_Hammer", "Item_Shield_Mirror"):
+            with self.subTest(missing=missing):
+                self.assertFalse(self.beaten_without(values, missing))
+                self.assertTrue(self.beaten_without({**values, "skip_trials": True}, missing))
+
+    def test_light_arrows_still_needed(self):
+        for keys in (SHUFFLED_KEYS, {}):
+            self.assertFalse(self.beaten_without({**keys, "bridge": "open", "skip_trials": True}, LIGHT_ARROWS))
 
 
 if __name__ == "__main__":

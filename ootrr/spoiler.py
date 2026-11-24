@@ -9,6 +9,7 @@ from typing import Any
 from . import __version__
 from .race import hash_symbols
 from .fill import Result
+from .keys import VANILLA_EVENT
 from .search import EVENT_PREFIX, State, is_beatable
 from .world import World
 
@@ -30,7 +31,8 @@ def playthrough(world: World, result: Result) -> list[list[tuple[str, str]]]:
         if not found:
             break
         spheres.append([(loc, item) for loc, item in found
-                        if world.is_progression(item) or loc.startswith(EVENT_PREFIX)])
+                        if world.is_progression(item)
+                        or (loc.startswith(EVENT_PREFIX) and not item.startswith(VANILLA_EVENT))])
     return spheres
 
 

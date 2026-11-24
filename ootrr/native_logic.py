@@ -24,6 +24,7 @@ import ast
 import json
 from pathlib import Path
 
+from . import keys as keys_mod
 from .settings import SETTINGS
 from .world import (DATA_DIR, JUNK_REPLACEMENT, LINKS_POCKET, OCARINA_EVENTS, OCARINA_OF_TIME_LOCATION, SONG_OF_TIME_LOCATION,
                     OPEN_DOOR_START, SARIA_GIFT, SKIP_CHILD_ZELDA, World)
@@ -36,6 +37,7 @@ OPS = ["T_TRUE", "T_FALSE", "T_IS_CHILD", "T_IS_ADULT", "T_HAS", "T_HELPER", "T_
 OP = {name: i for i, name in enumerate(OPS)}
 CMPS = {ast.GtE: 0, ast.Gt: 1, ast.LtE: 2, ast.Lt: 3, ast.Eq: 4, ast.NotEq: 5}
 KINDS = ("general", "song", "reward")
+KEY_KINDS = (keys_mod.SMALL, keys_mod.BOSS)
 
 
 class ExportError(ValueError):
@@ -64,6 +66,14 @@ class Exporter:
             for name, body in content.get("locations", {}).items():
                 if not name.startswith("_"):
                     self.extra_locations[name] = body
+        # the native generator never shuffles keys: each vanilla key is an event, as in World
+        self.key_dungeons = keys_mod.load(data_dir)
+        for added in ([kd.events for kd in self.key_dungeons.values()]
+                      + [keys_mod.vanilla_events(self.key_dungeons, KEY_KINDS)]):
+            for rname, new in added.items():
+                body = dict(self.regions_raw[rname])
+                body["events"] = {**body.get("events", {}), **new}
+                self.regions_raw[rname] = body
         from .starting import add_spawn_exits
         self.regions_raw = add_spawn_exits(self.regions_raw)  # même sorties de Root que world.World
         self.logic_items: dict[str, dict] = items_raw["logic"]
@@ -96,7 +106,7 @@ class Exporter:
         if isinstance(source, bool):
             self.code.append(OP["T_TRUE" if source else "T_FALSE"])
             return start
-        text = str(source).strip()
+        text = keys_mod.vanilla_terms(str(source).strip(), self.key_dungeons, KEY_KINDS)
         if not text:
             self.code.append(OP["T_TRUE"])
             return start
@@ -218,6 +228,7 @@ class Exporter:
             for target, src in body.get("exits", {}).items():
                 exits.append((rid[rname], rid[target], self.rule(src, f"sortie {rname} -> {target}")))
             for ename, src in body.get("events", {}).items():
+                src = keys_mod.vanilla_boss_rule(src, ename, self.key_dungeons)
                 events.append((self.inv[ename], rid[rname], self.rule(src, f"événement {ename}")))
             d = body.get("dungeon")
             if d and d not in dungeons:
@@ -232,7 +243,9 @@ class Exporter:
             d = self.regions_raw[rname].get("dungeon")
             locations.append(dict(
                 name=lname, region=rid[rname], kind=KINDS.index(lbody.get("kind", "general")),
-                rule=self.rule(lbody.get("rule", "True"), f"lieu {lname}"),
+                rule=self.rule(keys_mod.vanilla_terms(
+                    keys_mod.vanilla_boss_rule(lbody.get("rule", "True"), lname, self.key_dungeons),
+                    self.key_dungeons, KEY_KINDS, lname), f"lieu {lname}"),
                 vanilla=aid[lbody["vanilla"]], dungeon=dungeons.index(d) if d else -1,
                 shuffle=bool(lbody.get("shuffle", bool(hashes))),
                 dungeon_item={"map": 1, "compass": 2}.get(lbody.get("dungeon_item"), 0),

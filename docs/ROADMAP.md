@@ -180,8 +180,7 @@ and play) is validated in game on one PC.
   and read the setting), the Ice Cavern red ice one by one with the generator-built mod, and the arrow-side
   countdown of the timer (not validated in game).
 - `skip_trials` (Ganon's Castle trials done from the start): PC-built mod only, validated in game (2026-11-23).
-  To do: the native menu. The rule of the castle's
-  boss key chest (`data/keys.json`) still asks for the trials' items with it: prudent, the chest is in the tower.
+  To do: the native menu.
 - `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).
 - First-obtain animation of consumables: not removed (decided by the engine).
 - Progressive items: done in the native menu (`ingame::AdjustItem`), **to validate in game** (each chain, and the

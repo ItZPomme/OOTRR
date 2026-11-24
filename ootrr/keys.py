@@ -14,6 +14,9 @@ keys, a location of the dungeon needs all of its small keys, unless its rule ask
 (`has(Small_Key_Forest_Temple, 2)`). A key chest may have its own `rule` in keys.json (default: the dungeon's).
 A dungeon marked `"layout": true` in keys.json has all its key counts written: its rules are used as they are, and
 small_keys=own_dungeon places its keys anywhere in the dungeon by the logic (otherwise in their vanilla rooms).
+
+Vanilla keys are not items: each one is an event, collected in its vanilla place (`vanilla_events`), and the key
+terms of the rules count these events. Removed keys: the key terms are true.
 """
 
 from __future__ import annotations
@@ -67,6 +70,9 @@ class KeyDungeon:
     # chain-locked doors unlocked from the start (keys.json unlocked_doors): their saved Bool is set at the new game,
     # so the door loads as already unlocked and needs no key
     unlocked_doors: list[dict] = field(default_factory=list)
+    # vanilla keys only: {location or key chest: {written key count: keys asked}}. The counts are the worst case for
+    # keys that may be anywhere; some cannot be met with the keys in their vanilla places (see keys.json)
+    vanilla_counts: dict[str, dict[int, int]] = field(default_factory=dict)
 
     @property
     def key_rooms(self) -> dict[int, int]:
@@ -131,7 +137,9 @@ def load(data_dir: Path) -> dict[str, KeyDungeon]:
             boss_key=body.get("boss_key"), boss=list(body.get("boss", [])),
             boss_events=list(body.get("boss_events", [])), events=dict(body.get("events", {})),
             layout=bool(body.get("layout", False)), start_keys=int(body.get("start_keys", 0)),
-            unlocked_doors=list(body.get("unlocked_doors", [])))
+            unlocked_doors=list(body.get("unlocked_doors", [])),
+            vanilla_counts={name: {int(n): int(v) for n, v in counts.items()}
+                            for name, counts in body.get("vanilla_counts", {}).items()})
     return out
 
 
@@ -215,6 +223,70 @@ def clamp_counts(rule: str, dungeon: str, limit: int, owned: int = 0) -> str:
         n = min(int(m.group(1)) - owned, limit)
         return f"has({name}, {n})" if n > 0 else "True"
     return re.sub(rf"has\(\s*{name}\s*,\s*(\d+)\s*\)", count, str(rule))
+
+
+# ---------------------------------------------------------------------- vanilla keys in the logic
+# With vanilla keys the key chests are not locations: each key (chest or ground) is an event of its region, collected
+# when its rule is met, and the key terms of the rules count these events (Python and native generators).
+
+VANILLA_EVENT = "Vanilla_"  # prefix of the events that stand for the keys in their vanilla places
+
+
+def _vanilla_places(kd: KeyDungeon) -> list[dict]:
+    return kd.small + kd.freestanding
+
+
+def vanilla_small_events(kd: KeyDungeon) -> list[str]:
+    base = VANILLA_EVENT + logic_name(SMALL, kd.name)
+    return [f"{base}_{i + 1}" for i in range(len(_vanilla_places(kd)))]
+
+
+def vanilla_boss_event(kd: KeyDungeon) -> str:
+    return VANILLA_EVENT + logic_name(BOSS, kd.name)
+
+
+def vanilla_terms(rule: Any, dungeons: dict[str, KeyDungeon], kinds: tuple[str, ...], where: str = "") -> str:
+    """The rule of `where` (location or key chest) with its key terms of these kinds (vanilla keys) counted on the
+    vanilla key events."""
+    src = str(rule)
+    for kd in dungeons.values():
+        small, boss = logic_name(SMALL, kd.name), logic_name(BOSS, kd.name)
+        if SMALL in kinds and small in src:
+            events = vanilla_small_events(kd)
+            counts = kd.vanilla_counts.get(where, {})
+
+            def count(m: re.Match) -> str:
+                n = int(m.group(1) or 1)
+                n = min(counts.get(n, n) - kd.start_keys, len(events))
+                return f"(count({', '.join(events)}) >= {n})" if n > 0 else "True"
+            src = re.sub(rf"has\(\s*{small}\s*,\s*(\d+)\s*\)|(?<!\w){small}(?!\w)", count, src)
+        if BOSS in kinds and kd.boss_key:
+            src = re.sub(rf"has\(\s*{boss}\s*,\s*1\s*\)|(?<!\w){boss}(?!\w)", vanilla_boss_event(kd), src)
+    return src
+
+
+def vanilla_events(dungeons: dict[str, KeyDungeon], kinds: tuple[str, ...]) -> dict[str, dict[str, str]]:
+    """{region: {event: rule}} of the keys in their vanilla places (written rules, small key terms of the key chests
+    already counted on the events)."""
+    out: dict[str, dict[str, str]] = {}
+    for kd in dungeons.values():
+        if SMALL in kinds:
+            for i, (event, place) in enumerate(zip(vanilla_small_events(kd), _vanilla_places(kd))):
+                where = kd.small_location(i) if i < len(kd.small) else place.get("name", "")
+                out.setdefault(place.get("region", kd.region), {})[event] = vanilla_terms(
+                    place.get("rule", kd.rule), dungeons, kinds, where)
+        if BOSS in kinds and kd.boss_key:
+            out.setdefault(kd.boss_key.get("region", kd.region), {})[vanilla_boss_event(kd)] = str(
+                kd.boss_key.get("rule", kd.rule))
+    return out
+
+
+def vanilla_boss_rule(src: Any, name: str, dungeons: dict[str, KeyDungeon]) -> str:
+    """Rule of the location or event `name`: behind a boss door it also asks for the boss key."""
+    for kd in dungeons.values():
+        if kd.boss_key and name in kd.boss + kd.boss_events and not mentions(str(src), BOSS, kd.name):
+            return f"({src}) and {logic_name(BOSS, kd.name)}"
+    return str(src)
 
 
 def start_keys(data_dir: Path) -> dict[str, int]:

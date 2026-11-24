@@ -90,22 +90,13 @@
         "DMC Lower": "is_adult"
       }
     },
-    "Ganons Castle": {
-      "_doc": "Nothing randomized here",
-      "events": {
-        "Triforce": "can_use(Light_Arrows) and (skip_trials or has(Small_Key_Ganons_Castle, 1))"
-      },
-      "exits": {
-        "Ganons Castle Grounds": "True"
-      }
-    },
     "Ganons Castle Grounds": {
       "locations": {
         "OGC Great Fairy Reward": {"rule": "has_strength3 and great_fairy", "vanilla": "Item_FairyBless_DefenseDouble", "gift": true}
       },
       "exits": {
         "Market": "True",
-        "Ganons Castle": "rainbow_bridge"
+        "Ganons Castle Lobby": "rainbow_bridge"
       }
     },
     "Gerudo Fortress": {

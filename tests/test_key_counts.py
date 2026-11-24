@@ -163,10 +163,13 @@ class KeyCountsTest(unittest.TestCase):
         self.assertIn("has(Small_Key_Forest_Temple, 3)", boss)
         self.assertNotIn("has(Small_Key_Forest_Temple, 5)", boss)
 
-    def test_unshuffled_keys_are_owned(self):
-        for values in ({}, {"small_keys": "removed"}, {"boss_keys": "any_dungeon"}):
-            world = self.world(**values)
-            self.assertNotIn("Small_Key", world.locations["Forest Temple Bow Chest"].rule_src, values)
+    def test_unshuffled_keys(self):
+        """Removed keys are owned; vanilla keys are counted on the events of their vanilla places."""
+        self.assertNotIn("Small_Key", self.world(small_keys="removed").locations["Forest Temple Bow Chest"].rule_src)
+        for values in ({}, {"boss_keys": "any_dungeon"}):
+            rule = self.world(**values).locations["Forest Temple Bow Chest"].rule_src
+            self.assertNotIn("has(Small_Key", rule, values)
+            self.assertIn("count(Vanilla_Small_Key_Forest_Temple_1", rule, values)
 
     def test_own_dungeon_key_spots(self):
         world = self.world(small_keys="own_dungeon")

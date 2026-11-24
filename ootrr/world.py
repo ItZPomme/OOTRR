@@ -468,7 +468,11 @@ class World:
                     raise DataError(f"{path.name} : lieu « {name} » défini deux fois")
                 extra_locations[name] = body
 
-        # dungeon keys: only loaded when small_keys or boss_keys is not vanilla (vanilla = keys out of the logic)
+        # dungeon keys: key_dungeons is empty when both key settings are vanilla. Vanilla keys are not items: each
+        # one is an event, collected in its vanilla place (keys_mod.vanilla_events)
+        self._all_key_dungeons = keys_mod.load(data_dir)
+        self._vanilla_kinds = tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS)
+                                    if keys_mod.mode(settings, k) == "vanilla")
         self.key_dungeons: dict[str, keys_mod.KeyDungeon] = keys_mod.load(data_dir) if keys_mod.active(settings) else {}
         self.key_rooms: dict[str, int] = keys_mod.load_rooms(data_dir) if self.key_dungeons else {}
         # small keys owned from the start (keys.json start_keys), given whatever the key settings
@@ -479,6 +483,10 @@ class World:
         self._key_game = {kd.game: kd for kd in self.key_dungeons.values()}
         self._key_events: set[str] = set()  # events added by data/keys.json (no key requirement)
         self._add_key_data(regions_raw, extra_locations)
+        if not self.key_dungeons:
+            for kd in self._all_key_dungeons.values():
+                self._add_events(regions_raw, kd.events)
+        self._add_events(regions_raw, keys_mod.vanilla_events(self._all_key_dungeons, self._vanilla_kinds))
 
         self.gift_edits: dict[str, list[tuple[str, int, str, str]]] = {
             name: [tuple(e) for e in edits]
@@ -547,11 +555,7 @@ class World:
                 if chest.get("region", kd.region) not in kd.regions:
                     raise DataError(f"keys.json: {kd.name}: key chest region {chest['region']!r} is not one of the "
                                     "dungeon's regions")
-            for rname, events in kd.events.items():
-                body = dict(regions_raw[rname])
-                body["events"] = {**body.get("events", {}), **events}
-                regions_raw[rname] = body
-                self._key_events |= set(events)
+            self._add_events(regions_raw, kd.events)
             if self.key_mode(keys_mod.SMALL) != "vanilla":
                 for i, chest in enumerate(kd.small):
                     extra_locations[kd.small_location(i)] = {
@@ -565,6 +569,14 @@ class World:
                     "hashes": [kd.boss_key["hash"]],
                     "vanilla": keys_mod.item_name(keys_mod.BOSS, kd.game), "event": "drop",
                     "key_room": kd.boss_key["room"]}
+
+    def _add_events(self, regions_raw: dict[str, dict], added: dict[str, dict[str, str]]) -> None:
+        """Events of the key data, added to their regions (no extra key requirement, see _build_regions)."""
+        for rname, events in added.items():
+            body = dict(regions_raw[rname])
+            body["events"] = {**body.get("events", {}), **events}
+            regions_raw[rname] = body
+            self._key_events |= set(events)
 
     @staticmethod
     def _key_chest_rule(kd: keys_mod.KeyDungeon, chest: dict, lname: str) -> str:
@@ -606,16 +618,23 @@ class World:
         src = keys_mod.without_key_terms(src, (keys_mod.SMALL,))
         return src.strip() == "True" or keys_mod.conjuncts(src) <= keys_mod.conjuncts(kd.rule)
 
-    def _key_terms(self, src) -> str:
-        """Key terms of a rule (has(Small_Key_<Dungeon>, n), Boss_Key_<Dungeon>): true for keys that are not items
-        of this world (vanilla or removed), and a small key count above the keys of the logic asks for all of them
+    def _key_terms(self, src, where: str = "") -> str:
+        """Key terms of a rule (has(Small_Key_<Dungeon>, n), Boss_Key_<Dungeon>): counted on the vanilla key events
+        (vanilla keys) or true (removed keys), and a small key count above the keys of the logic asks for all of them
         (the data writes the dungeon's total, ground keys included: those join the pool with shuffled small keys)."""
+        src = keys_mod.vanilla_terms(src, self._all_key_dungeons, self._vanilla_kinds, where)
         src = keys_mod.without_key_terms(
             src, tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS) if self.key_mode(k) not in keys_mod.SHUFFLED))
         if self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED:
             for kd in self.key_dungeons.values():
                 src = keys_mod.clamp_counts(src, kd.name, self.small_key_count(kd), kd.start_keys)
         return str(src)
+
+    def _vanilla_boss(self, src, name: str) -> str:
+        """With vanilla boss keys, a location or event behind a boss door also asks for its boss key."""
+        if keys_mod.BOSS not in self._vanilla_kinds:
+            return src
+        return keys_mod.vanilla_boss_rule(src, name, self._all_key_dungeons)
 
     def _key_rule(self, kd: keys_mod.KeyDungeon, key_spot: bool, boss: bool, src: str = "True") -> str:
         """Extra requirement of a location or event of a dungeon with keys (prudent: no door layout).
@@ -716,7 +735,7 @@ class World:
             rname, src = self.ROOT, "True"
         region = self.regions[rname]
         written = str(src)  # the data's rule: does it give its own key count? (_key_terms may turn it into True)
-        src = self._key_terms(src)
+        src = self._key_terms(self._vanilla_boss(src, lname), lname)
         kd = self._key_region.get(rname)
         key_spot = bool(kd) and self._is_key_spot(lname, rname, lbody, str(src), kd)
         if key_spot and not kd.layout:  # the key chests' rule replaces the key count (see _key_rule)
@@ -793,7 +812,7 @@ class World:
                 region.exits.append(Exit(rname, target, c.compile(src, f"sortie {rname} -> {target}"), str(src)))
             for ename, src in body.get("events", {}).items():
                 written = str(src)  # its own key count, before _key_terms may turn it into True
-                src = self._key_terms(src)
+                src = self._key_terms(self._vanilla_boss(src, ename))
                 kd = self._key_region.get(rname)
                 if kd and ename not in self._key_events:
                     extra = self._key_rule(kd, False, boss=ename in kd.boss_events, src=written)
