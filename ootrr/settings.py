@@ -142,6 +142,10 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                        "main room once the player owns ganon_boss_key_count of them, its chest holds a seed item"),
     "ganon_boss_key_count": (6, int, "Number of stones / medallions / rewards / hearts that give Ganon's Castle boss "
                              "key (ganon_boss_key)"),
+    # PC-built mod only (script Defeat_Ganon); added last, see small_keys
+    "skip_tower_collapse": (False, bool,
+                            "No escape from the collapsing tower: after Ganondorf, Link goes straight to Ganon's "
+                            "arena (no pots to refill between the two fights)"),
 }
 # settings that are a condition with a count: {condition: count setting}; the count's limit per condition
 COUNT_SETTINGS = {"bridge": "bridge_count", "ganon_boss_key": "ganon_boss_key_count"}

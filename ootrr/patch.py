@@ -90,6 +90,7 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "extra_pickups": world.extra_pickups(),
         "ocarina_moat_gate": bool(world.settings.get("open_door_of_time")),
         "removed_actors": world.removed_actors(),
+        "skip_tower_collapse": bool(world.settings.get("skip_tower_collapse")),
         "ground_native": world.ground_native,
         "progressive": world.progressive,
         "progressive_pouch": world.progressive_pouch,

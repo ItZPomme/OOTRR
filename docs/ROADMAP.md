@@ -185,6 +185,8 @@ and play) is validated in game on one PC.
   validate in game** (key given in the main room, door of Ganondorf's room, nothing given below the count, hearts).
 - `skip_trials` (Ganon's Castle trials done from the start): PC-built mod only, validated in game (2026-11-23).
   To do: the native menu.
+- `skip_tower_collapse` (Ganondorf -> Ganon's arena): PC-built mod only, validated in game (2026-11-24, with a test mod
+  started at Ganondorf's door, up to the credits). To do: the native menu (a question before the map change of `Defeat_Ganon`); the retry after dying to Ganon, not reported yet.
 - `complete_mask_quest` and `fast_bunny_hood` in the native menu (PC-built mod only for now).
 - First-obtain animation of consumables: not removed (decided by the engine).
 - Progressive items: done in the native menu (`ingame::AdjustItem`), **to validate in game** (each chain, and the

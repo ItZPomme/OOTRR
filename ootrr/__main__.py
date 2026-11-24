@@ -166,6 +166,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
             print(f"Récompenses de boss modifiées dans {len(event_changes)} scènes")
         builder = ModBuilder(romfs)
         builder.scrub_secret = secret
+        builder.skip_collapse = bool(patch.get("skip_tower_collapse"))
         if patch.get("moat_items"):
             builder.moat_items = tuple(patch["moat_items"])
         builder.ocarina_guard = bool(patch.get("ocarina_guard", True))

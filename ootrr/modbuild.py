@@ -119,7 +119,7 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.gift_progressive) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.gift_progressive) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.COLLAPSE_FLOW} if self.skip_collapse else set()) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -176,6 +176,9 @@ class ModBuilder:
             if flow == self.DAMPE_FLOW:
                 new, dampe_report = self._dampe_exit(new)
                 report += dampe_report
+            if self.skip_collapse and flow == self.COLLAPSE_FLOW:
+                new, collapse_report = self._skip_tower_collapse(new)
+                report += collapse_report
             # shuffled potion shop gift (a plain edit, or a progressive one: patch.progressive_gifts moves it)
             if flow == self.BOTTLE_TUTORIAL_FLOW and (flow in self.gift_edits or flow in self.gift_progressive):
                 new, tutorial_report = self._skip_bottle_tutorial(new)
@@ -965,6 +968,33 @@ class ModBuilder:
         new, report = insert_flow(flow, None, [{"copy_event": started, "set": {"GameDataName": flag + "Cleared"},
                                                 "next": "after"}], before=playing)
         return new, report + [f"{self.BOTTLE_TUTORIAL_FLOW}: bug-catch tutorial skipped (door opens without a bottle)"]
+
+    # Tower collapse: after Ganondorf (InsideGanonCastle_Dungeon_BossDie_1) the script reserves the change to the map
+    # CrumblingGanonCastle; the escape (its own quest, EscapeFromCrumblingGanonCastle) ends at a door to Ganon's arena
+    # whose values are the ones below. The flag is the one its way out sets (Dm_SY_BancChangeGo, look of the arena
+    # before the fight). Nothing in the arena reads the escape quest or the other flags of the tower.
+    COLLAPSE_FLOW = "Defeat_Ganon"
+    COLLAPSE_BANC = "CrumblingGanonCastle"
+    COLLAPSE_WARP = {"NextBanc": "FinalBattleField", "NextStartPos": "FinalBattleField_Entrance",
+                     "BootEventName": "InsideGanonCaslte_Dungeon_Escape",
+                     "EventStarterName": "FinalBattleField_Entrance"}
+    COLLAPSE_FLAG = "FinalBattleField_ChangeENVForBeforeBattle"
+    skip_collapse = False  # setting skip_tower_collapse
+
+    def _skip_tower_collapse(self, flow: bytes) -> tuple[bytes, list[str]]:
+        """After Ganondorf, straight to Ganon's arena (the step that changes the map, replaced with a copy)."""
+        from .formats.evfl import find_action_event, insert_flow
+
+        warp = find_action_event(flow, *self.WARP_ACTION, "NextBanc", self.COLLAPSE_BANC)
+        # any step that sets a Bool to true, copied for the flag
+        set_true = find_action_event(flow, "GameDataActor", "EventTriggerSetGameDataBool", "GameDataName",
+                                     "InsideGanonCastele_Dungeon_Ganondorf_Die")
+        if warp is None or set_true is None:
+            raise KeyError(f"{self.COLLAPSE_FLOW}: steps after Ganondorf not found")
+        new, report = insert_flow(flow, None, [
+            {"copy_event": set_true, "set": {"GameDataName": self.COLLAPSE_FLAG}, "next": 1},
+            {"copy_event": warp, "set": dict(self.COLLAPSE_WARP), "next": "after"}], before=warp)
+        return new, report + [f"{self.COLLAPSE_FLOW}: tower collapse skipped (straight to Ganon's arena)"]
 
     def _guard_event(self, flow: bytes, guard: tuple) -> tuple[bytes, list[str]]:
         """Saute un événement (EVENT_GUARDS) tant que le drapeau est faux (0 = oui : l'événement se joue)."""

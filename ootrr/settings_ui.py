@@ -20,7 +20,7 @@ PAGES: list[tuple[str, list[str]]] = [
     ("Shuffle", ["shuffle_rewards", "shuffle_songs", "shuffle_ocarinas", "shuffle_scrubs", "scrub_prices",
                  "shuffle_skulltulas", "adult_trade_sequence", "gerudo_card"]),
     ("Dungeons", ["maps_compasses", "small_keys", "boss_keys", "key_locations", "ganon_boss_key",
-                  "ganon_boss_key_count"]),
+                  "ganon_boss_key_count", "skip_tower_collapse"]),
     ("Comfort", ["skip_cutscenes", "skip_child_zelda", "start_with_consumables", "cucco_count", "big_poe_count",
                  "complete_mask_quest", "fast_bunny_hood", "blue_fire_arrows"]),
     ("Logic", ["logic", "logic_lens_required", "accessibility"]),
@@ -87,6 +87,9 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
     # PC-only: start flags (the native menu's mod is built once and has no row)
     "skip_trials": ("Skip Trials", "Ganon's Castle: the six trials are completed from the start, the barrier around "
                     "the tower is down. The trial rooms can still be visited for their chests.", {}),
+    # PC-only: a script of the mod (the native menu's mod is built once and has no row)
+    "skip_tower_collapse": ("Skip Tower Collapse", "No escape from the collapsing tower: after Ganondorf, Link goes "
+                            "straight to Ganon's arena. No pots to refill between the two fights.", {}),
     "accessibility": ("Accessibility", "All: every location can be reached. Beatable: only Ganon has to be "
                       "reachable, some items may be locked away.", {"all": "All", "beatable": "Beatable"}),
 }

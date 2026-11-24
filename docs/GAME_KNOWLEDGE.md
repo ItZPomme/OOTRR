@@ -632,6 +632,22 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   game** (2026-11-23, Longshot, test mod OoTRR-essai: bridge and quest text, tower barrier gone, tower up to
   Ganondorf, a trial room, saved and reloaded).
 
+## Tower collapse **[files]** (2026-11-24)
+
+- Ganondorf beaten: `Defeat_Ganon:InsideGanonCastle_Dungeon_BossDie_1` (quest `Defeat_Ganon` Step06) reserves the map
+  change to `CrumblingGanonCastle` (`CrumblingGanonCastle_StartPos`, boot event `CrumblingGanonCastle_Arrive`).
+- The escape has its own quest (`EscapeFromCrumblingGanonCastle`, Step01 - Complete) and script of the same name. Its
+  last door (`FieldAndDungeonEntranceEventRequestActor` BackEntrance) leads to `FinalBattleField`
+  (`FinalBattleField_Entrance`, boot event `InsideGanonCaslte_Dungeon_Escape`, misspelt in the game: temporary save,
+  Step07); the way out sets `FinalBattleField_ChangeENVForBeforeBattle`.
+- Outside the tower, only the scene `Dm_InsideGanonCastle_0180` names the escape quest; the tower has 9 pots and no
+  chest. The fight starts when Link walks into the arena (`InsideGanonCastle_Dungeon_BossAppear_2`, Step08).
+- Setting `skip_tower_collapse`: the map change after Ganondorf takes the values of that last door, and the flag above
+  is set; the escape quest is left untouched. **Validated in game** (2026-11-24, Longshot, test mod OoTRR-essai with
+  `skip_cutscenes=safe`: both fights, up to the credits; the retry after dying to Ganon was not reported).
+- `Banc/BancBasedResource/StartPos.byml` holds a copy of every `StartPos` (position, rotation) per map: a start point
+  moved for a test was changed in both.
+
 ## Ganon's Castle boss key condition **[files]** (2026-11-23, not validated in game)
 
 - The boss door locks (`Obj_DoorChainLock_A_02`, Fire Temple `Dm_Obj_DoorChainLock_A_01`) run

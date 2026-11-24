@@ -250,6 +250,10 @@ from the start, so the barrier around the tower is down and you can go straight 
 still be visited for their chests (and the castle's small key); Light Arrows are still needed for Ganondorf. Validated
 in game.
 
+Also PC-only: `skip_tower_collapse` ("Skip Tower Collapse" on the "Dungeons" page). On: once Ganondorf is beaten you go
+straight to Ganon's arena instead of escaping the collapsing tower with Zelda. Nothing in the tower is randomized, but
+you lose its pots between the two fights. Validated in game.
+
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
