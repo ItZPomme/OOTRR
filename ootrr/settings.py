@@ -106,7 +106,7 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
                          "the logic then accepts Ice Arrows instead of a bottle of Blue Fire"),
     # dungeon keys (data/keys.json); PC-built mod only. Added last: the native menu numbers settings in this order
     "small_keys": ("vanilla", KEY_MODES,
-                   "Small keys: vanilla = in their original chests; own_dungeon = shuffled in their own dungeon "
+                   "Small keys: vanilla = in their original chests; own_dungeon = shuffled in their own dungeon, ground keys included "
                    "(prudent logic: a key may only move to another chest of the same room); any_dungeon = in any "
                    "dungeon; removed = no small key in the chests, each dungeon's counter starts with all its "
                    "keys (locked doors can be opened from the start); random = anywhere in the world"),

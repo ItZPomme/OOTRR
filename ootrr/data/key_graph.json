@@ -182,7 +182,7 @@
         {"rooms": [9, 10], "door": "open", "why": "Obj_Well_SwitchShutter_A_01 6524865327852541260 in room 9, nearest other room 10 at 0 m"}
       ]
     },
-    "Gerudo Training Ground": {
+    "Gerudo Proving Grounds": {
       "checked": false, "entrance": 0,
       "links": [
         {"rooms": [0, 1], "door": "open", "why": "Obj_Gerudo_SwitchShutter_A_04 17271596773795074407 in room 0, nearest other room 1 at 3 m"},

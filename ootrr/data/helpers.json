@@ -29,12 +29,16 @@
     "deku_tree_open":        "setting_is(open_forest, 'open') or (can_use(Kokiri_Sword) and has_deku_shield)",
     "great_fairy":           "can_play(Zeldas_Lullaby)",
     "gc_chests":             "is_adult and (can_use(Megaton_Hammer) or has_strength2) and has_explosives",
-    "gtg_chests":            "is_adult and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_see_invisible and can_use(Megaton_Hammer) and has_strength2 and can_use(Hover_Boots) and can_use(Iron_Boots)",
+    "gpg_lava_silver_rupees":   "count(GPG_Silver_Rupee_Lava_Start_Platform, GPG_Silver_Rupee_Lava_To_Water_Platform, GPG_Silver_Rupee_Lava_To_Back_1, GPG_Silver_Rupee_Lava_To_Back_2, GPG_Silver_Rupee_Lava_Flame_Circle) >= 5",
+    "gpg_slopes_silver_rupees": "count(GPG_Silver_Rupee_Slopes_Bottom_Right, GPG_Silver_Rupee_Slopes_Bottom_Left, GPG_Silver_Rupee_Slopes_Ledge, GPG_Silver_Rupee_Slopes_Top_Left, GPG_Silver_Rupee_Slopes_Ceiling) >= 5",
+    "gpg_water_silver_rupees":  "count(GPG_Silver_Rupee_Water_Top, GPG_Silver_Rupee_Water_Bottom_Center, GPG_Silver_Rupee_Water_Bottom_Back_Left, GPG_Silver_Rupee_Water_Middle, GPG_Silver_Rupee_Water_Bottom_Front_Right) >= 5",
+    "gpg_chests":            "is_adult and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_see_invisible and can_use(Megaton_Hammer) and has_strength2 and can_use(Hover_Boots) and can_use(Iron_Boots)",
     "ganon_castle_chests":   "can_use(Fire_Arrows) and can_use(Progressive_Hookshot) and can_use(Megaton_Hammer) and can_see_invisible and has_explosives and can_use(Hover_Boots) and has_strength2",
     "shadow_boss":           "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_play(Zeldas_Lullaby)",
-    "spirit_boss":           "can_use(Mirror_Shield) and can_use(Progressive_Hookshot) and has_explosives",
+    "spirit_boss":           "can_use(Mirror_Shield) and can_use(Progressive_Hookshot)",
     "water_boss":            "can_use(Iron_Boots) and can_use(Progressive_Hookshot) and has_explosives",
-
+    "spirit_child": "is_child",
+    "spirit_adult": "is_adult and has_strength2",
     "rainbow_bridge": "setting_is(bridge, 'open') or (setting_is(bridge, 'vanilla') and Shadow_Medallion and Spirit_Medallion and can_use(Light_Arrows)) or (setting_is(bridge, 'stones') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire) >= setting_value(bridge_count)) or (setting_is(bridge, 'medallions') and count(Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'dungeons') and count(Kokiri_Emerald, Goron_Ruby, Zora_Sapphire, Forest_Medallion, Fire_Medallion, Water_Medallion, Spirit_Medallion, Shadow_Medallion, Light_Medallion) >= setting_value(bridge_count)) or (setting_is(bridge, 'hearts') and hearts() >= setting_value(bridge_count))"
   }
 }

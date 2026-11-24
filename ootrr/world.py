@@ -27,7 +27,7 @@ GAME_DUNGEONS = {
     "Spirit Temple": "SpiritTemple",
     "Bottom of the Well": "BottomOfTheWell",
     "Ice Cavern": "IceCavern",
-    "Gerudo Training Ground": "GerudoTrainingGround",
+    "Gerudo Proving Grounds": "GerudoTrainingGround",
 }
 JUNK_REPLACEMENT = "TBox_Rupee_Green"
 # réglage skip_child_zelda : ces lieux donnent leur objet dès la nouvelle partie
@@ -523,8 +523,13 @@ class World:
 
     def _add_key_data(self, regions_raw: dict[str, dict], extra_locations: dict[str, dict]) -> None:
         """Key chests become locations (vanilla item: the dungeon's key item) when their setting is not
-        vanilla; the events of data/keys.json are added to their regions."""
+        vanilla, in their "region" (keys.json, default: the dungeon's "region"); the events of data/keys.json are
+        added to their regions."""
         for kd in self.key_dungeons.values():
+            for chest in kd.small + ([kd.boss_key] if kd.boss_key else []):
+                if chest.get("region", kd.region) not in kd.regions:
+                    raise DataError(f"keys.json: {kd.name}: key chest region {chest['region']!r} is not one of the "
+                                    "dungeon's regions")
             for rname, events in kd.events.items():
                 body = dict(regions_raw[rname])
                 body["events"] = {**body.get("events", {}), **events}
@@ -533,13 +538,13 @@ class World:
             if self.key_mode(keys_mod.SMALL) != "vanilla":
                 for i, chest in enumerate(kd.small):
                     extra_locations[kd.small_location(i)] = {
-                        "region": kd.region, "rule": self._key_chest_rule(kd, chest, kd.small_location(i)),
+                        "region": chest.get("region", kd.region), "rule": self._key_chest_rule(kd, chest, kd.small_location(i)),
                         "hashes": [chest["hash"]],
                         "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game), "key_room": chest["room"]}
             if self.key_mode(keys_mod.BOSS) != "vanilla" and kd.boss_key:
                 # the chest's event (Navi's line, ForesetTemple_GetBossKey) belongs to the boss key: "drop"
                 extra_locations[kd.boss_location] = {
-                    "region": kd.region, "rule": self._key_chest_rule(kd, kd.boss_key, kd.boss_location),
+                    "region": kd.boss_key.get("region", kd.region), "rule": self._key_chest_rule(kd, kd.boss_key, kd.boss_location),
                     "hashes": [kd.boss_key["hash"]],
                     "vanilla": keys_mod.item_name(keys_mod.BOSS, kd.game), "event": "drop",
                     "key_room": kd.boss_key["room"]}
@@ -587,8 +592,7 @@ class World:
     def _key_terms(self, src) -> str:
         """Key terms of a rule (has(Small_Key_<Dungeon>, n), Boss_Key_<Dungeon>): true for keys that are not items
         of this world (vanilla or removed), and a small key count above the keys of the logic asks for all of them
-        (the data writes the dungeon's total, ground keys included: those only join the pool with any_dungeon /
-        random)."""
+        (the data writes the dungeon's total, ground keys included: those join the pool with shuffled small keys)."""
         src = keys_mod.without_key_terms(
             src, tuple(k for k in (keys_mod.SMALL, keys_mod.BOSS) if self.key_mode(k) not in keys_mod.SHUFFLED))
         if self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED:
@@ -618,9 +622,14 @@ class World:
 
     def small_key_count(self, kd: keys_mod.KeyDungeon) -> int:
         """Small keys of the dungeon in the logic: the chests', plus the ground keys when those leave the map
-        (any_dungeon, random: their keys join the item pool)."""
-        moved = self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random")
-        return len(kd.small) + (len(kd.freestanding) if moved else 0)
+        (shuffled small keys: their keys join the item pool)."""
+        return len(kd.small) + (len(kd.freestanding) if self.ground_keys_moved else 0)
+
+    @property
+    def ground_keys_moved(self) -> bool:
+        """Shuffled small keys (own_dungeon, any_dungeon, random): the ground keys leave the maps and their keys
+        join the item pool, placed like the chest keys (own_dungeon: in a key spot of their own dungeon)."""
+        return self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED
 
     def location_game_dungeon(self, loc: Location) -> str | None:
         """Game dungeon (DungeonInfo / Banc name) of a location, for the keys given by its chest."""
@@ -846,7 +855,7 @@ class World:
                 out.append((JUNK_REPLACEMENT, None))  # removed keys: the counters start full (start_flags)
             else:
                 out.append((loc.vanilla, None))
-        if self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random"):
+        if self.ground_keys_moved:
             # the ground keys leave the map (removed_actors): their keys replace rupees of the pool
             extra = [keys_mod.item_name(keys_mod.SMALL, kd.game)
                      for kd in self.key_dungeons.values() for _ in kd.freestanding]
@@ -933,7 +942,7 @@ class World:
             out += OPEN_FOREST_REMOVALS["exit"]
         if mode == "open":
             out += OPEN_FOREST_REMOVALS["deku"]
-        if self.key_mode(keys_mod.SMALL) in ("any_dungeon", "random"):
+        if self.ground_keys_moved:
             out += [k["hash"] for kd in self.key_dungeons.values() for k in kd.freestanding]  # keys in the pool
         return out
 

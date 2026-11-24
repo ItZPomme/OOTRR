@@ -67,8 +67,15 @@ class KeysTest(unittest.TestCase):
             self.assertEqual(world.small_key_count(kd), n)
         self.assertEqual(sorted(world.removed_actors()),
                          sorted(k["hash"] for kd in world.key_dungeons.values() for k in kd.freestanding))
-        # the ground keys stay with own_dungeon
-        self.assertFalse(World(settings.build({"small_keys": "own_dungeon"})).removed_actors())
+        # own_dungeon moves the ground keys too: they leave the maps and join the pool
+        own = World(settings.build({"small_keys": "own_dungeon"}))
+        self.assertEqual(sorted(own.removed_actors()), sorted(world.removed_actors()))
+        own_pool = [item for item, _ in own.pool()]
+        for kd in own.key_dungeons.values():
+            self.assertEqual(own_pool.count(keys_mod.item_name(keys_mod.SMALL, kd.game)), own.small_key_count(kd))
+            self.assertEqual(own.small_key_count(kd), len(kd.small) + len(kd.freestanding), kd.name)
+        # vanilla small keys: the ground keys stay
+        self.assertFalse(World(settings.build({"boss_keys": "own_dungeon"})).removed_actors())
 
     def test_prudent_rules(self):
         world = World(settings.build({"small_keys": "any_dungeon", "boss_keys": "any_dungeon"}))

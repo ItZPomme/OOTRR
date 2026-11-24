@@ -217,8 +217,8 @@ python -m ootrr --seed 1234 --romfs "ROMFS" --install --set open_forest=open --s
 Shuffled shops are only available with the in-game menu. The other way round, the dungeon key settings
 (`small_keys`, `boss_keys`, "Dungeons" page of the desktop app) only exist for the PC-built mod:
 
-- `own_dungeon`: small keys stay in their dungeon (a key may move to another chest of the same room); boss keys go
-  anywhere in their dungeon;
+- `own_dungeon`: small keys stay in their dungeon, the keys lying on the ground included (a key may move to
+  another chest of the same room); boss keys go anywhere in their dungeon;
 - `any_dungeon`: in any dungeon; `random`: in any chest of the world;
 - `removed`: small keys: no key in the chests, every dungeon starts with all its keys (go and open the locked doors);
   boss keys: owned from the start;

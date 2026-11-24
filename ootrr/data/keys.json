@@ -66,61 +66,61 @@
       "game": "ShadowTemple",
       "regions": ["Shadow Temple"],
       "region": "Shadow Temple",
-      "layout": false,
+      "layout": true,
       "small": [
-        {"hash": 1111717451118505545, "room": 6, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
-        {"hash": 5781953901224064730, "room": 11, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
-        {"hash": 169081039115821925, "room": 16, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
-        {"hash": 17902550525792072472, "room": 21, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"}
+        {"hash": 1111717451118505545, "room": 6, "name": "Shadow Temple Small Key Chest 1", "rule": "can_use(Progressive_Hookshot) and can_use(Hover_Boots) and can_see_invisible and has(Small_Key_Shadow_Temple, 0)"},
+        {"hash": 5781953901224064730, "room": 11,"name": "Shadow Temple Small Key Chest 2", "rule": "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 1)"},
+        {"hash": 169081039115821925, "room": 16, "name": "Shadow Temple Small Key Chest 3", "rule": "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 2)"},
+        {"hash": 17902550525792072472, "room": 21, "name": "Shadow Temple Small Key Chest 4", "rule": "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 4)"}
       ],
-      "freestanding": [{"hash": 12562389953863361839, "room": 13}],
+      "freestanding": [{"hash": 12562389953863361839, "room": 13, "name": "Shadow Temple Giant Pot Small Key", "rule":"can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 3)"}],
       "boss_key": {"hash": 9221365632831348137, "room": 19, "rule": "shadow_boss and can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_see_invisible and has_explosives and has(Small_Key_Shadow_Temple, 5)"},
       "boss": ["Shadow Temple Bongo Bongo Heart", "Bongo Bongo"]
     },
     "Spirit Temple": {
       "game": "SpiritTemple",
-      "regions": ["Spirit Temple Lobby", "Spirit Temple Child", "Spirit Temple Adult"],
-      "region": "Spirit Temple Adult",
-      "layout": false,
-      "events": {"Spirit Temple Child": {"Spirit_Child_Side": "child_ranged"}},
+      "regions": ["Spirit Temple"],
+      "region": "Spirit Temple",
+      "layout": true,
+      "events": {"Spirit Temple": {"Spirit_Child_Side": "spirit_child and can_use(Boomerang)"}},
       "small": [
-        {"hash": 5703423643219134246, "room": 4, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
-        {"hash": 2203243501006528435, "room": 7, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
-        {"hash": 17407066694905911064, "room": 9, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
-        {"hash": 4277978357934400600, "room": 16, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
-        {"hash": 12042193296697281461, "room": 26, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"}
+        {"hash": 5703423643219134246, "room": 4,"name": "Spirit Temple Small Key Chest 1 (Child)", "rule": "Spirit_Child_Side and has(Small_Key_Spirit_Temple, 0)"},
+        {"hash": 2203243501006528435, "room": 7, "name": "Spirit Temple Small Key Chest 2", "rule": "spirit_adult and can_use(Progressive_Hookshot) and can_play(Zeldas_Lullaby) and has(Small_Key_Spirit_Temple, 3)"},
+        {"hash": 17407066694905911064, "room": 9, "name": "Spirit Temple Small Key Chest 3", "rule": "(spirit_child and has(Small_Key_Spirit_Temple, 5)) or (spirit_adult and can_use(Progressive_Hookshot) and has(Small_Key_Spirit_Temple, 3))"},
+        {"hash": 4277978357934400600, "room": 16, "name": "Spirit Temple Small Key Chest 4", "rule": "spirit_adult and (can_use(Bow) or can_use(Progressive_Hookshot)) and can_play(Song_of_Time) and has(Small_Key_Spirit_Temple, 0)"},
+        {"hash": 12042193296697281461, "room": 26, "name": "Spirit Temple Small Key Chest 5", "rule": "spirit_adult and (can_use(Bow) or can_use(Progressive_Hookshot)) and has_explosives and (can_play(Song_of_Time) or can_use(Hover_Boots) or has_fire) and can_use(Mirror_Shield) and has(Small_Key_Spirit_Temple, 4)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 16272168033146555902, "room": 29, "rule": "spirit_boss and can_use(Progressive_Hookshot) and has_explosives and can_use_longshot and can_see_invisible and can_play(Zeldas_Lullaby) and can_play(Song_of_Time) and Spirit_Child_Side and has(Small_Key_Spirit_Temple, 5)"},
+      "boss_key": {"hash": 16272168033146555902, "room": 29, "rule": "spirit_adult and (can_use(Bow) or can_use(Progressive_Hookshot)) and can_play(Zeldas_Lullaby) and has(Small_Key_Spirit_Temple, 5)"},
       "boss": ["Spirit Temple Twinrova Heart", "Twinrova"]
     },
     "Bottom of the Well": {
       "game": "BottomOfTheWell",
       "regions": ["Bottom of the Well"],
       "region": "Bottom of the Well",
-      "layout": false,
+      "layout": true,
       "small": [
-        {"hash": 8397646530660039355, "room": 1, "rule": "can_play(Zeldas_Lullaby) and can_see_invisible and has_explosives and has(Small_Key_Bottom_of_the_Well, 2)"}
+        {"hash": 8397646530660039355, "room": 1, "rule": "can_see_invisible and has(Small_Key_Bottom_of_the_Well, 0)"}
       ],
-      "freestanding": [{"hash": 17649154319341333603, "room": 3}],
+      "freestanding": [{"hash": 17649154319341333603, "room": 3, "rule": "(can_play(Zeldas_Lullaby) or has_gold_scale) and can_see_invisible and has(Small_Key_Bottom_of_the_Well, 0)"}],
       "boss_key": null,
       "boss": []
     },
-    "Gerudo Training Ground": {
+    "Gerudo Proving Grounds": {
       "game": "GerudoTrainingGround",
-      "regions": ["Gerudo Training Ground"],
-      "region": "Gerudo Training Ground",
-      "layout": false,
+      "regions": ["Gerudo Proving Grounds", "GPG Lava Room Front", "GPG Lava Room Back", "GPG Water Room", "GPG Underwater", "GPG Right Maze", "GPG Boulder Room", "GPG Heavy Block Room", "GPG Eye Statue Upper", "GPG Like Like Room", "GPG Eye Statue Lower", "GPG Hammer Room"],
+      "region": "Gerudo Proving Grounds",
+      "layout": true,
       "small": [
-        {"hash": 13501407288943710656, "room": 1, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 11563468890171962383, "room": 4, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 4372363658229299619, "room": 5, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 4709724720801091788, "room": 7, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 1883068192328530224, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 4320448574091221496, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 9911316961118170383, "room": 8, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 3717705376223508790, "room": 9, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"},
-        {"hash": 5329807728555596183, "room": 10, "rule": "gtg_chests and has(Small_Key_Gerudo_Training_Ground, 9)"}
+        {"hash": 13501407288943710656, "room": 1, "region": "Gerudo Proving Grounds", "name": "GPG Stalfos Chest", "rule": "True"},
+        {"hash": 11563468890171962383, "room": 4, "region": "GPG Eye Statue Lower", "name": "GPG Moving Platform Chest", "rule": "can_use(Bow)"},
+        {"hash": 4372363658229299619, "room": 5, "region": "GPG Hammer Room", "name": "GPG Hammer Room Chest 1", "rule": "can_use(Megaton_Hammer)"},
+        {"hash": 4709724720801091788, "room": 7, "region": "Gerudo Proving Grounds", "name": "GPG Beamos Room Chest", "rule": "has_explosives and has(Small_Key_Gerudo_Proving_Grounds, 0)"},
+        {"hash": 1883068192328530224, "room": 8, "region": "GPG Right Maze", "name": "GPG Right Maze Chest 2", "rule": "True"},
+        {"hash": 4320448574091221496, "room": 8, "region": "Gerudo Proving Grounds", "name": "GPG Maze Hidden Ceiling Chest", "rule": "can_see_invisible and has(Small_Key_Gerudo_Proving_Grounds, 3)"},
+        {"hash": 9911316961118170383, "room": 8, "region": "GPG Eye Statue Upper", "name": "GPG Over the Maze Chest", "rule": "can_use(Bow)"},
+        {"hash": 3717705376223508790, "room": 9, "region": "GPG Water Room", "name": "GPG Water Room Chest", "rule": "gpg_water_silver_rupees and has(Small_Key_Gerudo_Proving_Grounds, 0)"},
+        {"hash": 5329807728555596183, "room": 10, "region": "GPG Like Like Room", "name": "GPG Invisible Chest", "rule": "True"}
       ],
       "freestanding": [],
       "boss_key": null,
@@ -132,7 +132,7 @@
       "region": "Ganons Castle",
       "layout": false,
       "small": [
-        {"hash": 15320975652699461295, "room": 13, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"}
+        {"hash": 15320975652699461295, "room": 13, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"}
       ],
       "freestanding": [],
       "boss_key": {"hash": 17092385671602176550, "room": 24, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"},
@@ -159,9 +159,9 @@
     "Bottom of the Well Blue Rupee Chest 3": 1, "Bottom of the Well Purple Rupee Chest": 2,
     "Bottom of the Well Lens of Truth Chest": 8, "Bottom of the Well Scrub Seed Chest": 11,
     "Bottom of the Well Map Chest": 9, "Bottom of the Well Compass Chest": 1, "Bottom of the Well Deku Shield Chest": 6,
-    "GTG Blue Rupee Chest 1": 0, "GTG Blue Rupee Chest 2": 3, "GTG Purple Rupee Chest": 8, "GTG Red Rupee Chest 1": 8,
-    "GTG Ice Arrows Chest": 8, "GTG Bombchu Chest": 8, "GTG Arrow Chest 2": 8, "GTG Scrub Seed Chest": 10,
-    "GTG Red Rupee Chest 2": 10, "GTG Bomb Chest": 10,
+    "GPG Eye Switch First Room Chest": 0, "GPG Blue Rupee Chest 2": 3, "GPG Purple Rupee Chest": 8, "GPG Red Rupee Chest 1": 8,
+    "GPG Ice Arrows Chest": 8, "GPG Bombchu Chest": 8, "GPG Arrow Chest 2": 8, "GPG Scrub Seed Chest": 10,
+    "GPG Red Rupee Chest 2": 10, "GPG Bomb Chest": 10,
     "Ganons Castle Golden Gauntlets Chest": 8, "Ganons Castle Arrow Chest 1": 2, "Ganons Castle Bombchu Chest": 5,
     "Ganons Castle Arrow Chest 2": 8, "Ganons Castle Rupee Chest 1": 12, "Ganons Castle Rupee Chest 2": 12,
     "Ganons Castle Rupee Chest 3": 12, "Ganons Castle Rupee Chest 4": 12, "Ganons Castle Rupee Chest 5": 13,

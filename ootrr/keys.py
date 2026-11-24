@@ -208,8 +208,7 @@ def without_key_terms(rule: str, kinds: tuple[str, ...] = (SMALL, BOSS)) -> str:
 
 def clamp_counts(rule: str, dungeon: str, limit: int, owned: int = 0) -> str:
     """has(Small_Key_<dungeon>, n) counts the game's keys: the `owned` start keys are taken off (none left to find:
-    True), and n above the keys the logic knows (e.g. ground keys that stay on the ground with own_dungeon) asks
-    for all of them instead."""
+    True), and n above the keys the logic knows asks for all of them instead."""
     name = logic_name(SMALL, dungeon)
 
     def count(m: re.Match) -> str:

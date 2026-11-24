@@ -47,8 +47,8 @@
     "Fire Temple": {
       "dungeon": "Fire Temple",
       "locations": {
-        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
-        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple", "vanilla": "Item_Medal_Fire"}
+        "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple and has(Small_Key_Fire_Temple, 0)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
+        "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple and has(Small_Key_Fire_Temple, 0)", "vanilla": "Item_Medal_Fire"}
       },
       "exits": {
         "DMC Central": "True",
@@ -80,8 +80,8 @@
     "Shadow Temple": {
       "dungeon": "Shadow Temple",
       "locations": {
-        "Shadow Temple Bongo Bongo Heart": {"rule": "shadow_boss and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [17599164808183510748], "pickup": "boss"},
-        "Bongo Bongo":                     {"kind": "reward", "rule": "shadow_boss and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Item_Medal_Shadow"}
+        "Shadow Temple Bongo Bongo Heart": {"rule": "shadow_boss and Boss_Key_Shadow_Temple and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [17599164808183510748], "pickup": "boss"},
+        "Bongo Bongo":                     {"kind": "reward", "rule": "shadow_boss and Boss_Key_Shadow_Temple and has(Small_Key_Shadow_Temple, 5)", "vanilla": "Item_Medal_Shadow"}
       },
       "exits": {
         "Graveyard Warp Pad": "True"
@@ -93,34 +93,123 @@
         "Kakariko Village": "True"
       }
     },
-    "Gerudo Training Ground": {
-      "dungeon": "Gerudo Training Ground",
+    "Gerudo Proving Grounds": {
+      "dungeon": "Gerudo Proving Grounds",
       "exits": {
-        "Gerudo Fortress": "True"
+        "Gerudo Fortress": "True",
+        "GPG Lava Room Front": "has_explosives and (is_adult or can_use(Kokiri_Sword))",
+        "GPG Right Maze": "has(Small_Key_Gerudo_Proving_Grounds, 9)",
+        "GPG Boulder Room": "is_adult or can_use(Kokiri_Sword)"
       }
     },
-    "Spirit Temple Lobby": {
-      "dungeon": "Spirit Temple",
-      "exits": {
-        "Desert Colossus": "True",
-        "Spirit Temple Child": "is_child",
-        "Spirit Temple Adult": "is_adult and has_strength2"
-      }
-    },
-    "Spirit Temple Child": {
-      "dungeon": "Spirit Temple",
-      "exits": {
-        "Spirit Temple Lobby": "True"
-      }
-    },
-    "Spirit Temple Adult": {
-      "dungeon": "Spirit Temple",
-      "locations": {
-        "Spirit Temple Twinrova Heart": {"rule": "spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [4720088048159616469], "pickup": "boss"},
-        "Twinrova":                     {"kind": "reward", "rule": "spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Item_Medal_Spirit"}
+    "GPG Lava Room Front": {
+      "dungeon": "Gerudo Proving Grounds",
+      "events": {
+        "GPG_Silver_Rupee_Lava_Start_Platform": "True",
+        "GPG_Silver_Rupee_Lava_To_Water_Platform": "can_use(Hover_Boots)",
+        "GPG_Silver_Rupee_Lava_To_Back_1": "can_use(Hover_Boots) and can_use(Progressive_Hookshot)",
+        "GPG_Silver_Rupee_Lava_To_Back_2": "can_use(Hover_Boots) and can_use(Progressive_Hookshot)",
+        "GPG_Silver_Rupee_Lava_Flame_Circle": "can_play(Song_of_Time) or can_use(Hover_Boots)"
       },
       "exits": {
-        "Spirit Temple Lobby": "True"
+        "GPG Right Maze": "can_play(Song_of_Time)",
+        "GPG Lava Room Back": "can_use(Hover_Boots) and can_use(Progressive_Hookshot)",
+        "GPG Water Room": "gpg_lava_silver_rupees"
+      }
+    },
+    "GPG Lava Room Back": {
+      "dungeon": "Gerudo Proving Grounds",
+      "events": {
+        "GPG_Silver_Rupee_Lava_To_Back_1": "True",
+        "GPG_Silver_Rupee_Lava_To_Back_2": "can_use(Progressive_Hookshot)"
+      },
+      "exits": {
+        "GPG Lava Room Front": "can_use(Hover_Boots) or can_use(Progressive_Hookshot)",
+        "GPG Hammer Room": "can_use(Progressive_Hookshot)"
+      }
+    },
+    "GPG Water Room": {
+      "dungeon": "Gerudo Proving Grounds",
+      "events": {
+        "GPG_Silver_Rupee_Water_Top": "can_play(Song_of_Time) and can_use(Iron_Boots) and can_use(Zora_Tunic)"
+      },
+      "exits": {
+        "GPG Lava Room Front": "True",
+        "GPG Underwater": "can_play(Song_of_Time) and can_use(Iron_Boots) and can_use(Zora_Tunic)"
+      }
+    },
+    "GPG Underwater": {
+      "dungeon": "Gerudo Proving Grounds",
+      "events": {
+        "GPG_Silver_Rupee_Water_Bottom_Center": "True",
+        "GPG_Silver_Rupee_Water_Bottom_Back_Left": "True",
+        "GPG_Silver_Rupee_Water_Middle": "True",
+        "GPG_Silver_Rupee_Water_Bottom_Front_Right": "True"
+      },
+      "exits": {
+        "GPG Water Room": "True"
+      }
+    },
+    "GPG Right Maze": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Lava Room Front": "True"
+      }
+    },
+    "GPG Boulder Room": {
+      "dungeon": "Gerudo Proving Grounds",
+      "events": {
+        "GPG_Silver_Rupee_Slopes_Bottom_Right": "True",
+        "GPG_Silver_Rupee_Slopes_Bottom_Left": "True",
+        "GPG_Silver_Rupee_Slopes_Ledge": "True",
+        "GPG_Silver_Rupee_Slopes_Top_Left": "True",
+        "GPG_Silver_Rupee_Slopes_Ceiling": "can_use(Progressive_Hookshot)"
+      },
+      "exits": {
+        "Gerudo Proving Grounds": "True",
+        "GPG Heavy Block Room": "gpg_slopes_silver_rupees and can_use(Progressive_Hookshot)"
+      }
+    },
+    "GPG Heavy Block Room": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Like Like Room": "can_see_invisible and (can_use(Progressive_Hookshot) or can_use(Bow))",
+        "GPG Eye Statue Upper": "is_adult and can_see_invisible and can_use(Progressive_Hookshot)"
+      }
+    },
+    "GPG Eye Statue Upper": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Eye Statue Lower": "True"
+      }
+    },
+    "GPG Like Like Room": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Heavy Block Room": "True"
+      }
+    },
+    "GPG Eye Statue Lower": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Hammer Room": "True"
+      }
+    },
+    "GPG Hammer Room": {
+      "dungeon": "Gerudo Proving Grounds",
+      "exits": {
+        "GPG Lava Room Back": "True",
+        "GPG Eye Statue Lower": "can_use(Megaton_Hammer) and can_use(Bow)"
+      }
+    },
+    "Spirit Temple": {
+      "dungeon": "Spirit Temple",
+      "locations": {
+        "Spirit Temple Twinrova Heart": {"rule": "spirit_adult and spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Obj_Heart_Container", "hashes": [4720088048159616469], "pickup": "boss"},
+        "Twinrova":                     {"kind": "reward", "rule": "spirit_adult and spirit_boss and has(Small_Key_Spirit_Temple, 5)", "vanilla": "Item_Medal_Spirit"}
+      },
+      "exits": {
+        "Desert Colossus": "True"
       }
     }
   }

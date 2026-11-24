@@ -54,7 +54,7 @@
         "Colossus_Bean_Planted": "is_child and Magic_Bean"
       },
       "exits": {
-        "Spirit Temple Lobby": "True"
+        "Spirit Temple": "True"
       }
     },
     "DMC Central": {
@@ -119,7 +119,7 @@
       },
       "exits": {
         "Gerudo Valley": "True",
-        "Gerudo Training Ground": "is_adult and Gerudo_Membership_Card",
+        "Gerudo Proving Grounds": "is_adult and Gerudo_Membership_Card",
         "Haunted Wasteland": "is_adult and Gerudo_Membership_Card and (can_use(Hover_Boots) or can_use_longshot)"
       }
     },

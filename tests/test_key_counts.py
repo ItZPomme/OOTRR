@@ -56,15 +56,14 @@ class KeyTermsTest(unittest.TestCase):
         self.assertEqual(keys_mod.clamp_counts("has(Small_Key_Shadow_Temple, 5)", "Shadow Temple", 4),
                          "has(Small_Key_Shadow_Temple, 4)")
 
-    def test_ground_keys_clamped(self):
-        """The data writes the dungeon's total (ground key included): own_dungeon only has the chest keys."""
-        def shadow_rules(world):
-            return [l.rule_src for l in world.locations.values()
-                    if l.key_dungeon == "Shadow Temple" and not l.key_spot]
-        own = shadow_rules(World(settings.build({"small_keys": "own_dungeon"})))
-        self.assertTrue(own and all("has(Small_Key_Shadow_Temple, 4)" in r for r in own))
-        rand = shadow_rules(World(settings.build({"small_keys": "random"})))
-        self.assertTrue(rand and all("has(Small_Key_Shadow_Temple, 5)" in r for r in rand))
+    def test_ground_keys_counted(self):
+        """The data writes the dungeon's total (ground key included): every shuffled mode moves the ground key into
+        the pool, so a rule asking for all the keys keeps its count."""
+        for mode in ("own_dungeon", "any_dungeon", "random"):
+            world = World(settings.build({"small_keys": mode, "boss_keys": mode}))
+            kd = world.key_dungeons["Shadow Temple"]
+            self.assertEqual(world.small_key_count(kd), 5, mode)
+            self.assertIn("has(Small_Key_Shadow_Temple, 5)", world.locations[kd.boss_location].rule_src, mode)
 
 
 class KeyChestNamesTest(unittest.TestCase):
