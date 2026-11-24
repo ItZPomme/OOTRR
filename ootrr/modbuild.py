@@ -234,6 +234,9 @@ class ModBuilder:
             if kind == "blue_fire_arrows":
                 report += self._write_blue_fire_arrows(edit, out_romfs, templates, pack_changes)
                 continue
+            if kind == "still_floors":
+                report += self._write_still_floors(edit, out_romfs, pack_changes)
+                continue
             if kind == "ganon_boss_key":
                 report += self._write_flag_module(edit, out_romfs)
                 continue
@@ -261,6 +264,35 @@ class ModBuilder:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(self.codec.compress(path.name, new))
                 report.append(f"  pack {actor}")
+        return report
+
+    def _write_still_floors(self, edit: dict[str, list], out_romfs: Path,
+                            pack_changes: dict[str, dict[str, dict]] | None = None) -> list[str]:
+        """Falling floors that stay up (world.STILL_FLOORS, ainb_graph.still_floor)."""
+        from . import ainb_graph
+        from .formats.sarc import Sarc
+
+        report = []
+        for inner, (selector, support, message, actors) in sorted(edit.items()):
+            clash = set(actors) & set(pack_changes or {})
+            if clash:
+                raise ValueError(f"packs edited twice: {sorted(clash)}")
+            new_inner = None
+            for actor in actors:
+                path = self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+                raw = self.codec.decompress(path)
+                sarc = Sarc(raw)
+                if new_inner is None:
+                    new_inner = ainb_graph.still_floor(sarc.files[inner], selector, support, message)
+                    ainb_graph.inner_size_entry(self.restbl, inner, len(new_inner))
+                sarc.files[inner] = new_inner
+                new = sarc.to_bytes()
+                rel = path.relative_to(self.romfs).as_posix()
+                self.restbl.resize_like(rel[:-3], len(raw), len(new) + ainb_graph.INNER_MARGIN)
+                dest = out_romfs / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(self.codec.compress(path.name, new))
+            report.append(f"{inner}: the floor no longer falls ({', '.join(actors)})")
         return report
 
     def _write_flag_module(self, edit: dict, out_romfs: Path) -> list[str]:

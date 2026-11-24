@@ -158,6 +158,27 @@ class Templates:
         return self._cache[key]
 
 
+def still_floor(raw: bytes, selector: int, support: int, message: int) -> bytes:
+    """Falling floor AI that never starts to fall: the selector that waits for Link on the floor
+    (QueryPhysicsIsSpreadSupportActive, node `support`) reads the "fall" message query (node `message`) instead.
+    The messages are only sent by floors that start to fall, so it stays false: the floor stays as if untouched."""
+    import ainb
+
+    script = ainb.AINB.from_binary(raw)
+    node = script.nodes[selector]
+    names = (script.nodes[support].name, script.nodes[message].name)
+    if (node.type != ainb.NodeType.Element_BoolSelector or node.queries != [support] or names !=
+            ("QueryPhysicsIsSpreadSupportActive", "QueryInsideTheDekuFallingFloorReceiveFallMessage")):
+        raise ValueError(f"{script.filename}: unexpected falling floor nodes ({names}, queries {node.queries})")
+    source = node.params.bool_inputs[0].source
+    plug, = node.generic_plugs
+    if source.src_node_index != support or plug.node_index != support:
+        raise ValueError(f"{script.filename}: unexpected input of node {selector}")
+    source.src_node_index = plug.node_index = message
+    node.queries = [message]
+    return script.to_binary()
+
+
 class Graph:
     def __init__(self, raw: bytes, templates: Templates) -> None:
         import ainb

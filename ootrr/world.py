@@ -189,6 +189,15 @@ LAKE_SWITCH_AIR_WALL = 2935529029587700987
 # walkable (validated in game, 2026-11-22, Longshot).
 SHADOW_FALLING_FLOOR = 1947304115190709465
 SHADOW_FALLING_FLOOR_DELAY = 100000.0
+# Deku Tree, Slingshot room (room 2): the floor is two actors (Obj_InsideTheDekuTree_FallingFloor_A_01 / _A_02) that
+# fall when Link stands on one of them and tell each other to fall; only A_01 has a PreFallTime. Without the Slingshot
+# the fallen floor leaves no way out (the ladder is shot down). Their AIs no longer see Link
+# (ainb_graph.still_floor, validated in game 2026-11-24, Longshot): {AI file: (selector that waits for Link, its query, "fall" message query, packs)}.
+STILL_FLOORS = {
+    "AI/Obj_FallFloor_A_01.root.ainb": (2, 33, 14, ["Obj_InsideTheDekuTree_FallingFloor_A_01",
+                                                    "Obj_ShadowTemple_FallingFloor_A_01"]),
+    "AI/Obj_InsideTheDekuTree_FallingFloor_A_02.root.ainb": (6, 37, 8, ["Obj_InsideTheDekuTree_FallingFloor_A_02"]),
+}
 KOKIRI_INTERRUPTIONS = (
     15690126774393333419,  # KokiriForest_Kokiri_011_StopInFrontOfShop_00 (toit de la boutique)
     18383848770792576395,  # SubEvent_Kokiri_011_FocusOnNPC
@@ -305,6 +314,11 @@ GANON_KEY_DUNGEON = "Ganons Castle"
 GANON_KEY_HELPER = "ganon_boss_key_condition"  # helpers.json: the condition in the logic
 GANON_KEY_EXP = "OoTRR_GanonBossKey_Exp"
 GANON_KEY_MODULE = "InsideGanonCastle_Level_Room_01_Prefab_4ab0"
+
+
+def still_floors() -> dict[str, list]:
+    """STILL_FLOORS as an AINB edit of every mod (JSON lists)."""
+    return {file: [list(v) if isinstance(v, list) else v for v in spec] for file, spec in STILL_FLOORS.items()}
 
 
 def ganon_key_exps(mode: str, count: int) -> dict[str, list[tuple]]:
@@ -1163,7 +1177,7 @@ class World:
 
     def ainb_edits(self) -> dict[str, dict]:
         """Nodes added to AI modules of actor packs or to logic modules (ModBuilder._write_ainb_edits)."""
-        out: dict[str, dict] = {}
+        out: dict[str, dict] = {"still_floors": still_floors()}
         if self.settings.get("fast_bunny_hood"):
             out["fast_walk"] = {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
                                 "head_flag": BUNNY_HEAD_FLAG, "head_actor": BUNNY_HOOD, "factor": BUNNY_SPEED}

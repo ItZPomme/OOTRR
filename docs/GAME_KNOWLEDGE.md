@@ -738,6 +738,16 @@ not change) **[game]**.
   map `Dynamic` entry overrides it **[files]**. `World.actor_changes` sets it to 100000.0 (an F32, not an integer):
   the floor still makes its first small drop but never falls, and the player can walk back
   **[game, 2026-11-22, Longshot, test mod]**.
+- **Deku Tree falling floor (Slingshot room, room 2).** The floor towards the Slingshot chest is two actors of
+  `InsideTheDekuTree_Static`, `Obj_InsideTheDekuTree_FallingFloor_A_01` (16857684421111642545, root
+  `AI/Obj_FallFloor_A_01.root.ainb`) and `_A_02` (7059309790216407104, its own root); `_A_03` is their end, without
+  AI. Each starts to fall when Link stands on it (`QueryPhysicsIsSpreadSupportActive`) or when the other one sends the
+  "fall" message (`OneShotInsideTheDekuFallingFloorSendFallMessage`). Only `_A_01` reads `PreFallTime`, and not after a
+  message, so the Shadow Temple's fix is not enough. The way out of the pit is the ladder, shot down with the
+  Slingshot (`Obj_EyeSwitch_A_02` -> `InsideTheDekuTree_RoomC_Cleared`: ladder and its stopper), so a child without it
+  is stuck. `ainb_graph.still_floor` (`World.STILL_FLOORS`, every PC-built mod): the selector that waits for Link
+  reads the message query instead, which is never true then. `Obj_FallFloor_A_01.root.ainb` is also in the pack of the
+  Shadow Temple floor (which uses another root): edited the same there. **Validated in game** for the Deku Tree (2026-11-24, Longshot, test mod).
 - Changing an actor's type through `Gyaml` (heart -> chest): nothing appears. A chest copied into a static map
   (`Obj_TBox_A_01_NoBake`) could not be opened.
 - A copy of the Heart Container that gives HP (custom Piece of Heart) blocks the game.

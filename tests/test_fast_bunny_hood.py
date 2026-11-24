@@ -9,7 +9,7 @@ from ootrr.world import BUNNY_WORN_EXP, PLAYER_PACKS, World
 class FastBunnyHoodTest(unittest.TestCase):
     def test_off_by_default(self):
         world = World(settings.build({}))
-        self.assertEqual(world.ainb_edits(), {})
+        self.assertNotIn("fast_walk", world.ainb_edits())
         self.assertNotIn(BUNNY_WORN_EXP, world.bool_exps())
 
     def test_on(self):
