@@ -33,6 +33,7 @@
     "gpg_slopes_silver_rupees": "count(GPG_Silver_Rupee_Slopes_Bottom_Right, GPG_Silver_Rupee_Slopes_Bottom_Left, GPG_Silver_Rupee_Slopes_Ledge, GPG_Silver_Rupee_Slopes_Top_Left, GPG_Silver_Rupee_Slopes_Ceiling) >= 5",
     "gpg_water_silver_rupees":  "count(GPG_Silver_Rupee_Water_Top, GPG_Silver_Rupee_Water_Bottom_Center, GPG_Silver_Rupee_Water_Bottom_Back_Left, GPG_Silver_Rupee_Water_Middle, GPG_Silver_Rupee_Water_Bottom_Front_Right) >= 5",
     "gpg_chests":            "is_adult and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_see_invisible and can_use(Megaton_Hammer) and has_strength2 and can_use(Hover_Boots) and can_use(Iron_Boots)",
+    "ganon_trials_clear":    "Ganon_Forest_Trial_Clear and Ganon_Water_Trial_Clear and Ganon_Shadow_Trial_Clear and Ganon_Fire_Trial_Clear and Ganon_Light_Trial_Clear and Ganon_Spirit_Trial_Clear",
     "ganon_castle_chests":   "can_use(Fire_Arrows) and can_use(Progressive_Hookshot) and can_use(Megaton_Hammer) and can_see_invisible and has_explosives and can_use(Hover_Boots) and has_strength2",
     "shadow_boss":           "can_use(Hover_Boots) and can_use(Progressive_Hookshot) and can_use(Bow) and has_explosives and can_play(Zeldas_Lullaby)",
     "spirit_boss":           "can_use(Mirror_Shield) and can_use(Progressive_Hookshot)",

@@ -1,14 +1,15 @@
 {
   "_doc": [
-    "Small keys and boss keys (settings small_keys and boss_keys). Only loaded when one of them is not vanilla: with vanilla keys the key chests stay out of the world and the logic ignores keys (as before).",
+    "Small keys and boss keys (settings small_keys and boss_keys). With vanilla keys the key chests are not locations: each key (chest, ground or boss key) is an event, collected when its own rule is met, and the key counts of the rules count these events.",
     "Per dungeon: game = DungeonInfo.<game> (GameData counter SmallKeyNum, flag IsGetBossKey) and the Banc folder; regions = logic regions of the dungeon (Ganon's Castle is an overworld region); region = region of the key chests; rule = prudent rule of every key chest (everything the dungeon may need, as the boss rules); small = small key chests (hash, room = DefaultDungeonRoomIndex in the map); freestanding = small keys lying on the ground (Obj_Dungeon_SmallKey: they stay with own_dungeon and removed, and are removed from the map with any_dungeon and random, their keys going to the item pool); boss_key = boss key chest; boss = locations behind the boss door; boss_events = events behind it.",
     "Rule of one key chest: optional \"rule\" in its small / boss_key entry (default: the dungeon's rule). Without its key terms it must ask nothing more than the dungeon's rule (with own_dungeon the key chests are the key spots); a key count in it is used with any_dungeon and random.",
-    "Key counts: any location, event or exit rule may ask for keys itself, e.g. has(Small_Key_Forest_Temple, 2) or Boss_Key_Forest_Temple. With shuffled keys this replaces the prudent 'all the dungeon's small keys' (or the boss key) of its location; with vanilla or removed keys, and in the native generator, the term is always true.",
+    "Key counts: any location, event or exit rule may ask for keys itself, e.g. has(Small_Key_Forest_Temple, 2) or Boss_Key_Forest_Temple. With shuffled keys this replaces the prudent 'all the dungeon's small keys' (or the boss key) of its location; with vanilla keys (always the case in the native generator) it counts the keys in their vanilla places; with removed keys the term is always true.",
     "layout: true once every rule of the dungeon that needs small keys says how many, in the worst case (the player may have opened other doors first): a rule without a key count then needs no key, nothing prudent is added, and small_keys=own_dungeon places the dungeon's keys anywhere in it by the logic. Without it (default) the logic stays prudent and own_dungeon keeps each key in a chest of its vanilla room.",
     "name (optional, in a small / boss_key entry): the location name of that key chest, as shown in the plandomizer, the spoiler log and plando files; without it: <Dungeon> Small Key Chest <n> (n = rank in the list, not the order in the dungeon) or <Dungeon> Boss Key Chest. Names must be unique; a plando file using the old name must be updated.",
     "start_keys: small keys owned from the start (GameData counter set at the new game, whatever the key settings; removed adds them to the full counter). Rule counts are the game's keys: has(Small_Key_<Dungeon>, n) asks for n - start_keys keys of the item pool (none: true).",
     "unlocked_doors: chain-locked doors unlocked from the start, whatever the key settings: flag = the door's saved Bool (unnamed, #hash, found with tools.checkwatch while opening the door), set to true at the new game so the door loads as already unlocked; door = its map hash. Such a door is open in key_graph.json and needs no key. Fire Temple: the hammer-blocked door of the first room (room 0 -> 15), whose 8th key chest (room 22) is a normal location.",
     "rooms: room of the other chests of these dungeons (own_dungeon: a small key may move to a chest of the same room, see World._key_spots).",
+    "vanilla_counts (vanilla keys only): {location or key chest: {written count: keys asked}}. The written counts are the worst case for keys that may be anywhere; a few of them cannot be met with the keys in their vanilla places (the child has one key when the Silver Gauntlets chest asks for 5, a key of the Water Temple is behind the Longshot chest): those are lowered here, no other. tests: test_vanilla_game_is_beatable fails when one is missing.",
     "Hashes and rooms read in the maps (tools.inventory, Banc/<game>/*.bcett.byml.zs); rules are prudent, not checked in game."
   ],
   "dungeons": {
@@ -33,6 +34,7 @@
       "regions": ["Fire Temple"],
       "region": "Fire Temple",
       "layout": true,
+      "vanilla_counts": {"Fire Temple Small Key Chest 4": {"3": 2}},
       "unlocked_doors": [{"flag": "#749909151", "door": 4189300454150217955, "rooms": [0, 15]}],
       "small": [
         {"hash": 3949488292768750868, "room": 1, "name": "Fire Temple Small Key Chest 3", "rule": "has(Small_Key_Fire_Temple, 1)"},
@@ -52,6 +54,7 @@
       "regions": ["Water Temple"],
       "region": "Water Temple",
       "layout": true,
+      "vanilla_counts": {"Water Temple Longshot Chest": {"3": 2}},
       "unlocked_doors": [{"flag": "#3955751124", "door": 15319553007255647544, "rooms": [0, 1]}],
       "small": [
         {"hash": 16490222392193949581, "room": 4, "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and can_use(Bow) and has(Small_Key_Water_Temple, 0)"},
@@ -82,6 +85,7 @@
       "regions": ["Spirit Temple"],
       "region": "Spirit Temple",
       "layout": true,
+      "vanilla_counts": {"Spirit Temple Small Key Chest 3": {"5": 1}, "Spirit Temple Silver Gauntlets Chest": {"5": 2}},
       "events": {"Spirit Temple": {"Spirit_Child_Side": "spirit_child and can_use(Boomerang)"}},
       "small": [
         {"hash": 5703423643219134246, "room": 4,"name": "Spirit Temple Small Key Chest 1 (Child)", "rule": "Spirit_Child_Side and has(Small_Key_Spirit_Temple, 0)"},
@@ -128,14 +132,14 @@
     },
     "Ganons Castle": {
       "game": "InsideGanonCastle",
-      "regions": ["Ganons Castle"],
-      "region": "Ganons Castle",
-      "layout": false,
+      "regions": ["Ganons Castle Lobby", "Ganons Castle Forest Trial", "Ganons Castle Water Trial", "Ganons Castle Shadow Trial", "Ganons Castle Fire Trial", "Ganons Castle Light Trial", "Ganons Castle Spirit Trial", "Ganons Castle Tower"],
+      "region": "Ganons Castle Lobby",
+      "layout": true,
       "small": [
-        {"hash": 15320975652699461295, "room": 13, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"}
+        {"hash": 15320975652699461295, "room": 13, "region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 17092385671602176550, "room": 24, "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 1)"},
+      "boss_key": {"hash": 17092385671602176550, "room": 24, "region": "Ganons Castle Tower", "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"},
       "boss": [],
       "boss_events": ["Triforce"]
     }

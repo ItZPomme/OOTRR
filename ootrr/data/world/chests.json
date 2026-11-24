@@ -151,15 +151,15 @@
     "GPG Hammer Room Chest 2":   {"region": "GPG Hammer Room", "rule": "True", "hashes": [4961588221597286817], "vanilla": "TBox_ArrowBundle_Medium", "conditional": true, "_note": "Obj_TBox_A_06_NoBake, room 5: with the Bow, Drop__DropActor_Substitute TBox_ArrowBundle_Medium; no Drop__DropActor in the map"},
 
     "_ganon": "Intérieur du château de Ganon : clés à leur place ; règles prudentes.",
-    "Ganons Castle Golden Gauntlets Chest": {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [17657623307936361670], "vanilla": "Item_Gauntlet_Gold", "event": "drop", "_note": "prudent"},
-    "Ganons Castle Arrow Chest 1":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [16913531450403950487], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
-    "Ganons Castle Bombchu Chest":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14404733996390762670], "vanilla": "Item_BombchuBundle_Small", "_note": "prudent"},
-    "Ganons Castle Arrow Chest 2":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [18277713685010400796], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 1":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7461796063704896255], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 2":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14046623154429024571], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 3":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14962432460641118089], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 4":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [1029712040059298120], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 5":   {"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [4733634471038136588], "vanilla": "TBox_Rupee_Green", "_note": "prudent"},
-    "Ganons Castle Scrub Seed Chest":{"region": "Ganons Castle", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7899179288432849355], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"}
+    "Ganons Castle Golden Gauntlets Chest": {"region": "Ganons Castle Shadow Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [17657623307936361670], "vanilla": "Item_Gauntlet_Gold", "event": "drop", "_note": "prudent"},
+    "Ganons Castle Arrow Chest 1":   {"region": "Ganons Castle Forest Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [16913531450403950487], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
+    "Ganons Castle Bombchu Chest":   {"region": "Ganons Castle Water Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14404733996390762670], "vanilla": "Item_BombchuBundle_Small", "_note": "prudent"},
+    "Ganons Castle Arrow Chest 2":   {"region": "Ganons Castle Shadow Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [18277713685010400796], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
+    "Ganons Castle Rupee Chest 1":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7461796063704896255], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
+    "Ganons Castle Rupee Chest 2":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14046623154429024571], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
+    "Ganons Castle Rupee Chest 3":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14962432460641118089], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
+    "Ganons Castle Rupee Chest 4":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [1029712040059298120], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
+    "Ganons Castle Rupee Chest 5":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [4733634471038136588], "vanilla": "TBox_Rupee_Green", "_note": "prudent"},
+    "Ganons Castle Scrub Seed Chest":{"region": "Ganons Castle Spirit Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7899179288432849355], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"}
   }
 }
