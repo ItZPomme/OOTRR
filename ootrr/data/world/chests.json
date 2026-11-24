@@ -48,10 +48,10 @@
     "Wasteland Chest":            {"region": "Haunted Wasteland", "rule": "has_fire", "hashes": [8825521833684392638], "vanilla": "Item_ScrubBusinessSeed"},
     "Colossus Grotto Chest":      {"region": "Desert Colossus", "rule": "is_adult and has_strength2 and has_explosives", "hashes": [1186167733408299582], "vanilla": "TBox_Rupee_Purple", "_note": "prudent"},
 
-    "Deku Tree Slingshot Chest":     {"region": "Deku Tree", "rule": "True", "hashes": [821372075822700622], "vanilla": "Item_Range_SlingShot", "event": "drop"},
-    "Deku Tree Slingshot Room Chest":{"region": "Deku Tree", "rule": "True", "hashes": [13027331340815880287], "vanilla": "TBox_DekuNutBundle"},
-    "Deku Tree Compass Room Chest":  {"region": "Deku Tree", "rule": "True", "hashes": [11368028582977069031], "vanilla": "TBox_DekuNutBundle"},
-    "Deku Tree Basement Chest":      {"region": "Deku Tree", "rule": "has_fire_or_sticks", "hashes": [12889104996486369065], "vanilla": "Item_DekuStickBundle_Small"},
+    "Deku Tree Slingshot Chest":     {"region": "Deku Tree Lobby", "rule": "True", "hashes": [821372075822700622], "vanilla": "Item_Range_SlingShot", "event": "drop"},
+    "Deku Tree Slingshot Room Chest":{"region": "Deku Tree Lobby", "rule": "True", "hashes": [13027331340815880287], "vanilla": "TBox_DekuNutBundle"},
+    "Deku Tree Compass Room Chest":  {"region": "Deku Tree Upper", "rule": "True", "hashes": [11368028582977069031], "vanilla": "TBox_DekuNutBundle"},
+    "Deku Tree Basement Chest":      {"region": "Deku Tree Basement", "rule": "True", "hashes": [12889104996486369065], "vanilla": "Item_DekuStickBundle_Small"},
 
     "Dodongos Cavern Lobby Chest":       {"region": "Dodongos Cavern", "rule": "dc_explosives", "hashes": [8607798771661947511], "vanilla": "TBox_Rupee_Blue"},
     "Dodongos Cavern Red Rupee Chest":   {"region": "Dodongos Cavern", "rule": "dc_explosives", "hashes": [7764016096998075927], "vanilla": "TBox_Rupee_Red"},
@@ -105,9 +105,9 @@
     "Ice Cavern Red Rupee Chest":           {"region": "Ice Cavern", "rule": "has_bottle and can_play(Song_of_Time)", "hashes": [4128092231168513176], "vanilla": "TBox_Rupee_Red"},
     "Ice Cavern Iron Boots Chest":          {"region": "Ice Cavern", "rule": "has_bottle", "hashes": [6859289214373847284], "vanilla": "Item_HeavyBoot", "event": "keep", "_note": "déclenche la Sérénade de Sheik (gardé) : à vérifier en jeu"},
 
-    "_cartes": "Cartes et boussoles : mélangées selon le réglage maps_compasses. dungeon_item = map ou compass.",
-    "Deku Tree Map Chest":              {"region": "Deku Tree", "rule": "True", "hashes": [8579518566955184384], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
-    "Deku Tree Compass Chest":          {"region": "Deku Tree", "rule": "True", "hashes": [9284193025315608699], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
+    "_cartes": "Map and Compass",
+    "Deku Tree Map Chest":              {"region": "Deku Tree Lobby", "rule": "True", "hashes": [8579518566955184384], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
+    "Deku Tree Compass Chest":          {"region": "Deku Tree Upper", "rule": "True", "hashes": [9284193025315608699], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
     "Dodongos Cavern Map Chest":        {"region": "Dodongos Cavern", "rule": "True", "hashes": [8291119063305855945], "vanilla": "Item_Dungeon_Map", "event": "drop", "dungeon_item": "map"},
     "Dodongos Cavern Compass Chest":    {"region": "Dodongos Cavern", "rule": "dc_explosives", "hashes": [17531994809974271603], "vanilla": "Item_Dungeon_Compass", "event": "drop", "dungeon_item": "compass"},
     "Jabu Jabus Belly Map Chest":       {"region": "Jabu Jabus Belly", "rule": "can_use(Boomerang)", "hashes": [14933854942830098290], "vanilla": "Item_Dungeon_Map", "dungeon_item": "map"},
@@ -135,7 +135,7 @@
     "Bottom of the Well Deku Shield Chest":{"region": "Bottom of the Well", "rule": "can_see_invisible and has(Small_Key_Bottom_of_the_Well, 0)", "hashes": [874970148260328653], "vanilla": "TBox_Shield_Deku", "conditional": true},
     "Spirit Temple Deku Shield Chest":    {"region": "Spirit Temple", "rule": "spirit_child and can_use(Boomerang) and has(Small_Key_Spirit_Temple, 0)", "hashes": [5309180490719879013], "vanilla": "TBox_Shield_Deku", "conditional": true},
 
-    "_gpg": "Gerudo Proving Grounds : petites clés à leur place ; règles prudentes (toutes les salles).",
+    "_gpg": "Gerudo Proving Grounds",
     "GPG Maze Third Chest":         {"region": "Gerudo Proving Grounds", "rule": "has(Small_Key_Gerudo_Proving_Grounds, 7)", "hashes": [10743352138513225188], "vanilla": "TBox_Rupee_Red", "conditional": true},
     "GPG Eye Switch First Room Chest":    {"region": "Gerudo Proving Grounds", "rule": "(can_use(Bow) or can_use(Progressive_Hookshot)) and has(Small_Key_Gerudo_Proving_Grounds, 0)", "hashes": [2436665354602612279], "vanilla": "TBox_Rupee_Blue"},
     "GPG Wolfos Chest":    {"region": "GPG Heavy Block Room", "rule": "True", "hashes": [4519534997122863169], "vanilla": "TBox_Rupee_Blue"},
@@ -150,16 +150,16 @@
     "GPG Lobby Invisible Chest": {"region": "Gerudo Proving Grounds", "rule": "can_see_invisible", "hashes": [11182647876438515984], "vanilla": "TBox_Rupee_Red", "_note": "Obj_TBox_GlassTruth_A_01, room 0, no Drop__DropActor in the map (red rupee seen in game)"},
     "GPG Hammer Room Chest 2":   {"region": "GPG Hammer Room", "rule": "True", "hashes": [4961588221597286817], "vanilla": "TBox_ArrowBundle_Medium", "conditional": true, "_note": "Obj_TBox_A_06_NoBake, room 5: with the Bow, Drop__DropActor_Substitute TBox_ArrowBundle_Medium; no Drop__DropActor in the map"},
 
-    "_ganon": "Intérieur du château de Ganon : clés à leur place ; règles prudentes.",
-    "Ganons Castle Golden Gauntlets Chest": {"region": "Ganons Castle Shadow Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [17657623307936361670], "vanilla": "Item_Gauntlet_Gold", "event": "drop", "_note": "prudent"},
-    "Ganons Castle Arrow Chest 1":   {"region": "Ganons Castle Forest Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [16913531450403950487], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
-    "Ganons Castle Bombchu Chest":   {"region": "Ganons Castle Water Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14404733996390762670], "vanilla": "Item_BombchuBundle_Small", "_note": "prudent"},
-    "Ganons Castle Arrow Chest 2":   {"region": "Ganons Castle Shadow Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [18277713685010400796], "vanilla": "TBox_ArrowBundle_Medium", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 1":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7461796063704896255], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 2":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14046623154429024571], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 3":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [14962432460641118089], "vanilla": "TBox_Rupee_Red", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 4":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [1029712040059298120], "vanilla": "TBox_Rupee_Blue", "_note": "prudent"},
-    "Ganons Castle Rupee Chest 5":   {"region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [4733634471038136588], "vanilla": "TBox_Rupee_Green", "_note": "prudent"},
-    "Ganons Castle Scrub Seed Chest":{"region": "Ganons Castle Spirit Trial", "rule": "ganon_castle_chests and has(Small_Key_Ganons_Castle, 0)", "hashes": [7899179288432849355], "vanilla": "Item_ScrubBusinessSeed", "_note": "prudent"}
+    "_ganon": "Inside Ganon's Castle",
+    "Ganons Castle Golden Gauntlets Chest": {"region": "Ganons Castle Shadow Trial", "rule": "can_use(Bow) and can_use(Progressive_Hookshot) and can_use(Hover_Boots) and has(Small_Key_Ganons_Castle, 0)", "hashes": [17657623307936361670], "vanilla": "Item_Gauntlet_Gold", "event": "drop"},
+    "Ganons Castle Arrow Chest 1":   {"region": "Ganons Castle Forest Trial", "rule": "has(Small_Key_Ganons_Castle, 0)", "hashes": [16913531450403950487], "vanilla": "TBox_ArrowBundle_Medium"},
+    "Ganons Castle Bombchu Chest":   {"region": "Ganons Castle Water Trial", "rule": "has(Small_Key_Ganons_Castle, 0)", "hashes": [14404733996390762670], "vanilla": "Item_BombchuBundle_Small"},
+    "Ganons Castle Arrow Chest 2":   {"region": "Ganons Castle Shadow Trial", "rule": "can_use(Progressive_Hookshot) and has(Small_Key_Ganons_Castle, 0)", "hashes": [18277713685010400796], "vanilla": "TBox_ArrowBundle_Medium"},
+    "Ganons Castle Rupee Chest 1":   {"region": "Ganons Castle Light Trial", "rule": "can_see_invisible and has(Small_Key_Ganons_Castle, 0)", "hashes": [7461796063704896255], "vanilla": "TBox_Rupee_Blue"},
+    "Ganons Castle Rupee Chest 2":   {"region": "Ganons Castle Light Trial", "rule": "can_see_invisible and has(Small_Key_Ganons_Castle, 0)", "hashes": [14046623154429024571], "vanilla": "TBox_Rupee_Blue"},
+    "Ganons Castle Rupee Chest 3":   {"region": "Ganons Castle Light Trial", "rule": "can_see_invisible and has(Small_Key_Ganons_Castle, 0)", "hashes": [14962432460641118089], "vanilla": "TBox_Rupee_Red"},
+    "Ganons Castle Rupee Chest 4":   {"region": "Ganons Castle Light Trial", "rule": "can_see_invisible and has(Small_Key_Ganons_Castle, 0)", "hashes": [1029712040059298120], "vanilla": "TBox_Rupee_Blue"},
+    "Ganons Castle Rupee Chest 5":   {"region": "Ganons Castle Light Trial", "rule": "can_see_invisible and can_play(Zeldas_Lullaby) and has(Small_Key_Ganons_Castle, 0)", "hashes": [4733634471038136588], "vanilla": "TBox_Rupee_Green"},
+    "Ganons Castle Scrub Seed Chest":{"region": "Ganons Castle Spirit Trial", "rule": "can_use(Progressive_Hookshot) and has_explosives and has(Small_Key_Ganons_Castle, 0)", "hashes": [7899179288432849355], "vanilla": "Item_ScrubBusinessSeed"}
   }
 }

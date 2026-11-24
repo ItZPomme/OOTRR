@@ -1,7 +1,22 @@
 {
   "_doc": "Donjons : régions, boss (récompenses fixes) et événements. Les coffres sont dans chests.json. Petites clés et clés du boss restent à leur place d'origine.",
   "regions": {
-    "Deku Tree": {
+    "Deku Tree Lobby": {
+      "dungeon": "Deku Tree",
+      "exits": {
+        "Kokiri Forest": "True",
+        "Deku Tree Upper": "child_ranged",
+        "Deku Tree Basement": "has_fire"
+      }
+    },
+    "Deku Tree Upper": {
+      "dungeon": "Deku Tree",
+      "exits": {
+        "Deku Tree Lobby": "True",
+        "Deku Tree Basement": "True"
+      }
+    },
+    "Deku Tree Basement": {
       "dungeon": "Deku Tree",
       "locations": {
         "Deku Tree Queen Gohma Heart": {"rule": "can_use(Slingshot)", "vanilla": "Obj_Heart_Container", "hashes": [17948245526767051747], "pickup": "boss"},
@@ -11,7 +26,7 @@
         "Deku_Tree_Clear": "can_use(Slingshot)"
       },
       "exits": {
-        "Kokiri Forest": "True"
+        "Deku Tree Lobby": "True"
       }
     },
     "Dodongos Cavern": {

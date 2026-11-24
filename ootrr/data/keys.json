@@ -136,10 +136,10 @@
       "region": "Ganons Castle Lobby",
       "layout": true,
       "small": [
-        {"hash": 15320975652699461295, "room": 13, "region": "Ganons Castle Light Trial", "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"}
+        {"hash": 15320975652699461295, "room": 13, "region": "Ganons Castle Light Trial", "rule": "can_see_invisible and has(Small_Key_Ganons_Castle, 0)"}
       ],
       "freestanding": [],
-      "boss_key": {"hash": 17092385671602176550, "room": 24, "region": "Ganons Castle Tower", "rule": "ganon_castle_chests and can_use(Light_Arrows) and has(Small_Key_Ganons_Castle, 0)"},
+      "boss_key": {"hash": 17092385671602176550, "room": 24, "region": "Ganons Castle Tower", "rule": "ganon_trials_clear"},
       "boss": [],
       "boss_events": ["Triforce"]
     }

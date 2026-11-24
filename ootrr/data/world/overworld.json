@@ -219,7 +219,7 @@
       "exits": {
         "Lost Woods": "True",
         "Lost Woods Bridge": "is_adult or forest_exit_open",
-        "Deku Tree": "is_child and deku_tree_open"
+        "Deku Tree Lobby": "is_child and deku_tree_open"
       }
     },
     "Lake Hylia": {
