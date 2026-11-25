@@ -121,6 +121,11 @@ class Templates:
         "normalize": ("Obj_BlueFire_A_03", None, "QueryMathNormalizeVector"),
         "dot": ("Animal_Horse", None, "QueryMathDotVector"),
         "distance": ("Animal_Cucco", None, "QueryMathCalcVectorDistance"),
+        # navi_return: Link's AI asks for an event by name (as the game does for the NaviTips_Gauntlet events)
+        "request_event": ("Player_Adult", "AI/Player.action.grabpushpull.module.ainb",
+                          "OneShotEventPerformerRequestEventByEventName"),
+        "map_path": ("GameSystemActor", "AI/GameSystemActor.event.root.ainb", "QueryGetCurrentNormalizedBancName"),
+        "file_name": ("GameSystemActor", "AI/GameSystemActor.event.root.ainb", "QueryGetFileName"),
         "add_f32": ("Obj_RedIce_A_02", "AI/Obj_RedIce_A_01.root.ainb", "QueryMathAddF32"),
     }
 
@@ -461,6 +466,36 @@ def red_ice_melt(raw: bytes, templates: Templates, timer: str, centre: tuple, ra
         g._from(inp, either)
         sel.queries = [either.index]
     g.wrap_root(g.group(g.add_by(timer, active, -1)))
+    return g.to_binary()
+
+
+def navi_return(raw: bytes, templates: Templates) -> bytes:
+    """Link's AI, command "call Navi" (Player.sp.action `Summon`, D-pad right): whether Navi can be called or the module
+    shows "cannot call Navi", it asks for the event named after the current map (`FireTemple`...: rows written by
+    ModBuilder._write_navi_return; nothing happens on a map without a row). Validated in game (2026-11-25)."""
+    g = Graph(raw, templates)
+    blocked = next(n for n in g.nodes if n.name == "ExecuteNaviOpenUICannotCallNavi")
+    area = next(n for n in g.nodes if n.name == "QueryIsNaviAreaHint")
+    both = next(n for n in g.nodes if [p.node_index for p in n.child_plugs][:1] == [blocked.index]
+                and n.type == g.ainb.NodeType.Element_Simultaneous)
+    choice = next(n for n in g.nodes if n.type == g.ainb.NodeType.Element_BoolSelector and n.queries == [area.index])
+    path, name, ask = g.add("map_path"), g.add("file_name"), g.add("request_event")
+    g._link(next(p for p in name.params.string_inputs if p.name == "FilePath"), path)
+    g._link(next(p for p in ask.params.string_inputs if p.name == "EventName"), name)
+    name.queries, ask.queries = [path.index], [name.index]
+    for p in ask.properties.bool_properties:
+        if p.name == "ExecuteEveryFrame":
+            p.default_value = False
+    both.child_plugs[0].node_index = ask.index
+    for plug in choice.child_plugs:
+        plug.node_index = both.index
+    # Navi can be called (QueryNaviIsNaviFlag): the module does nothing itself, the call is handled elsewhere
+    flag = next(n for n in g.nodes if n.name == "QueryNaviIsNaviFlag")
+    call = next(n for n in g.nodes if n.type == g.ainb.NodeType.Element_BoolSelector and n.queries == [flag.index])
+    plug = next(p for p in call.child_plugs if p.name == "True")
+    calling = g.add("simultaneous")
+    calling.child_plugs[:] = [g.child(g.nodes[plug.node_index]), g.child(ask)]
+    plug.node_index = calling.index
     return g.to_binary()
 
 

@@ -173,6 +173,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.song_gives = patch.get("song_gives") or None
         builder.gift_edits = {f: [tuple(e) for e in v] for f, v in (patch.get("gift_changes") or {}).items()}
         builder.gift_progressive = patch.get("gift_progressive") or {}
+        builder.ground_chains = patch.get("ground_chains") or []
+        builder.given_flags = True
         builder.event_ints = {f: [tuple(e) for e in v] for f, v in (patch.get("event_ints") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,

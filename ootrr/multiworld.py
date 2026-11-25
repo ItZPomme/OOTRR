@@ -35,6 +35,7 @@ from typing import Any, Iterable, Mapping
 
 from . import __version__, settings as settings_mod
 from .fill import FillError, prefill
+from .patch import progressive_location
 from .search import EVENT_PREFIX, State
 from .world import DATA_DIR, Location, World
 
@@ -87,6 +88,7 @@ class MultiResult:
     players: list[Player]
     placements: list[dict[str, Placed]]  # per world: location -> (owner, item)
     unreachable: list[list[str]] = field(default_factory=list)
+    version: str = __version__  # version that made it (part of the hash: a running game survives an update)
 
     def own_items(self, world: int) -> dict[str, str]:
         """Locations of `world` whose item stays in it (the rest goes to other players)."""
@@ -151,8 +153,17 @@ def _candidates(worlds: list[World], item: Placed, locations: list[tuple[int, Lo
 
 def _accepts(worlds: list[World], k: int, loc: Location, item: Placed) -> bool:
     """Location `loc` of world `k` may hold `item`: the world's own rules, and another player's item only in a
-    chest that can hold one (`can_hold_remote`)."""
-    return worlds[k].can_place(item[1], loc) and (item[0] == k or can_hold_remote(loc))
+    chest that can hold one (`can_hold_remote`). Items of a progressive chain with a logic item only go where the PC-built mod gives
+    the next step (chests, gifts): a ground item gives its item as placed (seen in game, 2026-11-24: the biggest
+    quiver on Gohma's heart, no bow)."""
+    if not worlds[k].can_place(item[1], loc) or not (item[0] == k or can_hold_remote(loc)):
+        return False
+    return progressive_location(loc) or not any(item[1] in chain for chain in strict_chains(worlds[k]))
+
+
+def strict_chains(world: World) -> list[list[str]]:
+    """Progressive chains with an item the logic uses."""
+    return [c for c in world.progressive if any(world.is_progression(i) for i in c)]
 
 
 def _assumed_fill(worlds: list[World], rng: random.Random, items: list[Placed], locations: list[tuple[int, Location]],
@@ -196,9 +207,12 @@ def _attempt(worlds: list[World], rng: random.Random) -> list[dict[str, Placed]]
     # otherwise the last ones may only find other players' items left
     for k in range(len(worlds)):
         own_only = [l for kk, l in empty if kk == k and not can_hold_remote(l)]
-        own_only.sort(key=lambda l: sum(p[0] == k and worlds[k].can_place(p[1], l) for p in rest))
+        own_only.sort(key=lambda l: sum(p[0] == k and _accepts(worlds, k, l, p) for p in rest))
         for loc in own_only:
-            fits = [p for p in rest if p[0] == k and worlds[k].can_place(p[1], loc)]
+            # shuffled Deku Scrubs accept little else than quivers and bullet bags: as placed rather than no seed
+            # (the bow and the slingshot themselves are progression, placed above)
+            fits = ([p for p in rest if p[0] == k and _accepts(worlds, k, loc, p)]
+                    or [p for p in rest if p[0] == k and worlds[k].can_place(p[1], loc)])
             if not fits:
                 raise FillError(f"no item of player {k + 1} left for {loc.name}")
             p = rng.choice(fits)
@@ -265,7 +279,7 @@ def room_hash(result: MultiResult) -> str:
     """Identifies the multiworld: the server refuses a game whose seed has another hash."""
     blob = json.dumps({"p": [[p.name, p.settings] for p in result.players],
                        "l": [sorted(([loc, o, i] for loc, (o, i) in places.items())) for places in result.placements],
-                       "v": __version__}, sort_keys=True)
+                       "v": result.version}, sort_keys=True)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:10].upper()
 
 
@@ -287,7 +301,7 @@ def to_json(result: MultiResult, worlds: list[World] | None = None) -> dict[str,
     worlds = worlds or [World(p.settings) for p in result.players]
     return {
         "format": FORMAT,
-        "version": __version__,
+        "version": result.version,
         "seed": result.seed,
         "hash": room_hash(result),
         "attempts": result.attempts,
@@ -303,7 +317,8 @@ def from_json(data: dict[str, Any]) -> MultiResult:
         raise ValueError(f"multiworld file format {data.get('format')}, expected {FORMAT}")
     players = [Player(p["name"], p["settings"]) for p in data["players"]]
     placements = [{loc: (int(o), item) for loc, (o, item) in p["placements"].items()} for p in data["players"]]
-    return MultiResult(int(data["seed"]), int(data.get("attempts", 1)), players, placements)
+    return MultiResult(int(data["seed"]), int(data.get("attempts", 1)), players, placements,
+                       version=str(data.get("version", __version__)))
 
 
 def load(path: str | Path) -> MultiResult:
@@ -399,7 +414,8 @@ def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: W
     world = world or World(data.settings)
     placements = {loc: (item if owner == data.slot else REMOTE_PLACEHOLDER)
                   for loc, (owner, item) in data.placements.items()}
-    patch = build_patch(world, Result(data.seed, data.attempts, placements), f"{data.room_hash}-{data.slot + 1}")
+    patch = build_patch(world, Result(data.seed, data.attempts, placements), f"{data.room_hash}-{data.slot + 1}",
+                        remote_chains=True)
     remote = data.sent()
     events: dict[str, str] = {}
     actors: dict[str, dict[str, str]] = {}
@@ -422,6 +438,18 @@ def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: W
     patch["multiworld"] = {"hash": data.room_hash, "slot": data.slot + 1, "players": data.names,
                            "received_counter": RECEIVED_COUNTER, "locations": watch}
     return patch
+
+
+def fixed_chains(data: SlotData, world: World | None = None) -> list[str]:
+    """First steps of the chains whose items this player's mod gives as placed (`patch.progressive_chains`): the
+    bridge must do the same with the received copies. Otherwise: Longshot received first (given as a Hookshot),
+    then the Hookshot chest, and the logic counts a Longshot. Multiworlds generated since 2026-11-24 have none."""
+    world = world or World(data.settings)
+    chains = {c[0]: c for c in world.progressive if c[0] in world.progressive_logic}
+    return [first for first, chain in chains.items()
+            if any(owner == data.slot and item in chain and not progressive_location(world.locations[name])
+                   for name, (owner, item) in data.placements.items()
+                   if world.locations[name].shuffle)]
 
 
 def remote_watch(source: MultiResult | SlotData, slot: int | None = None,

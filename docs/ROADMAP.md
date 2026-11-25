@@ -203,3 +203,13 @@ and play) is validated in game on one PC.
   a boss key found elsewhere, the native menu.
 - Settings window on PC (simple alternative to the in-game menu).
 - Native in-game menu (injected code, exlaunch): injection validated in game, see `native/README.md`.
+
+## Play session of 2026-11-24 (multiworld, two players): still open
+
+- [ ] Way back asked by Navi (softlocks: Gerudo Training Ground Lizalfos room, adult Spirit Temple room with the Beamos
+  and 3 Anubis): question **validated in game** (GAME_KNOWLEDGE, "Way back"); to try in those two locked rooms.
+- [x] Day / night only changed with the Sun's Song (`world.NIGHT_FLAG`): **validated in game** (2026-11-25, new game). To
+  try: an older save (flag set by the next change of age, read in the script).
+- [x] Maps as adult (`world.ADULT_MAP_FLAG`): **validated in game** (2026-11-25).
+- [ ] Rolling Goron after the Fire Temple's quest steps (GAME_KNOWLEDGE).
+- [ ] To validate in game: everything GAME_KNOWLEDGE dates 2026-11-25 or [files] for this session.

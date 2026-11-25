@@ -254,6 +254,12 @@ Also PC-only: `skip_tower_collapse` ("Skip Tower Collapse" on the "Dungeons" pag
 straight to Ganon's arena instead of escaping the collapsing tower with Zelda. Nothing in the tower is randomized, but
 you lose its pots between the two fights. Validated in game.
 
+### Stuck? Ask Navi for the way back
+
+Call Navi (D-pad right): she offers to bring you back to the entrance of the dungeon you are in, or to your starting
+point. It also works outside, as child or adult and when Navi cannot normally be called. Validated in game on Longshot;
+the PC-built mod holds it for every platform, not tried on an emulator or a console yet.
+
 ### Desktop app (`OoTRR-App.exe`) and races
 
 The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod

@@ -25,7 +25,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from .. import multiworld as mw
 from .. import mw_protocol as P
@@ -44,12 +44,12 @@ class Bridge:
 
     def __init__(self, game: Any, watch: dict[str, str], room_hash: str, slot: int, names: list[str],
                  send: Callable[..., None], say: Callable[[str], None] = print,
-                 label: Callable[[str], str] | None = None) -> None:
+                 label: Callable[[str], str] | None = None, fixed: Iterable[str] = ()) -> None:
         self.game, self.send, self.say = game, send, say
         self.watch = watch  # saved Int -> location
         self.by_hash = {flag_hash(name): loc for name, loc in watch.items()}
         self.room_hash, self.slot, self.names = room_hash, slot, names
-        self.giver = ItemGiver(game)
+        self.giver = ItemGiver(game, fixed=fixed)  # fixed: multiworld.fixed_chains
         self.label = label or plain_label
         self.pending: dict[int, tuple[int, str, str]] = {}  # received index -> (from slot, item, location)
         self.sent: set[str] = set()
@@ -194,7 +194,8 @@ def run(args, echo: Callable[[str], None] = print, stop: threading.Event | None 
         raise Retry(f"cannot reach the server {args.server}: {exc}") from None
     path = Path(args.file)
     log = Log(args.log or path.with_name(f"{path.stem}_p{slot}.log"), echo=echo)
-    bridge = Bridge(game, watch, data.room_hash, slot, data.names, link.send, say=log, label=labeller(args.romfs))
+    bridge = Bridge(game, watch, data.room_hash, slot, data.names, link.send, say=log, label=labeller(args.romfs),
+                    fixed=mw.fixed_chains(data))
     echo(f"multiworld {bridge.room_hash}, player {slot} {bridge.names[slot - 1]}: {len(watch)} locations watched")
     bridge.hello()
     game.call("subscribe", events=["oot", "state"], every=args.every, changes=True)

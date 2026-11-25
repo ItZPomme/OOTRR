@@ -46,7 +46,8 @@ class ProgressiveChestTests(unittest.TestCase):
     def _patch(self, kinds):
         """Patch with the three gauntlets, each in a chest or a gift, and the Hookshot / Longshot in chests."""
         chests = [{"location": f"L{i}", "hashes": [i + 1], "vanilla": "TBox_Rupee_Green", "item": item,
-                   "event": "keep", "gift": kind == "gift", "pickup": "freestanding" if kind == "pickup" else None}
+                   "event": "keep", "gift": kind == "gift", "pickup": "freestanding" if kind == "pickup" else None,
+                   "scrub": kind == "scrub"}
                   for i, (item, kind) in enumerate(zip(("Item_Gauntlet_Goron", "Item_Gauntlet_Silver",
                                                         "Item_Gauntlet_Gold"), kinds))]
         chests += [{"location": "H1", "hashes": [10], "vanilla": "TBox_Rupee_Green", "item": "Item_Hookshot",
@@ -60,7 +61,7 @@ class ProgressiveChestTests(unittest.TestCase):
         strength = next(c for c in self.chains if c[0] == "Item_Gauntlet_Goron")
         self.assertIn(strength, progressive_chains(self._patch(("chest", "chest", "chest"))))
         self.assertIn(strength, progressive_chains(self._patch(("chest", "gift", "chest"))))
-        patch = self._patch(("chest", "pickup", "chest"))  # a ground item gives its item as placed
+        patch = self._patch(("chest", "scrub", "chest"))  # a Deku Scrub gives its item as placed
         self.assertNotIn(strength, progressive_chains(patch))
         changes = chest_changes(patch)
         self.assertEqual(changes[1]["Drop__DropActor"], "Item_Gauntlet_Goron")  # fixed, as placed
@@ -81,6 +82,18 @@ class ProgressiveChestTests(unittest.TestCase):
         self.assertEqual(gifts, {"Dm_Goron_0030": [[128, "ActorName", "Item_Gauntlet_Goron", [
             ["Item_Gauntlet_Goron", "Armor_Child_Gauntlet_Goron"], ["Item_Gauntlet_Silver", "Item_Gauntlet_Silver"],
             ["Item_Gauntlet_Gold", "Item_Gauntlet_Gold"]]]]})
+
+    def test_bow_gift_next_to_a_quiver_on_the_ground(self):
+        """The big quiver may be taken before the bow: the bow's gift gives the bow, as placed."""
+        patch = self._patch(("chest", "chest", "chest"))
+        patch["chests"] = [
+            {"location": "G", "hashes": [], "vanilla": "X", "item": "Item_Range_Bow", "event": "keep", "gift": True},
+            {"location": "P", "hashes": [20], "vanilla": "X", "item": "Item_Quiver_Large", "event": "keep",
+             "scrub": True}]
+        edits = {"G": [("Npc", 1, "ActorName", "X")]}
+        self.assertEqual(progressive_gifts(patch, edits), {})
+        patch["chests"][1].pop("scrub")  # in a chest: progressive
+        self.assertIn("Npc", progressive_gifts(patch, edits))
 
     def test_mixed_sources_never_ahead_of_the_logic(self):
         """Chests and exact gifts mixed, any order: the real level is never below the logic's count."""

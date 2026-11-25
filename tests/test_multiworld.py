@@ -81,6 +81,10 @@ class MultiworldFillTest(unittest.TestCase):
         again = mw.from_json(data)
         self.assertEqual(again.placements, result.placements)
         self.assertEqual(mw.room_hash(again), data["hash"])
+        # a game made by an earlier version keeps its hash after an update
+        older = mw.to_json(mw.from_json({**data, "version": "0.0.1"}))
+        self.assertNotEqual(older["hash"], data["hash"])
+        self.assertEqual(older["hash"], mw.room_hash(mw.from_json(older)))
         self.assertIn("P2", mw.to_text(data))
 
     def test_refused(self):

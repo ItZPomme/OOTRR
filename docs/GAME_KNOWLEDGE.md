@@ -63,6 +63,47 @@ confirmed.
   of the step (`insert_flow` `copy_event` + `set`) that give the next step (`ModBuilder._progressive_gift`,
   `patch.progressive_gifts`). Exact for every chain. Re-read with `tools.events`: e.g. the man on the roof
   (`Npc_Hylia_001_Adult`, entry `Get_HeartPiece`).
+- **Progressive ground items, PC-built mod [files]** (2026-11-25, to test in game): the biggest quiver on Gohma's heart
+  came before the bow **[game]** (2026-11-24), a ground item giving its item as placed. Now a chain item on the ground
+  (hearts, Skulltula drops) always gives the chain's **last** step, and the pickup script `Dm_SY_Get` (after
+  `EventTriggerAddOwnToPouch`, every pickup) checks each chain: last step owned without the step before -> last step
+  removed (`AddOrRemovePouchContent` -1, `IsGet` false) and the missing step added (`ModBuilder._progressive_ground`).
+  Link can have too much for a moment, never too little. The get window still names the last step. The pickup event
+  is asked for by the engine (`Dm_SY_Get` in main.bin) and no query compares the item's name, hence the pouch check.
+  `Dm_SY_Get_WithoutPlayer` is not edited: its pickups are put right at the next one. Deku Scrubs: still as placed.
+- **Values the game derives when it adds an item [files]** (RSDB `ExpansionAvility`): strength =
+  `PlayerStatus.LiftGrade` (Enum None / Low / Middle / High), magic = `PlayerStatus.MPMax` / `MP` (240 with the single
+  magic in a save, double = 480). Writing only the pouch leaves a bracelet that lifts nothing **[game]** (2026-11-24).
+- **Boss key in a small chest [game]** (2026-11-24, Fire Temple): small chests open with `Dm_SY_TreasureboxSmall`, which
+  only adds to the pouch: `IsGetBossKey` stays false. Chests holding a boss key now get the event of the vanilla boss
+  key chests (`ForesetTemple_GetBossKey`, big chest script) **[files]**.
+- **Master Sword [game]** (2026-11-24): equipped at the first change of era but not in the pouch (the Door of Time
+  step that adds it is skipped). Added by `ReplaceEquipmentForEraChange` when Link (child) has none **[files]**.
+- **"Already given" tests on the vanilla item**: Dampé's race (script + modules `UnderTheGrave_Prefab_0a7f` / `_6971`:
+  Hookshot) and the windmill man (`IsGet.Item_Melody_StormSong`) **[game]** (2026-11-24). They read a saved flag of our
+  own set when the check is given (`ModBuilder._given_flag`, PC-built mod) **[files]**.
+- **Volvagia's blue warp [game]** (2026-11-24): stuck in Kakariko without the reward, because the scene
+  `Dm_Kakariko_0025` between two map changes is skipped. The warp goes straight to the Chamber of Sages **[files]**.
+- **Rolling Goron (adult)**: created by `SageOfFire_GenerateDaruniaJr` (scene `SageOfFire_CityIn`), rolls while the quest
+  `SageOfFire` is at `StopDaruniaJr`; entering the crater (`MeetSheik`) or the Fire Temple moves the quest past it, then
+  he blocks the tunic **[game]** (2026-11-24). Scene result at the start, crater steps neutralised
+  (`world.ROLLING_GORON_*`) **[files]**. Not solved: the Fire Temple's own steps (MeetDarunia, GetBossKey...).
+- **Adult Link has no map without a scene [game]** (2026-11-25, Longshot, test mod: with the flag, the minimap shows as
+  adult in the Desert Colossus and the Spirit Temple): main 0x582cf0 (is the map shown?) returns "no" for an
+  adult whose `HavePlayedEvent.Dm_TimeTemple_0065` (way out of the Temple of Time) is false, hidden too while
+  `GreatFairyFountain_In`, `MapIconPlayerStop` or `MapIconDeactivateByAreaActor` is true. The flag was false in a save
+  where the maps only showed in child dungeons **[game]** (2026-11-24): start flag `world.ADULT_MAP_FLAG`.
+- **Way back [game]** (2026-11-25, Longshot, new game, child and adult; the locked rooms of the report not tested):
+  Link's AI calls Navi (D-pad right) through the `Summon` command of `Player.sp.action`
+  (`_LocalModule_ff99ea2070f1.module`). Both where Navi can be called (`QueryNaviIsNaviFlag`, the module does nothing
+  itself) and where it showed "cannot call Navi", it now asks for the event named after the current map (`QueryGetCurrentNormalizedBancName` -> `QueryGetFileName` ->
+  `OneShotEventPerformerRequestEventByEventName`, the node the game uses for `NaviTips_Gauntlet_01`). The events are one
+  script (`OoTRR_Return`, renamed copy of `WarpEvent`, whose 14 entry points become 12 dungeons + child / adult
+  outside): question, then `EventReserveBancChange` to the entrance (`StartPos` of the map) or to the starting point.
+  RomFS only: every platform. Tested: question in a dungeon and outside, cancel, entrance, starting point of both ages,
+  during a fight. Navi's own hints may no longer be heard (the question comes first).
+- **Spirit Temple**: the statue room's west door (room 7 -> 6) opens with the sun switch of the child side only
+  (`SpiritTemple_Level_Room_07_SunSwitchOn`) **[game]** (2026-11-24): the Bombchu Chest is child only in the logic.
 - **Strength [files]**: the pouch holds `Armor_Child_Gauntlet_Goron`, `Armor_Adult_Gauntlet_Silver`,
   `Armor_Adult_Gauntlet_Gold` (RSDB `ActorInfo.ActorName`); flags `IsGet.Armor_*` (no `IsGet.Item_Gauntlet_*`).
   `CheckActor = Armor_Child_Gauntlet_Goron` matches once the bracelet is owned **[game]** (2026-11-16: Mido chest
@@ -136,6 +177,9 @@ confirmed.
   in the pool). Native menu: each gift becomes its location's token; the Song of Time is also given directly at the
   moat (duplicate ignored). Only the seed's song is given **[game]** (2026-11-12); the scene's lesson still plays the
   original song.
+- Learning a song does not need an ocarina, except the Song of Storms (windmill) and Epona's Song (Malon) **[game]**
+  (2026-11-24). The logic matches: only `Song from Windmill` and `Song from Malon` ask for `Ocarina`; playing a song
+  (`can_play`) always does.
 - Each of the 12 song scenes (`Dm_MelodyGet_*`, Sun's Song: `Dm_MelodyGet_Sun_03`) **also** gives its own song:
   `GetPouchContent:GetPouchContentByActorName` (get window + a real `EventTriggerAddOrRemovePouchContent`). In
   vanilla the double gift is invisible; with shuffled songs the PC-built mod gave the original song on top of the
@@ -536,6 +580,13 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   `Event_RebuildConditionEnvTimePalette`). The owl is only requested (module `HyruleField_Child_Prefab_de5f`: player
   in the area, `Dm_HrlField_0010` not seen, quest `Goto_HyruleCastle` at Step01) in a normal game: step 182 is
   skipped (`world.FIELD_FIRST_PALETTE_STEP`).
+- **Clock held at 15:00 [game]** (2026-11-25): while `HavePlayedEvent.Dm_HrlField_0020` (Impa leads child Link out of
+  the castle, reached from Zelda's courtyard, `DoorOfTime` event 1, which does not test the flag) is false, the time
+  advance (main 0x3cdf70) clamps the clock at 54000 s: night only came with the Sun's Song. Clock read in Longshot
+  (about 120 s per real second): stops at 15:00 with the flag false, passes 15:00, night and midnight with it true. Set
+  from the start in all settings (`world.NIGHT_FLAG`) and at every change of age for older saves
+  (`ReplaceEquipmentForEraChange`, **[files]**). Other readers: the owl at Zora's River (also wants Saria's Song scene),
+  lines of two Market characters.
 - `IsWorldTimeStop` / `IsDisableTimeProgress` are event settings (EventSetting), not a global state.
 - **Time only flows after `HyruleField_ArriveEntrance` [game, native trace]**: 0x345c020 freezes the time unless
   `Meet_DekuTree` is at Ready, or `HyruleField_ArriveEntrance` is true and `HrlField_HasEnteredFirstTime_Adult` false

@@ -118,7 +118,9 @@
     ["Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large"],
     ["Item_Gauntlet_Goron", "Item_Gauntlet_Silver", "Item_Gauntlet_Gold"],
     ["Item_Scale_Silver", "Item_Scale_Gold"],
-    ["Item_Wallet_Medium", "Item_Wallet_Large"]
+    ["Item_Wallet_Medium", "Item_Wallet_Large"],
+    ["Item_FairyBless_MP", "Item_FairyBless_MPDouble"],
+    ["Item_Ocarina_Fairy", "Item_Ocarina_Time"]
   ],
   "_progressive_pouch": "Name of a step in Link's pouch, when it differs (RSDB ActorInfo.ActorName): Drop__CheckActor counts this name (QueryGetPouchContentNumByActorName in the A_06 AI). Validated in game 2026-11-15: Weapon_Range_SlingShot, Item_Range_SlingShot and Pouch_Range_SlingShot all match once the slingshot is owned.",
   "progressive_pouch": {"Item_Range_Bow": "Weapon_Range_Bow", "Item_Range_SlingShot": "Weapon_Range_SlingShot", "Item_Gauntlet_Goron": "Armor_Child_Gauntlet_Goron"},
@@ -126,6 +128,8 @@
   "progressive_kept": ["Item_Range_Bow", "Item_Range_SlingShot", "Item_Gauntlet_Goron"],
   "_progressive_logic": "Chains whose level the logic needs (has(Progressive_Hookshot, 2), has_strength2 / 3, has_gold_scale). PC-built mod: only chests are progressive, other locations give their item as placed; such a chain is progressive in a seed only when every copy is in a chest (patch.progressive_chains), otherwise its items stay fixed (the logic count never exceeds the real level).",
   "progressive_logic": ["Item_Hookshot", "Item_Gauntlet_Goron", "Item_Scale_Silver"],
+  "_progressive_whole": "Chains progressive in a PC-built mod only when every copy is in a chest or a gift: the ocarinas (the scenes of Saria and the moat give theirs as placed, and the Fairy Ocarina received after the Ocarina of Time replaces it, seen in game; a Fairy Ocarina chest then gives the Ocarina of Time again if Link has it, patch.chest_changes).",
+  "progressive_whole": ["Item_Ocarina_Fairy"],
   "_ground": "Objets autorisés à la place d'un cœur posé au sol (quart de cœur libre, réceptacle de boss). Ils sont donnés par un objet ramassable sur mesure (copie du réceptacle, tables RSDB). Vérifié en jeu : objets « Material » (Grappin, Boomerang), objets clés simples (Écaille d'argent), chants (Chant du soleil). Les objets de l'onglet Équipement ne s'ajoutent pas à l'inventaire de cette façon (Arc, Lance-Pierre, bottes testés).",
   "ground": [
     "Item_Hookshot", "Item_Longshot", "Item_Boomerang", "Item_Hammer", "Item_DinFire", "Item_FaroreWind", "Item_NayruLove",

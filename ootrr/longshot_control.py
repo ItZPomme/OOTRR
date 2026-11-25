@@ -23,7 +23,9 @@ GameData Int lookup (decompiled `GetInt`, main 0x163d20; reads checked against t
 `*(manager + 0xd8) + index * 0x28`, current value at entry + 0x1c (signed). The game's own writes go through a
 queue (`manager + 0xf8`, count `+0x100 & 0xfffff`, 12-byte {value, hash, kind}) that `GetInt` reads first. Bools:
 `GetBool` (0x3744460) table at +0x20 (size +0x2c), 0x18-byte entries at +0x18, value byte +0x16; queue of `SetBool`
-(0x682b00) at +0x38 (capacity +0x30, count +0x40), 8-byte {u8 value, u32 hash at +4}.
+(0x682b00) at +0x38 (capacity +0x30, count +0x40), 8-byte {u8 value, u32 hash at +4}. Enums: `SetEnum` (0x3e0980,
+decompiled) table at +0x260 (size +0x26c), queue at +0x278 (capacity +0x270, count +0x280), 8-byte {u32 value, u32
+hash}; a value is the `flag_hash` of its raw name. Enum writes: **not tried in game yet**.
 
 Writes (`set_int`, `set_bool`) are appended to these queues and read back until applied (an append can be lost:
 see `_queue`); they are saved (seen in game 2026-11-17: a Hookshot given this way fires and is still there after
@@ -47,6 +49,10 @@ BOOL_TABLE, BOOL_TABLE_SIZE, BOOL_ENTRIES, BOOL_ENTRY_SIZE, BOOL_VALUE = 0x20, 0
 # Int {s32 value, u32 hash, u32 kind: 0 set, 1 add} (GetInt reads it first), Bool {u8 value, 3 pad, u32 hash}
 INT_QUEUE, INT_QUEUE_CAP, INT_QUEUE_COUNT = 0xf8, 0xf0, 0x100
 BOOL_QUEUE, BOOL_QUEUE_CAP, BOOL_QUEUE_COUNT = 0x38, 0x30, 0x40
+
+
+ENUM_TABLE, ENUM_TABLE_SIZE = 0x260, 0x26c
+ENUM_QUEUE, ENUM_QUEUE_CAP, ENUM_QUEUE_COUNT = 0x278, 0x270, 0x280
 
 
 class ControlError(OSError):
@@ -243,6 +249,14 @@ class Longshot:
         """Queued Bool write, like the game's SetBool (main 0x682b00)."""
         h = flag_hash(name_or_hash) if isinstance(name_or_hash, str) else name_or_hash
         self._queue(BOOL_QUEUE, BOOL_QUEUE_CAP, BOOL_QUEUE_COUNT, bytes([1 if value else 0, 0, 0, 0]) + h.to_bytes(4, "little"))
+
+    def set_enum(self, name_or_hash: str | int, value: str) -> None:
+        """Queued Enum write, like the game's SetEnum (main 0x3e0980); `value` = raw name of the value."""
+        h = flag_hash(name_or_hash) if isinstance(name_or_hash, str) else name_or_hash
+        if self._lookup(h, self.gamedata_manager(), ENUM_TABLE, ENUM_TABLE_SIZE) is None:
+            raise ControlError(f"no GameData Enum {name_or_hash}")
+        self._queue(ENUM_QUEUE, ENUM_QUEUE_CAP, ENUM_QUEUE_COUNT,
+                    flag_hash(value).to_bytes(4, "little") + h.to_bytes(4, "little"))
 
 
 def main(argv: list[str] | None = None) -> int:

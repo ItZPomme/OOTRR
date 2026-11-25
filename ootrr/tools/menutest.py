@@ -266,7 +266,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
                        bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps(menu.option_enums(read_byml(mb.codec.decompress(
                            next((romfs / "GameData").glob("GameDataList*.byml.zs"))))))},
-                       moat_gate=True, **common)
+                       moat_gate=True, ainb_edits={"navi_return": world.navi_return()}, **common)
 
     # GameData : structure OoTRRMenu et drapeau du menu
     path = next((romfs / "GameData").glob("GameDataList*.byml.zs"))

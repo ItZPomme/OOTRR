@@ -3,16 +3,18 @@
 
 from __future__ import annotations
 
+import itertools
 import unittest
 
 from ootrr import multiworld as mw
 from ootrr import mw_protocol as P
 from ootrr import settings
 from ootrr.formats.gamedata import flag_hash
-from ootrr.mw_items import ItemGiver
-from ootrr.patch import chest_changes
+from ootrr.mw_items import BOTTLE_SLOTS, ItemGiver
+from ootrr.patch import chest_changes, progressive_chains, progressive_location
 from ootrr.tools.mw_longshot import Bridge, BridgeError
 from ootrr.tools.mw_server import Room
+from ootrr.world import World
 
 
 class FakeGame:
@@ -21,6 +23,7 @@ class FakeGame:
     def __init__(self, ints: dict[str, int] | None = None, bools: dict[str, bool] | None = None) -> None:
         self.ints = dict(ints or {})
         self.bools = dict(bools or {})
+        self.enums: dict[str, str] = {}
 
     def get_int(self, name):
         return self.ints.get(name)
@@ -36,11 +39,16 @@ class FakeGame:
         assert name in self.bools, f"no Bool {name}"
         self.bools[name] = value
 
+    def set_enum(self, name, value):
+        assert name in self.enums, f"no Enum {name}"
+        self.enums[name] = value
+
 
 def _pouch(*names: str, owned: tuple[str, ...] = ()) -> FakeGame:
     g = FakeGame({"PlayerStatus.CurrentRupee": 0, "PlayerStatus.MaxLife": 12, "PlayerStatus.Life": 12,
-                  "PouchData.Obj_Heart_Piece.StockNum": 0},
+                  "PouchData.Obj_Heart_Piece.StockNum": 0, "PlayerStatus.MPMax": 0, "PlayerStatus.MP": 0},
                  {})
+    g.enums["PlayerStatus.LiftGrade"] = "None"
     for n in names:
         g.ints[f"PouchData.{n}.StockNum"] = 1 if n in owned else 0
         g.bools[f"IsGet.{n}"] = n in owned
@@ -65,6 +73,49 @@ class ItemGiverTest(unittest.TestCase):
         self.assertTrue(g.bools["IsGet.Armor_Adult_Gauntlet_Silver"])
         self.assertFalse(g.bools["IsGet.Armor_Adult_Gauntlet_Gold"])
 
+    def test_bow_after_a_big_quiver(self):
+        """The biggest quiver taken on the ground first: the next copy received is the bow, the quiver stays."""
+        g = _pouch("Weapon_Range_Bow", "Item_Quiver_Small", "Item_Quiver_Medium", "Item_Quiver_Large",
+                   "Item_Arrow_Normal", owned=("Item_Quiver_Large",))
+        g.ints["PouchData.Item_Arrow_Normal.StockNum"] = 50
+        ItemGiver(g).give("Item_Quiver_Medium")
+        self.assertTrue(g.bools["IsGet.Weapon_Range_Bow"])
+        self.assertFalse(g.bools["IsGet.Item_Quiver_Small"])
+        self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 50)
+
+    def test_strength_and_magic_status(self):
+        """The game reads the strength and the magic from PlayerStatus, not from the pouch (2026-11-24)."""
+        g = _pouch("Armor_Child_Gauntlet_Goron", "Armor_Adult_Gauntlet_Silver", "Armor_Adult_Gauntlet_Gold",
+                   "Item_FairyBless_MP", "Item_FairyBless_MPDouble", "Item_DinFire")
+        giver = ItemGiver(g)
+        for grade in ("Low", "Middle", "High"):
+            giver.give("Item_Gauntlet_Gold")
+            self.assertEqual(g.enums["PlayerStatus.LiftGrade"], grade)
+        giver.give("Item_FairyBless_MPDouble")  # first copy: the single magic
+        self.assertEqual((g.ints["PlayerStatus.MPMax"], g.bools["IsGet.Item_FairyBless_MPDouble"]), (240, False))
+        giver.give("Item_FairyBless_MP")
+        self.assertEqual((g.ints["PlayerStatus.MPMax"], g.ints["PlayerStatus.MP"]), (480, 480))
+        giver.give("Item_DinFire")
+        self.assertEqual(g.ints["PlayerStatus.MPMax"], 480)
+
+    def test_rupees_stop_at_the_wallet(self):
+        g = _pouch("Item_Wallet_Medium", "Item_Wallet_Large")
+        g.ints["PlayerStatus.CurrentRupee"] = 190
+        giver = ItemGiver(g)
+        giver.give("TBox_Rupee_Purple")
+        self.assertEqual(g.ints["PlayerStatus.CurrentRupee"], 200)
+        g.bools["IsGet.Item_Wallet_Medium"] = True
+        giver.give("TBox_Rupee_Gold")
+        self.assertEqual(g.ints["PlayerStatus.CurrentRupee"], 400)
+
+    def test_fixed_chain_given_as_placed(self):
+        g = _pouch("Item_Hookshot", "Item_Longshot")
+        giver = ItemGiver(g, fixed=["Item_Hookshot"])
+        giver.give("Item_Longshot")
+        self.assertTrue(g.bools["IsGet.Item_Longshot"])
+        giver.give("Item_Hookshot")  # never below what Link owns
+        self.assertFalse(g.bools["IsGet.Item_Hookshot"])
+
     def test_bags_fill_ammo(self):
         g = _pouch("Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large", "Item_Bomb")
         ItemGiver(g).give("Item_BombBag_Large")  # progressive: the small one first
@@ -77,7 +128,7 @@ class ItemGiverTest(unittest.TestCase):
         self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 30)
 
     def test_rupees_hearts_bundles(self):
-        g = _pouch("Item_Bomb", "Item_BombBag_Small", "Item_Bottle")
+        g = _pouch("Item_Bomb", "Item_BombBag_Small")
         giver = ItemGiver(g)
         giver.give("TBox_Rupee_Red")
         self.assertEqual(g.ints["PlayerStatus.CurrentRupee"], 20)
@@ -88,9 +139,34 @@ class ItemGiverTest(unittest.TestCase):
         for _ in range(4):
             giver.give("Obj_Heart_Piece")
         self.assertEqual((g.ints["PlayerStatus.MaxLife"], g.ints["PouchData.Obj_Heart_Piece.StockNum"]), (20, 0))
-        giver.give("Item_Bottle")
-        giver.give("Item_Bottle")
-        self.assertEqual(g.ints["PouchData.Item_Bottle.StockNum"], 2)
+
+    def test_bottles(self):
+        """No counter: the first free slot of the five (main 0x110d570)."""
+        g = FakeGame(bools={f"{s}.IsValid": False for s in BOTTLE_SLOTS})
+        g.bools.update({f"{BOTTLE_SLOTS[0]}.IsValid": True, "IsGet.Item_Bottle": False, "IsGet.Item_Bottle_Milk": False,
+                        "IsGet.Item_Bottle_Letter": False, "Get_StoneOfWater_GetRutoLetter": False})
+        g.enums = {f"{s}.BottleItem": "Empty" for s in BOTTLE_SLOTS}
+        giver = ItemGiver(g)
+        for item in ("Item_Bottle", "Item_Bottle", "Item_Bottle_Milk", "Item_Bottle_Letter"):
+            self.assertNotIn("nothing given", giver.give(item)[-1])
+        self.assertTrue(all(g.bools.values()))
+        self.assertEqual([g.enums[f"{s}.BottleItem"] for s in BOTTLE_SLOTS],
+                         ["Empty", "Empty", "Empty", "MaxMilk", "Letter"])
+        self.assertIn("nothing given", giver.give("Item_Bottle")[-1])  # five bottles already
+
+    def test_shields_and_songs(self):
+        g = _pouch("Weapon_Shield_Deku")
+        ItemGiver(g).give("TBox_Shield_Deku")
+        self.assertTrue(g.bools["IsGet.Weapon_Shield_Deku"])
+        self.assertEqual(g.ints["PouchData.Weapon_Shield_Deku.StockNum"], 1)
+        g.bools["IsGet.Item_Melody_SariaSong"] = False
+        ItemGiver(g).give("Item_Melody_SariaSong")
+        self.assertTrue(g.bools["IsGet.Item_Melody_SariaSong"])
+
+    def test_bottle_hashes(self):
+        self.assertEqual(flag_hash("Empty"), 0xbe69de49)  # the value the game writes when it clears a slot
+        self.assertEqual(flag_hash(f"{BOTTLE_SLOTS[0]}.BottleItem"), 2101927798)
+        self.assertEqual(flag_hash(f"{BOTTLE_SLOTS[0]}.IsValid"), 4087145488)
 
     def test_pouch_name_of_another_actor(self):
         """The Lens of Truth's counter is Armor_GlassTruth's (seen in game, 2026-11-21)."""
@@ -117,6 +193,77 @@ class ItemGiverTest(unittest.TestCase):
         self.assertEqual(flag_hash("IsGet.Weapon_Range_Bow"), 0x69ec28be)
         self.assertEqual(flag_hash("IsGet.Armor_Adult_Gauntlet_Silver"), 0x87e58de3)
         self.assertEqual(flag_hash("IsGet.Item_Hookshot"), 0xff98ed58)
+
+
+class ProgressiveMixTest(unittest.TestCase):
+    """Chain copies split between one's own chests / gifts and other worlds."""
+
+    def test_fill_keeps_chains_progressive(self):
+        players = [mw.Player("A", settings.build({})), mw.Player("B", settings.build({}))]
+        worlds = mw.build_worlds(players)
+        self.assertEqual([c[0] for c in mw.strict_chains(worlds[0])],
+                         ["Item_Hookshot", "Item_Range_Bow", "Item_Range_SlingShot", "Item_BombBag_Small",
+                          "Item_Gauntlet_Goron", "Item_Scale_Silver", "Item_FairyBless_MP", "Item_Ocarina_Fairy"])
+        for seed in range(6):
+            result = mw.generate(players, seed, worlds=worlds)
+            for k, world in enumerate(worlds):
+                data = mw.slot_data(result, k)
+                self.assertEqual(mw.fixed_chains(data, world), [])
+                self.assertEqual(progressive_chains(mw.slot_patch(result, k, world)), world.progressive)
+                for name, (_, item) in result.placements[k].items():
+                    loc = world.locations[name]
+                    if loc.shuffle and any(item in c for c in mw.strict_chains(world)):
+                        self.assertTrue(progressive_location(loc), (seed, name, item))
+
+    def test_fill_with_shuffled_scrubs(self):
+        """Deku Scrubs accept few items: the chain rule must leave some."""
+        players = [mw.Player(n, settings.build({"shuffle_scrubs": True, "shuffle_songs": "random"})) for n in "AB"]
+        worlds = mw.build_worlds(players)
+        for seed in range(6):
+            result = mw.generate(players, seed, worlds=worlds)
+            self.assertLessEqual(result.attempts, 5)
+            for k, world in enumerate(worlds):  # quivers and bullet bags may be sold, never the logic's chains
+                self.assertEqual(mw.fixed_chains(mw.slot_data(result, k), world), [])
+
+    def test_fixed_chains_match_the_mod(self):
+        """A chain copy sold by a Deku Scrub (an older multiworld): bridge and mod agree."""
+        players = [mw.Player(n, settings.build({"shuffle_scrubs": True})) for n in "AB"]
+        worlds = mw.build_worlds(players)
+        result = mw.generate(players, 2, worlds=worlds)
+        places = result.placements[0]
+        ground = next(n for n, l in worlds[0].locations.items() if l.shuffle and l.scrub and places[n][0] == 0)
+        here = next((n for n, p in places.items() if p == (0, "Item_Hookshot")), None)
+        if here:
+            places[here] = places[ground]
+        places[ground] = (0, "Item_Hookshot")
+        self.assertEqual(mw.fixed_chains(mw.slot_data(result, 0), worlds[0]), ["Item_Hookshot"])
+        done = [c[0] for c in progressive_chains(mw.slot_patch(result, 0, worlds[0]))]
+        self.assertNotIn("Item_Hookshot", done)
+        self.assertIn("Item_Scale_Silver", done)
+
+    def test_level_never_below_the_logic(self):
+        """Any mix of chests, gifts and received copies, any order: the real level >= the number of copies."""
+        data = World(settings.build({}))
+        for chain in (c for c in data.progressive if c[0] in data.progressive_logic):
+            for kinds in itertools.product(("chest", "gift", "remote"), repeat=len(chain)):
+                chests = [{"location": f"L{i}", "hashes": [i + 1], "vanilla": "TBox_Rupee_Green", "item": item,
+                           "event": "keep", "gift": kind == "gift"}
+                          for i, (item, kind) in enumerate(zip(chain, kinds)) if kind != "remote"]
+                patch = {"chests": chests, "progressive": data.progressive, "progressive_pouch": {},
+                         "progressive_kept": data.progressive_kept, "progressive_logic": data.progressive_logic,
+                         "progressive_remote": True}
+                self.assertIn(chain, progressive_chains(patch))
+                changes = chest_changes(patch)
+                for order in itertools.permutations(range(len(chain))):
+                    owned: set[str] = set()
+                    for n, i in enumerate(order, 1):
+                        if kinds[i] == "chest":
+                            c = changes[i + 1]
+                            owned.add(c["Drop__DropActor_Substitute"] if chain[0] in owned else c["Drop__DropActor"])
+                        else:  # gifts and the bridge: the step after the highest one
+                            top = max((chain.index(x) for x in owned), default=-1)
+                            owned.add(chain[min(top + 1, len(chain) - 1)])
+                        self.assertGreaterEqual(max(chain.index(x) for x in owned) + 1, n, (kinds, order, owned))
 
 
 class SlotPatchTest(unittest.TestCase):

@@ -86,6 +86,15 @@ the receiving player, from 0) and a text spoiler next to it (`.txt`). The server
   rewards and songs, plando, dungeon keys, maps and compasses. **They stay in their own world.**
 - Progression of every world: assumed fill over the locations of every world at once. Reachability sweeps every world
   together (`MultiState`): an item found in world A for player B goes into B's inventory.
+- **Progressive chains** with a logic item (Hookshot, bow, slingshot, bomb bags, strength, scales; `strict_chains`):
+  in chests, gifts and on the ground, where the PC-built mod gives the next step (GAME_KNOWLEDGE, "Progressive ground
+  items"). Exception: shuffled Deku Scrubs may sell quivers and bullet bags as placed (they accept little else). Copies of a chain may be split between worlds: own
+  chests / gifts and the bridge all give the next step (`patch.progressive_chains` with `progressive_remote`). The
+  game's pouch count reads `PouchData.<item>.StockNum` (decompiled, main 0x17a580), which the bridge writes.
+  **Verified in the files and by tests** (every order of chests, gifts and received copies: level >= copies found);
+  **to validate in game**. A chain whose logic matters with a copy sold by a Deku Scrub stays as placed, received
+  copies too (`multiworld.fixed_chains`). A multiworld in progress: reinstall the mod (*Install and play*);
+  the multiworld file keeps the version that made it, so its hash does not change with an update.
 - Items placed in random order with one sweep each (as Archipelago does). The single-world order (fewest possible
   locations first) costs one sweep per remaining item per step: N^3 with N players, minutes for 4.
   Measured: 0.2 s for 2 players, 1.3 s for 4, ~6 s for 8 (default settings).
@@ -195,9 +204,19 @@ The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld s
     rewrites `Life` / `MaxLife` into GameData from Link's data every frame. The native module's note says max life
     is recomputed at an age change; there is no Heart Container counter (`PouchData.Obj_Heart_Container.StockNum`
     does not exist). To find.
-  - Not seen in game yet: Pieces of Heart (same problem expected), bottles (no `PouchData.Item_Bottle.StockNum`:
-    nothing is given), seeds with the Slingshot (`PouchData.Item_DekuSeed.StockNum` exists, not filled yet), songs,
-    swords and shields, magic. No get-item window: the bridge prints the received item.
+  - **Items logged "nothing given"** (seen in game, 2026-11-24: Deku Shield, bottle), now written as the game does,
+    **verified in the files, to validate in game**: shields (`TBox_Shield_*` counted as `Weapon_Shield_*`); bottles (no
+    counter: first slot `PlayerStatus.AssignableItem.BottleInfo.Bottle<A-E>` whose `IsValid` is false, content in its
+    Enum `BottleItem`, as `PouchAdd` 0x110d570 does; first use of the Enum write queue); songs (`IsGet.Item_Melody_*`
+    only, no counter); Ruto's letter also sets `Get_StoneOfWater_GetRutoLetter` (the quest step itself is not
+    advanced: reading the letter should do it). Magic jars still give nothing.
+  - **Received items and derived values** (2026-11-25, **to validate in game**): strength, magic and double defense also
+    write what the game derives (`PlayerStatus.LiftGrade`, `MPMax` / `MP`, an unnamed Bool); the first magic upgrade
+    received is the single magic; rupees stop at the wallet's limit (200 / 500 / 1000).
+  - An item logged "nothing given" is counted as received: it is not sent again unless an older save is loaded.
+  - Not seen in game yet: Pieces of Heart (same problem expected), seeds with the Slingshot
+    (`PouchData.Item_DekuSeed.StockNum` exists, not filled yet), swords, magic. No get-item window: the bridge prints
+    the received item.
 - No `GOAL` yet: the end of the game is not watched, so a Longshot player who finishes does not release items.
 - The pipe and its JSON may change with Longshot versions (seen: rc.6 -> v3.0.0 kept them); the bridge warns when
   `status` is not `"protocol": 1`. Longshot now installs to `Games/Longshot/<channel>/<version>` (`stable/v3.0.0`,

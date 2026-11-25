@@ -37,7 +37,7 @@ class ModBuilder:
 
     def _write_gamedata(self, flags: dict[str, object], out_romfs: Path,
                         bool_exps: dict[str, list] | None = None,
-                        saved_ints: list[str] | None = None) -> list[str]:
+                        saved_ints: list[str] | None = None, saved_bools: list[str] | None = None) -> list[str]:
         """Change la valeur de départ (DefaultValue) de drapeaux de sauvegarde, et ajoute
         des expressions booléennes (bool_exps : {nom: programme postfixe}).
 
@@ -74,18 +74,19 @@ class ModBuilder:
             root["Data"]["BoolExp"].append({"Hash": U32(h), "ResetTypeValue": 0, "SaveFileIndex": -1,
                                             "Values": values})
             report.append(f"GameData : nouvelle expression {name}")
-        if saved_ints:
+        if saved_ints or saved_bools:
             import copy
             from .ingame_menu import PROGRESS_SAVE, add_saved_entries
-            template = next(e for e in root["Data"]["Int"] if e.get("SaveFileIndex") == PROGRESS_SAVE)
-            for name in saved_ints:
-                if flag_hash(name) in idx:
-                    raise KeyError(f"entrée déjà présente dans GameData : {name}")
-                entry = copy.deepcopy(template)
-                entry.update({"Hash": U32(flag_hash(name)), "ResetTypeValue": 0,
-                              "DefaultValue": type(template["DefaultValue"])(0)})
-                root["Data"]["Int"].append(entry)
-            report += add_saved_entries(root, PROGRESS_SAVE, len(saved_ints))
+            for section, names in (("Int", saved_ints or []), ("Bool", saved_bools or [])):
+                template = next(e for e in root["Data"][section] if e.get("SaveFileIndex") == PROGRESS_SAVE)
+                for name in names:
+                    if flag_hash(name) in idx:
+                        raise KeyError(f"entrée déjà présente dans GameData : {name}")
+                    entry = copy.deepcopy(template)
+                    entry.update({"Hash": U32(flag_hash(name)), "ResetTypeValue": 0,
+                                  "DefaultValue": type(template["DefaultValue"])(0)})
+                    root["Data"][section].append(entry)
+            report += add_saved_entries(root, PROGRESS_SAVE, len(saved_ints or []) + len(saved_bools or []))
         new = write_byml(root, byml_version(raw))
         rel = path.relative_to(self.romfs).as_posix()
         self.restbl.resize_like(rel[:-3], len(raw), len(new))
@@ -120,6 +121,10 @@ class ModBuilder:
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
         flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.gift_progressive) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.COLLAPSE_FLOW} if self.skip_collapse else set()) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        if self.given_flags:
+            flows.add(self.WINDMILL_FLOW)
+        if self.ground_chains:
+            flows |= set(self.GROUND_FLOWS)
         for flow in sorted(flows):
             mapping = event_changes.get(flow, {})
             path = self.romfs / "Event" / "EventFlow" / f"{flow}.bfevfl.zs"
@@ -173,6 +178,20 @@ class ModBuilder:
             if flow == self.ERA_FLOW:
                 new, era_report = self._guard_era_sword(new)
                 report += era_report
+                new, era_report = self._give_master_sword(new)
+                report += era_report
+            if flow == self.ESCAPE_FLOW and "Dm_Kakariko_0025" in timeline_skips.get(flow, ()):
+                new, escape_report = self._fire_warp(new)
+                report += escape_report
+            if self.given_flags and flow == self.DAMPE_FLOW:
+                new, given_report = self._given_flag(new, flow, *self.DAMPE_GIVEN)
+                report += given_report
+            if self.given_flags and flow == self.WINDMILL_FLOW:
+                new, given_report = self._given_flag(new, flow, *self.WINDMILL_GIVEN)
+                report += given_report
+            if self.ground_chains and flow in self.GROUND_FLOWS:
+                new, ground_report = self._progressive_ground(new, self.GROUND_FLOWS[flow])
+                report += [f"{flow}: {r}" for r in ground_report]
             if flow == self.DAMPE_FLOW:
                 new, dampe_report = self._dampe_exit(new)
                 report += dampe_report
@@ -243,6 +262,9 @@ class ModBuilder:
             if kind == "ganon_boss_key":
                 report += self._write_flag_module(edit, out_romfs)
                 continue
+            if kind == "navi_return":
+                report += self._write_navi_module(edit, out_romfs, templates)
+                continue
             if kind != "fast_walk":
                 raise KeyError(f"unknown AINB edit: {kind}")
             clash = set(edit["actors"]) & set(pack_changes or {})
@@ -268,6 +290,123 @@ class ModBuilder:
                 dest.write_bytes(self.codec.compress(path.name, new))
                 report.append(f"  pack {actor}")
         return report
+
+    def _write_navi_module(self, edit: dict, out_romfs: Path, templates) -> list[str]:
+        """Link's "call Navi" module (ainb_graph.navi_return), in every pack of Link; the packs may already hold
+        another edit of this mod (fast_walk)."""
+        from . import ainb_graph
+        from .formats.sarc import Sarc
+
+        inner, new_inner, report = edit["file"], None, []
+        for actor in edit["actors"]:
+            path = self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+            rel = path.relative_to(self.romfs).as_posix()
+            dest = out_romfs / rel
+            raw = self.codec.decompress(dest if dest.exists() else path)
+            sarc = Sarc(raw)
+            if new_inner is None:
+                new_inner = ainb_graph.navi_return(sarc.files[inner], templates)
+                ainb_graph.inner_size_entry(self.restbl, inner, len(new_inner))
+                report.append(f"{inner}: calling Navi asks for the map's event ({len(sarc.files[inner])} -> "
+                              f"{len(new_inner)} bytes)")
+            sarc.files[inner] = new_inner
+            new = sarc.to_bytes()
+            self.restbl.resize_like(rel[:-3], len(raw), len(new) + ainb_graph.INNER_MARGIN)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(self.codec.compress(path.name, new))
+            report.append(f"  pack {actor}")
+        return report
+
+    # Way back: one event per map, named after the map (asked for by Link's AI), all in one script, a renamed copy of
+    # WarpEvent (it has the actors needed and 14 entry points: 12 dungeons, child outside, adult outside).
+    RETURN_FLOW, RETURN_BASE = "OoTRR_Return", "WarpEvent"
+    RETURN_ROW = "NaviTips_Gauntlet_00"  # plain FlowchartEvent asked for by Link's AI
+    RETURN_FILE = "EventFlowMsg/Enemy_Event"
+    RETURN_LABELS = {"entrance": 9111, "start": 9112, "cancel": 9113}
+    RETURN_TEXTS = {
+        "en": {"dungeon": "Are you stuck?\nWhere do you want to go back to?",
+               "outside": "Are you stuck?\nDo you want to go back to the start?",
+               "entrance": "Dungeon entrance", "start": "Starting point", "cancel": "Cancel"},
+        "fr": {"dungeon": "Tu es bloqué ?\nOù veux-tu retourner ?",
+               "outside": "Tu es bloqué ?\nVeux-tu retourner au départ ?",
+               "entrance": "Entrée du donjon", "start": "Point de départ", "cancel": "Annuler"}}
+
+    def _return_messages(self, language: str) -> dict[str, bytes]:
+        texts = self.RETURN_TEXTS["fr" if language.endswith("fr") else "en"]
+        out = {f"{n:04d}": texts[k].encode() for k, n in self.RETURN_LABELS.items()}
+        out.update({f"OoTRR_Return_{k}": texts[k].encode() for k in ("dungeon", "outside")})
+        return out
+
+    def _write_navi_return(self, edit: dict, out_romfs: Path) -> tuple[list[str], dict[str, dict[str, dict]]]:
+        """The script and the RSDB rows ({table: rows}) of the way back."""
+        from .formats.evfl import (_dic_names, _flowchart_full, ensure_actor_member, event_params, find_action,
+                                   insert_flow, rename_flow)
+        from .tools.events import event_line
+
+        folder = self.romfs / "Event" / "EventFlow"
+        raw = self.codec.decompress(folder / f"{self.RETURN_BASE}.bfevfl.zs")
+        fc = _flowchart_full(raw)
+        entries = [e for e in _dic_names(raw, fc["entry_dic"]) if e]
+        flow = rename_flow(raw, self.RETURN_BASE, self.RETURN_FLOW)
+        for actor, kind, member in (("SystemTextNPC", "action", "EventTalk"),
+                                    ("GameSystemActor", "query", "EventQueryTalkChoice2"),
+                                    ("GameSystemActor", "query", "EventQueryTalkChoice3"),
+                                    ("GameSystemActor", "action", "EventReserveBancChange"),
+                                    ("Player_Event", "query", "EventQueryPlayerIsChild"),
+                                    ("Player_Event", "action", "EventTriggerParticipateEvent")):
+            flow = ensure_actor_member(flow, actor, kind, member)
+        talk_src = self.codec.decompress(folder / "GetPouchContent.bfevfl.zs")
+        talk = (talk_src, find_action(talk_src, "SystemTextNPC", "EventTalk"))
+        # map change of Dampé's exit (a plain one, used the same way there), validated in game
+        warp_src = self.codec.decompress(folder / f"{self.DAMPE_FLOW}.bfevfl.zs")
+        if "Graveyard_Adult" not in event_line(warp_src, self.DAMPE_WARP)[0]:
+            raise KeyError(f"{self.DAMPE_FLOW}: unexpected map change")
+        warp = (warp_src, event_params(warp_src, self.DAMPE_WARP))
+
+        def go(point) -> dict:
+            return {"actor": "GameSystemActor", "action": "EventReserveBancChange", "template": warp,
+                    "set": {"NextBanc": point[0], "NextStartPos": point[1]}, "next": None}
+
+        def ask(text: str, *labels: str) -> dict:
+            values = {"MessageId": f"{self.RETURN_FILE}:OoTRR_Return_{text}", "ChoiceNumber": len(labels),
+                      "ChoiceDefaultNo": len(labels) - 1, "ChoiceCancelNo": len(labels) - 1}
+            values.update({f"ChoiceLabel{i}": self.RETURN_LABELS[k] for i, k in enumerate(labels, 1)})
+            return {"actor": "SystemTextNPC", "action": "EventTalk", "template": talk, "set": values, "next": 2}
+
+        join = {"actor": "Player_Event", "action": "EventTriggerParticipateEvent", "template": (flow, 0), "next": 1}
+        graphs: list[tuple[list[str], list[dict]]] = []
+        for game, pos in edit["dungeons"].items():
+            graphs.append(([game], [
+                dict(join), ask("dungeon", "entrance", "start", "cancel"),
+                {"actor": "GameSystemActor", "query": "EventQueryTalkChoice3", "template": (flow, 0),
+                 "cases": {0: 3, 1: 4, 2: None}},
+                go((game, pos)),
+                {"actor": "Player_Event", "query": "EventQueryPlayerIsChild", "template": (flow, 0),
+                 "cases": {0: 5, 1: 6}},
+                go(edit["points"]["child"]), go(edit["points"]["adult"])]))
+        for age, maps in edit["outside"].items():
+            graphs.append((maps, [
+                dict(join), ask("outside", "start", "cancel"),
+                {"actor": "GameSystemActor", "query": "EventQueryTalkChoice2", "template": (flow, 0),
+                 "cases": {0: 3, 1: None}},
+                go(edit["points"][age])]))
+        if len(graphs) > len(entries):
+            raise ValueError(f"{self.RETURN_BASE}: {len(entries)} entry points for {len(graphs)} questions")
+        setting, analyzed = {}, {}
+        for entry, (maps, nodes) in zip(entries, graphs):
+            flow, _ = insert_flow(flow, entry, nodes)
+            for name in maps:
+                setting[name] = {"__new": True, "__copy_from": self.RETURN_ROW, "EntryPointName": entry,
+                                 "FlowchartFileName": f"Work/Event/EventFlow/{self.RETURN_FLOW}.evfc"}
+                analyzed[name] = {"__new": True, "__copy_from": self.RETURN_ROW}
+        rel = f"Event/EventFlow/{self.RETURN_FLOW}.bfevfl"
+        base = self.restbl.get(f"Event/EventFlow/{self.RETURN_BASE}.bfevfl")
+        self.restbl.set(rel, base + max(0, len(flow) - len(raw)))
+        dest = out_romfs / (rel + ".zs")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(self.codec.compress(dest.name, flow))
+        return ([f"{rel}: way back asked by Navi, {len(graphs)} questions, {len(setting)} maps"],
+                {"EventSetting": setting, "GameAnalyzedEventInfo": analyzed})
 
     def _write_still_floors(self, edit: dict[str, list], out_romfs: Path,
                             pack_changes: dict[str, dict[str, dict]] | None = None) -> list[str]:
@@ -496,11 +635,19 @@ class ModBuilder:
                 raise KeyError(f"gift event {event}: {param} = {found[1] if found else None!r}, expected {old!r}")
             n = len(steps)
             nodes: list[dict] = []
+            first = steps[0][1]
+            # a weapon first (bow, slingshot): no weapon, whatever bag Link has -> the weapon
+            base = 2 if first.startswith("Weapon_") and first != steps[0][0] else 0
+            if base:
+                nodes = [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
+                          "set": {"Actor": first}, "cases": {0: 2, 1: 1}},
+                         {"copy_event": event, "set": {param: steps[0][0]}, "next": "after"}]
             # node 2k: question "owns step n-1-k?"; node 2k+1: copy giving the step after it
             for k in range(n):
                 owned = n - 1 - k
                 nodes.append({"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
-                              "set": {"Actor": steps[owned][1]}, "cases": {0: 2 * k + 1, 1: 2 * k + 2}})
+                              "set": {"Actor": steps[owned][1]},
+                              "cases": {0: base + 2 * k + 1, 1: base + 2 * k + 2}})
                 nodes.append({"copy_event": event, "set": {param: steps[min(owned + 1, n - 1)][0]},
                               "next": "after"})
             nodes.append({"copy_event": event, "set": {param: steps[0][0]}, "next": "after"})
@@ -603,7 +750,7 @@ class ModBuilder:
     SCRUB_TEXT = ("I've got ", " for you! It's ", " rupees", ". Wanna buy it?")  # secours si le modèle manque
 
     def _write_messages(self, scrub_items: list[str], out_romfs: Path, questions: list[str] = (),
-                        pouch_texts: dict[str, bytes] | None = None) -> list[str]:
+                        pouch_texts: dict[str, bytes] | None = None, way_back: bool = False) -> list[str]:
         """Messages des Peste Mojo : un message par objet vendu, dans chaque langue, avec le nom
         de l'objet tel que le jeu l'écrit (ActorMsg/PouchContent.msbt) et le prix (SimpleShop_Price).
         pouch_texts: item texts added to ActorMsg/PouchContent.msbt in every language ({label: text}; the
@@ -642,6 +789,8 @@ class ModBuilder:
             if questions:
                 new[f"{self.ANSWER_LABELS[0]:04d}"] = b"Yes"
                 new[f"{self.ANSWER_LABELS[1]:04d}"] = b"No"
+            if way_back:
+                new.update(self._return_messages(path.name.split(".")[0]))
             key = "EventFlowMsg/Enemy_Event.msbt"
             sarc.files[key] = add_messages(sarc.files[key], new)
             if pouch_texts:
@@ -922,6 +1071,154 @@ class ModBuilder:
                                                 "template": ask, "set": {"Actor": "Weapon_Sword_Kokiri"},
                                                 "cases": {0: "old", 1: "after"}}], before=idx)
         return new, report + [f"{self.ERA_FLOW}: épée Kokiri équipée seulement si possédée"]
+
+    # First change to adulthood: the Door of Time script (its step that adds the Master Sword) may be skipped; the sword
+    # was equipped but not in the pouch, and lost as soon as Link changed swords (save read 2026-11-24:
+    # IsGet.Weapon_Sword_Master false as adult). Given here when Link, child, has none. The adult's map flag
+    # (world.ADULT_MAP_FLAG) and the one that lets night come (world.NIGHT_FLAG, at every change of age) are set here
+    # too, for the saves made before they were start flags.
+    def _give_master_sword(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import ensure_actor_member, find_action, find_query, insert_flow
+
+        template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
+        flow = ensure_actor_member(flow, *self.POUCH_ACTION[:1], "action", self.POUCH_ACTION[1])
+        ask = (flow, find_query(flow, "PouchSystemActor", "EventQueryIsExistInPouch"))
+        src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.TIMELINE_TEMPLATE}.bfevfl.zs")
+        flow = ensure_actor_member(flow, "GameDataActor", "action", "EventTriggerSetGameDataBool")
+        from .world import ADULT_MAP_FLAG, NIGHT_FLAG
+        set_bool = (src, find_action(src, "GameDataActor", "EventTriggerSetGameDataBool"))
+        nodes = [{"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": set_bool,
+                  "set": {"GameDataName": NIGHT_FLAG, "Value": 1}, "next": 1},
+                 {"actor": "Player_Event", "query": "EventQueryPlayerIsChild", "template": (flow, 0),
+                  "cases": {0: 2, 1: "old"}},
+                 {"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": set_bool,
+                  "set": {"GameDataName": ADULT_MAP_FLAG, "Value": 1}, "next": 3},
+                 {"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
+                  "set": {"Actor": "Weapon_Sword_Master"}, "cases": {0: "old", 1: 4}},
+                 {"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
+                  "template": (template, find_action(template, *self.POUCH_ACTION)),
+                  "set": {"Actor": "Weapon_Sword_Master"}, "next": "old"}]
+        new, report = insert_flow(flow, self.ERA_FLOW, nodes)
+        return new, report + [f"{self.ERA_FLOW}: Master Sword given on the way to adulthood"]
+
+    # Blue warp after Volvagia: the script goes to Kakariko (scene Dm_Kakariko_0025), then to the Chamber of Sages. With
+    # the scene skipped, Link stayed stuck in Kakariko without the reward (2026-11-24). As for the other temples, the
+    # warp goes straight to the Chamber of Sages (copy of the script's own map change, step 73).
+    ESCAPE_FLOW = "Dm_SY_BancChange_EscapeDungeon"
+    FIRE_KAKARIKO, FIRE_SAGES = 69, 73
+
+    def _fire_warp(self, flow: bytes) -> tuple[bytes, list[str]]:
+        from .formats.evfl import find_action, insert_flow
+        from .tools.events import event_line
+
+        if "FireTemple_SageOfFire_Kakariko" not in event_line(flow, self.FIRE_KAKARIKO)[0] or \
+                "FireTemple_SageOfFire_SageRoom" not in event_line(flow, self.FIRE_SAGES)[0]:
+            raise KeyError(f"{self.ESCAPE_FLOW}: unexpected Fire Temple warp steps")
+        src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.TIMELINE_TEMPLATE}.bfevfl.zs")
+        setb = (src, find_action(src, "GameDataActor", "EventTriggerSetGameDataBool"))
+        new, report = insert_flow(flow, None, [
+            {"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": setb,
+             "set": {"GameDataName": "HavePlayedEvent.Dm_Kakariko_0025", "Value": 1}, "next": 1},
+            {"copy_event": self.FIRE_SAGES, "next": None}], before=self.FIRE_KAKARIKO)
+        return new, report + [f"{self.ESCAPE_FLOW}: Volvagia's warp goes straight to the Chamber of Sages"]
+
+    # "Already given?" checks that test "does Link have the vanilla item?" (world.GIVEN_MODULES, PC-built mod): the
+    # questions read a saved flag of our own, set when the check is given. (flag, step that gives, questions).
+    # Dampé: the flag is set with the chest state OpenedHookShot; windmill: before the song's scene (Dm_MelodyGet_Storm).
+    given_flags = False
+    WINDMILL_FLOW = "Npc_Hylia_009_Adult"
+    DAMPE_GIVEN = ("OoTRR.DampeHookshot", (125, "OpenedHookShot"),
+                   {39: "Item_Hookshot", 74: "Item_Hookshot", 75: "Item_Longshot", 165: "Item_Hookshot",
+                    167: "Item_Longshot", 422: "Item_Hookshot", 423: "Item_Hookshot", 424: "Item_Hookshot"})
+    WINDMILL_GIVEN = ("OoTRR.Given.Windmill.Storms", (55, "Dm_MelodyGet_Storm"),
+                      {4: "IsGet.Item_Melody_StormSong", 17: "IsGet.Item_Melody_StormSong",
+                       51: "IsGet.Item_Melody_StormSong", 54: "IsGet.Item_Melody_StormSong"})
+
+    def _given_flag(self, flow: bytes, name: str, flag: str, gives: tuple[int, str],
+                    questions: dict[int, str]) -> tuple[bytes, list[str]]:
+        from .formats.evfl import ensure_actor_member, find_action, find_query, insert_flow
+        from .tools.events import event_line
+
+        gd, query, action = "GameDataActor", "EventQueryIsGameDataBool", "EventTriggerSetGameDataBool"
+        folder = self.romfs / "Event" / "EventFlow"
+        door = self.codec.decompress(folder / "DoorOfTime.bfevfl.zs")
+        src = self.codec.decompress(folder / f"{self.TIMELINE_TEMPLATE}.bfevfl.zs")
+        ask, setb = (door, find_query(door, gd, query)), (src, find_action(src, gd, action))
+        flow = ensure_actor_member(ensure_actor_member(flow, gd, "query", query), gd, "action", action)
+        for event, item in sorted(questions.items()):
+            line = event_line(flow, event)[0]
+            found = re.search(r"cas=\[(.*)\]$", line)
+            if item not in line or not found:
+                raise KeyError(f"{name}: event {event} is not a question about {item}")
+            cases = {int(v): {"event": int(t)} for v, t in re.findall(r"\((\d+), (\d+)\)", found.group(1))}
+            flow, _ = insert_flow(flow, None, [{"actor": gd, "query": query, "template": ask,
+                                                "set": {"GameDataName": flag}, "cases": cases}], before=event)
+        if gives[1] not in event_line(flow, gives[0])[0]:
+            raise KeyError(f"{name}: event {gives[0]} does not name {gives[1]}")
+        flow, _ = insert_flow(flow, None, [{"actor": gd, "action": action, "template": setb,
+                                            "set": {"GameDataName": flag, "Value": 1}, "next": "old"}], before=gives[0])
+        return flow, [f"{name}: {len(questions)} questions read {flag} (set before event {gives[0]})"]
+
+    # Ground items of the progressive chains (patch.ground_chains): they give the chain's last step, and right after
+    # the pouch add the pickup script checks each chain: last step owned without the step before -> the last step is
+    # removed and the missing step added. The check is on the pouch, not on the item just taken: if one pickup path
+    # is not covered, the next item taken anywhere puts it right. (flow: step after "add to the pouch")
+    ground_chains: list = []
+    GROUND_FLOWS = {"Dm_SY_Get": (7, 183)}
+    REMOVE_TEMPLATE = ("Goto_HyruleCastle", "Item_WeirdEgg")  # AddOrRemovePouchContent, Num -1
+
+    def _progressive_ground(self, flow: bytes, steps: tuple[int, int]) -> tuple[bytes, list[str]]:
+        from .formats.evfl import (ensure_actor_member, event_params, find_action, find_action_event, find_query,
+                                   insert_flow)
+        from .tools.events import event_line
+
+        add_own, before = steps
+        if "EventTriggerAddOwnToPouch" not in event_line(flow, add_own)[0] or \
+                event_line(flow, add_own)[1] != [before]:
+            raise KeyError("pickup script: unexpected steps")
+        folder = self.romfs / "Event" / "EventFlow"
+        load = lambda n: self.codec.decompress(folder / f"{n}.bfevfl.zs")
+        dampe, door, timeline, pouch, egg = (load(n) for n in (self.DAMPE_FLOW, "DoorOfTime", self.TIMELINE_TEMPLATE,
+                                                              self.POUCH_TEMPLATE, self.REMOVE_TEMPLATE[0]))
+        pq, gq = ("PouchSystemActor", "EventQueryIsExistInPouch"), ("GameDataActor", "EventQueryIsGameDataBool")
+        ga = ("GameDataActor", "EventTriggerSetGameDataBool")
+        for actor, kind, member in ((pq[0], "query", pq[1]), (gq[0], "query", gq[1]), (ga[0], "action", ga[1]),
+                                    (self.POUCH_ACTION[0], "action", self.POUCH_ACTION[1])):
+            flow = ensure_actor_member(flow, actor, kind, member)
+        remove_at = find_action_event(egg, *self.POUCH_ACTION, "Actor", self.REMOVE_TEMPLATE[1])
+        templates = {"has": (dampe, find_query(dampe, *pq)), "flag": (door, find_query(door, *gq)),
+                     "set": (timeline, find_action(timeline, *ga)), "add": (pouch, find_action(pouch, *self.POUCH_ACTION)),
+                     "remove": (egg, event_params(egg, remove_at))}
+        nodes: list[dict] = []
+
+        def owned(step: list[str], yes, no) -> dict:
+            # a weapon (bow, slingshot) stays in the pouch after its upgrades; the others are replaced by them
+            if step[1].startswith("Weapon_"):
+                return {"actor": pq[0], "query": pq[1], "template": templates["has"], "set": {"Actor": step[1]},
+                        "cases": {0: yes, 1: no}}
+            return {"actor": gq[0], "query": gq[1], "template": templates["flag"],
+                    "set": {"GameDataName": f"IsGet.{step[0]}"}, "cases": {0: yes, 1: no}}
+
+        for number, chain in enumerate(self.ground_chains):
+            start, n, last = len(nodes), len(chain), chain[-1]
+            # layout: question "last step?", n-1 questions, n-1 fixes of 3 actions
+            fixes = start + n
+            after = "old" if number == len(self.ground_chains) - 1 else fixes + 3 * (n - 1)
+            nodes.append({"actor": pq[0], "query": pq[1], "template": templates["has"], "set": {"Actor": last[1]},
+                          "cases": {0: start + 1, 1: after}})
+            for i, step in enumerate(chain[:-1]):
+                yes = start + 2 + i if i + 1 < n - 1 else after
+                nodes.append(owned(step, yes, fixes + 3 * i))
+            for i, step in enumerate(chain[:-1]):
+                at = fixes + 3 * i
+                nodes += [{"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
+                           "template": templates["remove"], "set": {"Actor": last[0]}, "next": at + 1},
+                          {"actor": ga[0], "action": ga[1], "template": templates["set"],
+                           "set": {"GameDataName": f"IsGet.{last[0]}", "Value": 0}, "next": at + 2},
+                          {"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
+                           "template": templates["add"], "set": {"Actor": step[0]}, "next": after}]
+        new, _ = insert_flow(flow, None, nodes, before=before)
+        return new, ["progressive ground items: " + ", ".join("/".join(s[0] for s in c) for c in self.ground_chains)]
 
     # course de Dampé : la sortie de la salle d'arrivée demande le Grappin, qui est dans le coffre de la course
     # (mélangé : on peut l'ouvrir sans recevoir le Grappin). Après ce coffre (état OpenedHookShot), parler à
@@ -1430,8 +1727,13 @@ class ModBuilder:
         if mw_events:  # multiworld: one saved Int per remote chest, and the received items counter
             from .multiworld import RECEIVED_COUNTER
             saved_ints += sorted(mw_events.values()) + [RECEIVED_COUNTER]
-        if start_flags or bool_exps or saved_ints:
-            report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps, saved_ints)
+        saved_bools = []
+        if self.given_flags:
+            from .world import DAMPE_FLAG, GIVEN_MODULES, WINDMILL_FLAG
+            saved_bools = [DAMPE_FLAG, WINDMILL_FLAG]
+            logic_patches = {**(logic_patches or {}), **GIVEN_MODULES}
+        if start_flags or bool_exps or saved_ints or saved_bools:
+            report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps, saved_ints, saved_bools)
         if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
             report += self._write_events(event_changes or {}, out_romfs, event_skips, start_items, moat_gate,
                                          start_warp, scrub_sales, questions, timeline_skips, timeline_fade_in)
@@ -1441,10 +1743,11 @@ class ModBuilder:
             if set(logic_ints) & set(logic_patches or {}):
                 raise ValueError(f"modules edited twice: {sorted(set(logic_ints) & set(logic_patches))}")
             report += self._write_logic_ints(logic_ints, out_romfs)
-        if scrub_sales or questions or mw_actors:
+        navi = (ainb_edits or {}).get("navi_return")
+        if scrub_sales or questions or mw_actors or navi:
             items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items)) if scrub_sales or questions else []
             report += self._write_messages(items, out_romfs, questions or [],
-                                           self._mw_texts(mw_actors) if mw_actors else None)
+                                           self._mw_texts(mw_actors) if mw_actors else None, bool(navi))
         if key_events or mw_events:
             report += self._write_key_flows(key_events or {}, out_romfs, mw_events)
         if pack_changes:
@@ -1452,6 +1755,11 @@ class ModBuilder:
         if ainb_edits:
             report += self._write_ainb_edits(ainb_edits, out_romfs, pack_changes)
         rsdb_all: dict[str, dict[str, dict]] = {t: dict(rows) for t, rows in (rsdb_changes or {}).items()}
+        if navi:
+            navi_report, rows_by_table = self._write_navi_return(navi, out_romfs)
+            report += navi_report
+            for table, rows in rows_by_table.items():
+                rsdb_all.setdefault(table, {}).update(rows)
         if pickups:
             for table, rows in self._write_pickups(pickups, out_romfs).items():
                 rsdb_all.setdefault(table, {}).update(rows)

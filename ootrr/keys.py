@@ -310,14 +310,23 @@ def mentions(rule: str, kind: str, dungeon: str) -> bool:
                for m in KEY_TERM.finditer(str(rule)))
 
 
-def chest_change(item: str, location_game: str | None) -> dict[str, Any] | None:
-    """Chest fields for a key item, or None if the item is not a key. location_game = game dungeon of the chest."""
+BOSS_CHEST_EVENT = "ForesetTemple_GetBossKey"  # event of the vanilla boss key chests (every dungeon)
+
+
+def chest_change(item: str, location_game: str | None, event: str | None = None) -> dict[str, Any] | None:
+    """Chest fields for a key item, or None if the item is not a key. location_game = game dungeon of the chest;
+    event = the location's `event`. A small chest opens with Dm_SY_TreasureboxSmall, which puts its item in the
+    pouch: a boss key so given is never counted (IsGetBossKey stayed false, seen in game 2026-11-24). The event of
+    the vanilla boss key chests plays the big chest script, whose EventGetDungeonBossKey counts it."""
     key = parse_item(item)
     if key is None:
         return None
     kind, game = key
     if location_game == game:
-        return {"Drop__DropActor": GAME_ITEM[kind]}
+        change = {"Drop__DropActor": GAME_ITEM[kind]}
+        if kind == BOSS and event != "keep":
+            change["GetEventName"] = BOSS_CHEST_EVENT
+        return change
     return {"Drop__DropActor": FOREIGN_ACTOR, "GetEventName": event_name(kind, game)}
 
 

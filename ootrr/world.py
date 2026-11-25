@@ -126,6 +126,11 @@ FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
 # 6 h 00 pendant toute la partie, demandes 0 h et 20 h ignorées). HyruleField_ArriveEntrance n'est posé que par la
 # scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 132), jamais jouée avec les scènes passées ou Zelda passée.
 TIME_FLOW_FLAG = "HyruleField_ArriveEntrance"
+# Night: the same time advance (0x3cdf70) holds the clock at 15:00 (54000 s, 0x3420da0) while the scene of Impa leading
+# child Link out of the castle has not been played. That scene is reached from Zelda's courtyard (DoorOfTime, event 1,
+# which does not test the flag): never with Zelda skipped or an adult start, so night only came with the Sun's Song.
+# Other readers: the owl at Zora's River (also wants Saria's Song scene) and lines of two Market characters.
+NIGHT_FLAG = "HavePlayedEvent.Dm_HrlField_0020"
 # Onglet des quêtes du menu (tapisserie, ChallengeMenu : pierres et médaillons) : « ??? / Unavailable right now »
 # tant que UI_IsFinishChallengeMenuOpenEvent est faux (lu par 0x3385f50 pour l'onglet et l'écran) ; posé lui aussi
 # par la scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 70), jamais jouée chez nous (constaté en jeu)
@@ -143,6 +148,52 @@ SONG_OF_TIME_LOCATION = "Song from Ocarina of Time"  # aussi donné directement 
 # jamais de bombes à ces deux lieux (sans sac, un coffre de bombes donne le sac de bombes, constaté en jeu ;
 # le même risque n'a pas pu être écarté pour une scène) ; même règle dans generator.cpp (CanPlace)
 OCARINA_FORBIDDEN_PREFIX = "Item_BombBundle"
+# Adult Link has no map at all (minimap, map menu: "Unavailable right now") until the scene on the way out of the Temple
+# of Time has been seen: main 0x582cf0 (is the map shown?) reads HavePlayedEvent.Dm_TimeTemple_0065 when Link is an
+# adult. Nothing plays it in most seeds (reported in game 2026-11-24: maps only in child dungeons). The flag only
+# gates that scene and the fog outside the temple (Market_Adult_Prefab_50e3).
+ADULT_MAP_FLAG = "HavePlayedEvent.Dm_TimeTemple_0065"
+# Way back (softlocks): calling Navi (D-pad right) asks "dungeon entrance / starting point / cancel"
+# (ModBuilder._write_navi_return). {map: start position at the entrance}, checked in the maps (StartPos actors).
+NAVI_MODULE = "AI/_LocalModule_ff99ea2070f1.module.ainb"  # Link's AI, command Summon (call Navi)
+DUNGEON_ENTRANCES = {
+    "InsideTheDekuTree": "Entrance", "DodongoCavern": "DodongoCavern_MountainTrailSide",
+    "InsideJabuJabuBelly": "InsideJabuJabuBelly_FromZoraFountain", "ForestTemple": "ForestTemple",
+    "FireTemple": "FireTemple", "WaterTemple": "WaterTemple_FromLakeHylia", "ShadowTemple": "Entrance",
+    "SpiritTemple": "SpiritTemple_Entrance", "BottomOfTheWell": "Well_KakarikoSide",
+    "IceCavern": "IceCavern_FromZoraFountain", "GerudoTrainingGround": "GerudoTrainingGround_FromGerudoFortress",
+    "InsideGanonCastle": "Entrance"}
+OUTSIDE_MAPS = {
+    "child": ("DeathMountainCrater_Child", "DeathMountainTrail_Child", "DesertColossus_Child", "GerudoValley_Child",
+              "GoronCity_Child", "Graveyard_Child", "HountedWasteland_Child", "HyruleCastle", "HyruleField_Child",
+              "KakarikoVillage_Child", "KokiriForest_Child", "LostWood_Child", "Market_Child",
+              "SacredForestMeadow_Child", "ZoraDomain_Child", "ZoraFountain_Child", "ZoraRiver_Child"),
+    "adult": ("DeathMountainCrater_Adult", "DeathMountainTrail_Adult", "DesertColossus_Adult", "GanonCastle",
+              "GerudoFortress_Adult", "GerudoValley_Adult", "GoronCity_Adult", "Graveyard_Adult",
+              "HountedWasteland_Adult", "HyruleField_Adult", "KakarikoVillage_Adult",
+              "KakarikoVillage_Adult_Alternative", "KokiriForest_Adult", "LostWood_Adult", "Market_Adult",
+              "SacredForestMeadow_Adult", "ZoraDomain_Adult", "ZoraDomain_Adult_Alternative", "ZoraFountain_Adult",
+              "ZoraRiver_Adult")}
+RETURN_POINTS = {"child": ("KokiriForest_Child", "ReturnFromDreamWorld"),  # in front of Link's house
+                 "adult": ("Market_Adult", "LightPrelude")}  # Temple of Time
+# Adult Goron City: the rolling Goron (Goron Tunic) is only created once the scene SageOfFire_CityIn has played
+# (GoronCity_Adult_Prefab_118a: SageOfFire_GenerateDaruniaJr; a placement area at some of the entrances), and only
+# rolls while the quest SageOfFire is at StopDaruniaJr, which the crater's own steps (MeetSheik, EnterTemple) jump
+# over (reported in game, 2026-11-24: nothing until Link comes from the Lost Woods, blocked when coming from the
+# crater). The scene's result from the start, and those two steps renamed to steps that do not exist.
+# The Fire Temple itself still moves the quest on. Not validated in game.
+ROLLING_GORON_FLAGS = {"SageOfFire_GenerateDaruniaJr": True, "HavePlayedEvent.SageOfFire_CityIn": True,
+                       "#4004018924": "StopDaruniaJr"}
+ROLLING_GORON_MODULES = {"DeathMountainCrater_Adult_Prefab_a0e2": {"MeetSheik": "MeetShe__"},
+                         "DeathMountainCrater_Adult_Prefab_e63c": {"EnterTemple": "EnterTemp__"}}
+# Checks whose giver tests "Link has this item" instead of "already given": a saved flag of our own instead, set by
+# the giver's script (ModBuilder.GIVEN_FLAGS). Same length as the replaced name in the logic modules.
+DAMPE_FLAG = "OoTRR.DampeHookshot"
+WINDMILL_FLAG = "OoTRR.Given.Windmill.Storms"
+GIVEN_MODULES = {"UnderTheGrave_Prefab_0a7f": {"IsGet.Item_Hookshot": DAMPE_FLAG},
+                 "UnderTheGrave_Prefab_6971": {"IsGet.Item_Hookshot": DAMPE_FLAG}}
+# (windmill: only the script of the man; the modules KakarikoVillage_Adult_Common_7d34 / 3a6a read IsGet for playing
+# the Song of Storms there, which must stay "Link has the song")
 # shuffle_ocarinas : scènes qui donnent les ocarinas (action d'inventaire + affichage nommant l'objet)
 OCARINA_EVENTS = {SARIA_GIFT: ("Dm_Kokiri_0155", "Item_Ocarina_Fairy"),
                   OCARINA_OF_TIME_LOCATION: ("Dm_MelodyGet_Time", "Item_Ocarina_Time")}
@@ -569,6 +620,7 @@ class World:
         self.progressive_pouch: dict[str, str] = dict(items_raw.get("progressive_pouch", {}))
         self.progressive_kept: list[str] = list(items_raw.get("progressive_kept", []))
         self.progressive_logic: list[str] = list(items_raw.get("progressive_logic", []))
+        self.progressive_whole: list[str] = list(items_raw.get("progressive_whole", []))
         self.ground_native: dict[str, str] = dict(items_raw.get("ground_native", {}))
         for name in self.ground | set(self.ground_native):
             if name not in self.items:
@@ -985,6 +1037,10 @@ class World:
         flags: dict[str, bool] = {}
         # cycle jour / nuit : voir TIME_FLOW_FLAG (toujours, quels que soient les réglages)
         flags[TIME_FLOW_FLAG] = True
+        flags[NIGHT_FLAG] = True
+        flags[ADULT_MAP_FLAG] = True
+        # adult Goron City: the rolling Goron is there whatever the entrance, see ROLLING_GORON_FLAGS
+        flags.update(ROLLING_GORON_FLAGS)
         # onglet des quêtes du menu (tapisserie : pierres, médaillons) : voir CHALLENGE_MENU_FLAG
         flags[CHALLENGE_MENU_FLAG] = True
         # D-pad guide shown from the start: see NAVI_GUIDE_FLAG
@@ -1140,6 +1196,7 @@ class World:
             out.update(OPEN_DOOR_OCARINA)  # l'ocarina des douves apparaît à l'étape Step06
         if self.settings.get("bridge", "vanilla") != "vanilla":
             out.update(BRIDGE_MODULE)
+        out.update(ROLLING_GORON_MODULES)
         return out
 
     def logic_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
@@ -1175,9 +1232,18 @@ class World:
             out[BUNNY_WORN_EXP] = [("Bool", BUNNY_WORN_FLAG)]
         return out
 
+    def navi_return(self) -> dict[str, Any]:
+        points = {age: list(p) for age, p in RETURN_POINTS.items()}
+        from .starting import spawn
+        sp = spawn(self.settings)
+        if sp:
+            points[sp["age"]] = [sp["banc"], sp["pos"]]
+        return {"actors": list(PLAYER_PACKS), "file": NAVI_MODULE, "points": points,
+                "dungeons": dict(DUNGEON_ENTRANCES), "outside": {a: list(m) for a, m in OUTSIDE_MAPS.items()}}
+
     def ainb_edits(self) -> dict[str, dict]:
         """Nodes added to AI modules of actor packs or to logic modules (ModBuilder._write_ainb_edits)."""
-        out: dict[str, dict] = {"still_floors": still_floors()}
+        out: dict[str, dict] = {"still_floors": still_floors(), "navi_return": self.navi_return()}
         if self.settings.get("fast_bunny_hood"):
             out["fast_walk"] = {"actors": list(PLAYER_PACKS), "file": PLAYER_WALK_MODULE, "bool_exp": BUNNY_WORN_EXP,
                                 "head_flag": BUNNY_HEAD_FLAG, "head_actor": BUNNY_HOOD, "factor": BUNNY_SPEED}

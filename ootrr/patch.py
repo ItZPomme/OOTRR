@@ -7,7 +7,7 @@ from typing import Any
 from . import __version__
 from .fill import Result
 from . import keys as keys_mod
-from .world import World
+from .world import Location, World
 
 PATCH_FORMAT = "ootrr-patch"
 PATCH_VERSION = 2
@@ -27,7 +27,8 @@ def _start_warp(world: World) -> list[str] | None:
     return [sp["banc"], sp["pos"]] if sp else None
 
 
-def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
+def build_patch(world: World, result: Result, seed_hash: str, remote_chains: bool = False) -> dict[str, Any]:
+    """remote_chains (multiworld): copies of the progressive chains may come from other worlds."""
     chests = []
     rank = {name: i for i, name in enumerate(world.locations)}  # same order as the native kLocations
     for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
@@ -96,6 +97,9 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
         "progressive_pouch": world.progressive_pouch,
         "progressive_kept": world.progressive_kept,
         "progressive_logic": world.progressive_logic,
+        "progressive_whole": world.progressive_whole,
+        "ground_chains": ground_chains(chests, world),
+        "progressive_remote": remote_chains,
         "chests": chests,
     }
     # progressive gifts (PC-built mod): their events get questions instead of a plain text change
@@ -110,10 +114,25 @@ def build_patch(world: World, result: Result, seed_hash: str) -> dict[str, Any]:
     return patch
 
 
+# Ground items (pickups, Gold Skulltula drops) of a PC-built mod: a chain item always gives the last step of its chain,
+# and the pickup script (Dm_SY_Get) brings it back to the step Link has reached (ModBuilder._progressive_ground).
+# If the script did nothing, Link would have more than the logic counts, never less.
+def ground_chain(item: str, chains: list[list[str]], ground: set[str] | list[str]) -> list[str] | None:
+    return next((c for c in chains if item in c and c[-1] in ground), None)
+
+
+def ground_chains(chests: list[dict], world: World) -> list[list[list[str]]]:
+    """[[[step, pouch name], ...]] of the chains with a copy on the ground."""
+    items = {c["item"] for c in chests if c.get("pickup") or c.get("skulltula")}
+    return [[[s, world.progressive_pouch.get(s, s)] for s in c] for c in world.progressive
+            if c[-1] in world.ground and items & set(c)]
+
+
 # Progressive items in a PC-built mod (chests only): the chest becomes an Obj_TBox_A_06 ("if Link owns
 # Drop__CheckActor, give Drop__DropActor_Substitute"; a plain A_01 chest ignores the condition, validated in game
 # 2026-11-15). The builder picks Obj_TBox_A_06 or Obj_TBox_A_06_NoBake from the chest's own type.
 PROGRESSIVE_CHEST = "__progressive_chest"
+OCARINA_FAIRY, OCARINA_TIME = "Item_Ocarina_Fairy", "Item_Ocarina_Time"
 
 
 def progressive_chest(item: str, chains: list[list[str]], pouch: dict[str, str] | None = None,
@@ -142,12 +161,19 @@ def progressive_chest(item: str, chains: list[list[str]], pouch: dict[str, str] 
 
 def _source(chest: dict) -> str | None:
     """How a PC-built mod makes this location progressive: "gift" (questions before the gift in its script,
-    exact), "chest" (conditional chest) or None (the item is given as placed)."""
+    exact), "chest" (conditional chest), "ground" (pickup script, exact) or None (the item is given as placed)."""
     if chest.get("gift"):
         return "gift"
     if chest.get("hashes") and not any(chest.get(k) for k in ("pickup", "scrub", "skulltula", "shop", "ocarina")):
         return "chest"
+    if chest.get("pickup") or chest.get("skulltula"):
+        return "ground"
     return None
+
+
+def progressive_location(loc: Location) -> bool:
+    """`_source` of a Location is not None: a chain item placed there is given as the next step."""
+    return loc.gift or bool(loc.pickup) or loc.skulltula or (loc.is_chest and not loc.ocarina)
 
 
 def _sources(patch: dict[str, Any], chain: list[str]) -> list[str | None]:
@@ -156,15 +182,17 @@ def _sources(patch: dict[str, Any], chain: list[str]) -> list[str | None]:
 
 def progressive_chains(patch: dict[str, Any]) -> list[list[str]]:
     """Chains made progressive in a PC-built mod. A chain whose level the logic needs (`progressive_logic`:
-    Hookshot, strength) only when every copy is in a chest or a gift: other locations give their item as placed,
+    Hookshot, strength) only when every copy is in a chest, a gift or on the ground: others give it as placed,
     and a chest opened first would give step 1 again before such a location's step 1 (Hookshot twice, the logic
-    counting a Longshot). With fixed items the logic's count never exceeds the real level."""
-    logic = set(patch.get("progressive_logic") or ())
+    counting a Longshot). With fixed items the logic's count never exceeds the real level.
+    Multiworld (`progressive_remote`): the copies found in other worlds are given as the next step by the bridge
+    (`mw_items.ItemGiver`), so only the copies of this world matter (`multiworld.fixed_chains`: the same rule)."""
+    logic = set(patch.get("progressive_logic") or ()) | set(patch.get("progressive_whole") or ())
     out = []
     for chain in patch.get("progressive") or []:
         if chain[0] in logic:
             where = _sources(patch, chain)
-            if len(where) != len(chain) or not all(where):
+            if not all(where) or (len(where) != len(chain) and not patch.get("progressive_remote")):
                 continue
         out.append(chain)
     return out
@@ -172,9 +200,11 @@ def progressive_chains(patch: dict[str, Any]) -> list[list[str]]:
 
 def _skip_middle(patch: dict[str, Any], chain: list[str]) -> bool:
     """Chests of a 3-step logic chain mixed with gifts give step 1, then the last step: a gift gives the exact
-    next step, so a chest that gives step 2 after a gift's step 2 would add nothing while the logic counts it."""
+    next step, so a chest that gives step 2 after a gift's step 2 would add nothing while the logic counts it.
+    Same with copies received from other worlds (exact too)."""
+    where = _sources(patch, chain)
     return (len(chain) > 2 and chain[0] in set(patch.get("progressive_logic") or ())
-            and "gift" in _sources(patch, chain))
+            and ("gift" in where or bool(patch.get("progressive_remote") and len(where) < len(chain))))
 
 
 def progressive_gifts(patch: dict[str, Any], gift_edits: dict[str, list]) -> dict[str, list]:
@@ -183,7 +213,11 @@ def progressive_gifts(patch: dict[str, Any], gift_edits: dict[str, list]) -> dic
     the next step (ModBuilder._progressive_gift). gift_edits = World.gift_edits ({location: [(flow, event,
     parameter, vanilla text)]}); every variant of the gift gets its questions, whatever its vanilla item."""
     pouch = patch.get("progressive_pouch") or {}
-    chains = {item: chain for chain in progressive_chains(patch) for item in chain}
+    # bow / slingshot with a copy given as placed (scrub): the gifts too. Link may own the big quiver without the bow,
+    # and the questions (from the last step down) would never give it
+    kept = set(patch.get("progressive_kept") or ())
+    chains = {item: chain for chain in progressive_chains(patch) for item in chain
+              if chain[0] not in kept or all(_sources(patch, chain))}
     out: dict[str, list] = {}
     for chest in patch["chests"]:
         chain = chains.get(chest["item"])
@@ -215,11 +249,11 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
                                                   patch.get("progressive_kept") or (), _skip_middle(patch, chain))
         if chest["item"] == chest["vanilla"] and not progressive:
             continue
-        change: dict[str, Any] = {"Drop__DropActor": chest["item"]}
+        change = {"Drop__DropActor": chest["item"]}
         # a progressive chest may give another item than the placed one: no item event (drop) either way
         if chest["event"] == "drop" and (chest["item"] != chest["vanilla"] or progressive):
             change["GetEventName"] = None
-        key = keys_mod.chest_change(chest["item"], chest.get("key_dungeon"))
+        key = keys_mod.chest_change(chest["item"], chest.get("key_dungeon"), chest["event"])
         if key:  # dungeon key: the game's key in its own dungeon, otherwise a "door key" + the chest event
             change.update(key)
         if chest.get("conditional"):
@@ -228,6 +262,9 @@ def chest_changes(patch: dict[str, Any]) -> dict[int, dict]:
             change["Drop__DropActor_Substitute"] = None
         if progressive:
             change.update(progressive)
+        elif chest["item"] == OCARINA_FAIRY:  # never back from the Ocarina of Time to the Fairy Ocarina
+            change.update({"Drop__DropActor": OCARINA_FAIRY, "Drop__CheckActor": OCARINA_TIME,
+                           "Drop__DropActor_Substitute": OCARINA_TIME, PROGRESSIVE_CHEST: True})
         for h in chest["hashes"]:
             changes[int(h)] = change
     return changes
@@ -266,7 +303,7 @@ def skulltula_changes(patch: dict[str, Any], pickups: dict[str, str]) -> dict[in
     for loc in patch["chests"]:
         if not loc.get("skulltula") or loc["item"] == loc["vanilla"]:
             continue
-        item = ground_item(loc)
+        item = ground_item(loc, patch)
         if item in native:
             actor = native[item]
         elif item in made:
@@ -283,11 +320,15 @@ def skulltula_changes(patch: dict[str, Any], pickups: dict[str, str]) -> dict[in
 PICKUP_PREFIX = "Obj_OoTRR_Pickup_"
 
 
-def ground_item(loc: dict[str, Any]) -> str:
+def ground_item(loc: dict[str, Any], patch: dict[str, Any] | None = None) -> str:
     """Item given by a ground item (pickup, Gold Skulltula drop): a small key is the game's key item, added by the
-    game to the dungeon of the current map (World.ground_key only puts a key in its own dungeon) [game]."""
+    game to the dungeon of the current map (World.ground_key only puts a key in its own dungeon) [game]. An item of
+    a progressive chain: the chain's last step (`ground_chains`)."""
     key = keys_mod.parse_item(loc["item"])
     if key is None:
+        for chain in (patch or {}).get("ground_chains") or []:
+            if loc["item"] in [step for step, _ in chain]:
+                return chain[-1][0]
         return loc["item"]
     if key[0] != keys_mod.SMALL or loc.get("key_dungeon") != key[1]:
         raise ValueError(f"{loc['location']}: {loc['item']} cannot be given by a ground item")
@@ -305,7 +346,7 @@ def pickup_changes(patch: dict[str, Any]) -> tuple[dict[int, dict], dict[str, st
     for loc in patch["chests"]:
         if not loc.get("pickup") or loc["item"] == loc["vanilla"]:
             continue
-        item = ground_item(loc)
+        item = ground_item(loc, patch)
         if item in native:
             actor = native[item]
         else:
