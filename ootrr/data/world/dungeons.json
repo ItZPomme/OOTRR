@@ -188,7 +188,7 @@
     "GPG Heavy Block Room": {
       "dungeon": "Gerudo Proving Grounds",
       "exits": {
-        "GPG Like Like Room": "can_see_invisible and (can_use(Progressive_Hookshot) or can_use(Bow))",
+        "GPG Like Like Room": "can_see_invisible and (can_use(Progressive_Hookshot) or can_use(Bow)) and has_strength2",
         "GPG Eye Statue Upper": "is_adult and can_see_invisible and can_use(Progressive_Hookshot)"
       }
     },

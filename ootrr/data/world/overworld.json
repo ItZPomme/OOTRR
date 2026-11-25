@@ -128,7 +128,7 @@
       "locations": {
         "GC Darunias Joy":           {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
         "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium"},
-        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or can_use(Bow) or Progressive_Strength)", "vanilla": "Goron_Tunic"},
+        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or Progressive_Strength)", "vanilla": "Goron_Tunic"},
         "GC Pot Freestanding PoH":   {"rule": "is_child and has_explosives and has_fire_or_sticks", "vanilla": "Obj_Heart_Piece", "_note": "spinning pot (flag GoronLargePot_IsGetHeartPiece set by Npc_Goron_005_Child, scene Dm_Goron_0045, map icon in GoronCity_Child_Dynamic); rule taken from OoT (bomb in the pot, torches lit), not checked in game"}
       },
       "exits": {
@@ -148,7 +148,7 @@
       },
       "exits": {
         "Kakariko Village": "True",
-        "Graveyard Warp Pad": "can_use_longshot"
+        "Graveyard Warp Pad": "can_play(Nocturne_of_Shadow)"
       }
     },
     "Graveyard Warp Pad": {
