@@ -528,6 +528,28 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
 - Item names: `ActorMsg/PouchContent.msbt`, labels `<item>_Name`.
 - Messages can be added (`msbt.add_messages`, identical rewrite verified).
 
+## Navi's balloons (NaviChat) **[game]** (2026-11-25, Longshot v3.2.0, test mod)
+
+Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons: no scene, Link keeps moving.
+- **Asking for one = one GameData write**: the Enum `0x34c5d5f7` (name unknown, not saved, values `None`, `type001` to
+  `type511`) set to `type<n>`; `OneShotNaviRequestBallonMessage` (0x28f37a0) does only that, and the game sets it back
+  to `None` once shown. From the PC: `Longshot.set_enum(0x34c5d5f7, "type500")` (first Enum writes used live).
+- `GameParameter/NaviMgrGlobalParam` (`BalloonMessageParamList`): Enum value hash -> parameter file
+  `Game/NaviBalloonMessageParam/*` in `Pack/NaviBallonMess.pack`; 233 of 512 used (`type500`-`type511` free, among
+  others). Text: label in `EventFlowMsg/NaviChat.msbt`.
+- **New balloons work** (`Return000` copied with another `LabelList`, RESTBL entry, table entry, text added in every
+  language). Line of 33 characters fine; `
+` fine (two lines in the same box); colour tag (0, 3) fine; a line of 63
+  characters runs off the screen (not wrapped).
+- Shown about 2 s. A second request replaces the balloon shown. Asked in the pause menu: shown when it closes. The
+  write queue refuses writes during a loading. Child and adult.
+- **Shown once**: `HavePlayedNaviBalloonMessage.type<n>` (saved Bool) becomes true; set back to false first, it plays
+  again. The multiworld bridge uses it to know that a balloon was shown (`IsSetReadFlagIfNoRequest` = false).
+- During a fight: shown with `IsNotRequestInCombat` = false (Wolfos, Forest Temple); it follows Navi, so it can be off
+  screen when she is behind the camera.
+- 271 free balloons that no script, AI or map asks for: `mw_navi.NUMBERS` (some unused ones are asked for, e.g. 118).
+- Not tested: a target lock, a scene, or with Navi away.
+
 ## Kokiri Forest
 
 - Door of Link's house (`Obj_Kokiri_Door_A_01`, the only actor of this type): it plays `Dm_Kokiri_0045` (discovery of

@@ -217,6 +217,14 @@ The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld s
   - Not seen in game yet: Pieces of Heart (same problem expected), seeds with the Slingshot
     (`PouchData.Item_DekuSeed.StockNum` exists, not filled yet), swords, magic. No get-item window: the bridge prints
     the received item.
+  - **Navi says it** ("You received Hookshot from Bob!", two lines when long; `ootrr/mw_navi.py`, GAME_KNOWLEDGE "Navi's
+    balloons"): **validated in game** (Longshot v3.2.0, 2026-11-25, server + bridge + bots, 4 players): own line for
+    each item, several items one after the other, progressive step really given, during a fight. The mod holds one
+    balloon per (sender, item) pair (`incoming` in the player's data: pairs without locations; 40 to 70 for 2 to 4
+    players, 271 at most) and one "a gift from Bob" per sender. The bridge resets the balloon's played flag, asks for
+    it, waits for the flag, asks again every 8 s (8 times); at most 20 waiting. Not said: a mod built before (its saved
+    Int `OoTRR.MW.Navi.<hash>` is missing: reinstall with *Install and play*) or a host whose version does not give
+    `incoming`. Asked during a loading: said once the bridge has read the chests again (about 15 s).
 - No `GOAL` yet: the end of the game is not watched, so a Longshot player who finishes does not release items.
 - The pipe and its JSON may change with Longshot versions (seen: rc.6 -> v3.0.0 kept them); the bridge warns when
   `status` is not `"protocol": 1`. Longshot now installs to `Games/Longshot/<channel>/<version>` (`stable/v3.0.0`,

@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from . import __version__, settings as settings_mod
+from . import __version__, mw_navi, settings as settings_mod
 from .fill import FillError, prefill
 from .patch import progressive_location
 from .search import EVENT_PREFIX, State
@@ -360,6 +360,9 @@ class SlotData:
     seed: int
     attempts: int
     placements: dict[str, Placed]  # this player's world: location -> (owner, item)
+    # (sender index, item) pairs the others may send, without the locations: Navi's texts (mw_navi). Empty when the
+    # host's version does not give them: Navi says nothing.
+    incoming: list[Placed] = field(default_factory=list)
 
     def sent(self) -> dict[str, Placed]:
         return {loc: p for loc, p in self.placements.items() if p[0] != self.slot}
@@ -367,13 +370,15 @@ class SlotData:
 
 def slot_data(result: MultiResult, slot: int) -> SlotData:
     return SlotData(room_hash(result), slot, [p.name for p in result.players], result.players[slot].settings,
-                    result.seed, result.attempts, dict(result.placements[slot]))
+                    result.seed, result.attempts, dict(result.placements[slot]),
+                    mw_navi.incoming(result.placements, slot))
 
 
 def slot_to_json(data: SlotData) -> dict[str, Any]:
     return {"slot_format": SLOT_FORMAT, "version": __version__, "hash": data.room_hash, "slot": data.slot + 1,
             "names": data.names, "settings": data.settings, "seed": data.seed, "attempts": data.attempts,
-            "placements": {loc: [o, i] for loc, (o, i) in sorted(data.placements.items())}}
+            "placements": {loc: [o, i] for loc, (o, i) in sorted(data.placements.items())},
+            "incoming": [[s, i] for s, i in data.incoming]}
 
 
 def slot_from_json(raw: dict[str, Any]) -> SlotData:
@@ -381,7 +386,8 @@ def slot_from_json(raw: dict[str, Any]) -> SlotData:
         raise ValueError(f"player data format {raw.get('slot_format')}, expected {SLOT_FORMAT}")
     return SlotData(str(raw["hash"]), int(raw["slot"]) - 1, [str(n) for n in raw["names"]], dict(raw["settings"]),
                     int(raw["seed"]), int(raw.get("attempts", 1)),
-                    {loc: (int(o), str(i)) for loc, (o, i) in raw["placements"].items()})
+                    {loc: (int(o), str(i)) for loc, (o, i) in raw["placements"].items()},
+                    [(int(s), str(i)) for s, i in raw.get("incoming", ())])
 
 
 def load_slot(path: str | Path, slot: int | None = None) -> SlotData:
@@ -433,6 +439,10 @@ def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: W
         raise ValueError(f"player {data.slot + 1}: {len(remote) - len(events)} remote items outside the chests")
     patch["mw_events"] = events
     patch["mw_actors"] = actors
+    table = mw_navi.layout(data.incoming)
+    if table:
+        patch["mw_navi"] = {"mark": mw_navi.mark(table, data.names),
+                            "balloons": {str(n): [data.names[s], item] for n, (s, item) in table.items()}}
     for table, rows in mw_rsdb_rows(events).items():
         patch["rsdb_changes"].setdefault(table, {}).update(rows)
     patch["multiworld"] = {"hash": data.room_hash, "slot": data.slot + 1, "players": data.names,

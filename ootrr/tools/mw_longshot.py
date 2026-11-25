@@ -12,6 +12,7 @@
   older save lowers it: the server sends the missing items again.
 - Log: every exchange of the multiworld (the server's INFO lines: "Bot -> Pomme: Hookshot (GF Rupee Chest)") and
   each item given in this game, in `<file>_p<slot>.log` (`--log`), with the items' names from the game's texts.
+- Navi says each given item in a balloon (`mw_navi.Announcer`), one at a time.
 - No GOAL yet: the game's end is not watched (no release when a Longshot player finishes).
 """
 
@@ -30,8 +31,10 @@ from typing import Any, Callable, Iterable
 from .. import multiworld as mw
 from .. import mw_protocol as P
 from ..formats.gamedata import flag_hash
+from ..longshot_control import ControlError
 from ..mw_items import ItemGiver
 from ..mw_log import Log, labeller, plain_label
+from ..mw_navi import Announcer, layout
 
 
 class BridgeError(RuntimeError):
@@ -44,13 +47,16 @@ class Bridge:
 
     def __init__(self, game: Any, watch: dict[str, str], room_hash: str, slot: int, names: list[str],
                  send: Callable[..., None], say: Callable[[str], None] = print,
-                 label: Callable[[str], str] | None = None, fixed: Iterable[str] = ()) -> None:
+                 label: Callable[[str], str] | None = None, fixed: Iterable[str] = (),
+                 incoming: Iterable[tuple[int, str]] = ()) -> None:
         self.game, self.send, self.say = game, send, say
         self.watch = watch  # saved Int -> location
         self.by_hash = {flag_hash(name): loc for name, loc in watch.items()}
         self.room_hash, self.slot, self.names = room_hash, slot, names
         self.giver = ItemGiver(game, fixed=fixed)  # fixed: multiworld.fixed_chains
         self.label = label or plain_label
+        self.navi = Announcer(game, layout(incoming), names)  # incoming: multiworld.SlotData.incoming
+        self.navi_error = ""  # last one said
         self.pending: dict[int, tuple[int, str, str]] = {}  # received index -> (from slot, item, location)
         self.sent: set[str] = set()
         self.ready = False  # WELCOME received
@@ -104,6 +110,12 @@ class Bridge:
                 self._check(loc)
         if self.ready and not game.get("event") and not game.get("loading"):
             self.apply()
+            try:
+                self.navi.step()
+            except ControlError as exc:  # write queue busy: the next look at the game tries again
+                if str(exc) != self.navi_error:
+                    self.navi_error = str(exc)
+                    self.say(f"  Navi: {exc}")
 
     def apply(self) -> int:
         """Gives the received items the game does not count yet, in order (GameData writes, `ItemGiver`);
@@ -114,9 +126,11 @@ class Bridge:
         given = 0
         while count in self.pending:
             finder, item, loc = self.pending.pop(count)
+            received = self.giver.adjusted(item)
             writes = self.giver.give(item)
             count = self._counted(count)
             given += 1
+            self.navi.add(finder - 1, received)
             self.say(f"  given in game: {self.label(item)} (from {self.names[finder - 1]}, {loc}; {'; '.join(writes)})")
         if given:
             self.send(P.SYNC, count)
@@ -133,6 +147,7 @@ class Bridge:
         """After a loading: the save may be another one, read everything again."""
         self.sent.clear()
         self.written = None
+        self.navi.reloaded()
         if self.ready:
             self.send(P.SYNC, self.received_count())
             self.scan()
@@ -174,7 +189,7 @@ class Retry(Exception):
 
 def run(args, echo: Callable[[str], None] = print, stop: threading.Event | None = None) -> int:
     """The bridge until Longshot or the server goes away (BridgeError / Retry / OSError), or `stop` is set."""
-    from ..longshot_control import ControlError, Longshot
+    from ..longshot_control import Longshot
 
     data = mw.load_slot(args.file, args.slot)
     slot = data.slot + 1
@@ -195,7 +210,7 @@ def run(args, echo: Callable[[str], None] = print, stop: threading.Event | None 
     path = Path(args.file)
     log = Log(args.log or path.with_name(f"{path.stem}_p{slot}.log"), echo=echo)
     bridge = Bridge(game, watch, data.room_hash, slot, data.names, link.send, say=log, label=labeller(args.romfs),
-                    fixed=mw.fixed_chains(data))
+                    fixed=mw.fixed_chains(data), incoming=data.incoming)
     echo(f"multiworld {bridge.room_hash}, player {slot} {bridge.names[slot - 1]}: {len(watch)} locations watched")
     bridge.hello()
     game.call("subscribe", events=["oot", "state"], every=args.every, changes=True)

@@ -750,11 +750,12 @@ class ModBuilder:
     SCRUB_TEXT = ("I've got ", " for you! It's ", " rupees", ". Wanna buy it?")  # secours si le modèle manque
 
     def _write_messages(self, scrub_items: list[str], out_romfs: Path, questions: list[str] = (),
-                        pouch_texts: dict[str, bytes] | None = None, way_back: bool = False) -> list[str]:
+                        pouch_texts: dict[str, bytes] | None = None, way_back: bool = False,
+                        navi_texts: dict[str, bytes] | None = None) -> list[str]:
         """Messages des Peste Mojo : un message par objet vendu, dans chaque langue, avec le nom
         de l'objet tel que le jeu l'écrit (ActorMsg/PouchContent.msbt) et le prix (SimpleShop_Price).
         pouch_texts: item texts added to ActorMsg/PouchContent.msbt in every language ({label: text}; the
-        multiworld chest actors, `_mw_texts`)."""
+        multiworld chest actors, `_mw_texts`); navi_texts: same for EventFlowMsg/NaviChat.msbt (`_navi_texts`)."""
         from .formats.msbt import add_messages, read_labels, read_texts, tag
         from .formats.sarc import Sarc
 
@@ -795,6 +796,9 @@ class ModBuilder:
             sarc.files[key] = add_messages(sarc.files[key], new)
             if pouch_texts:
                 sarc.files["ActorMsg/PouchContent.msbt"] = add_messages(names, pouch_texts)
+            if navi_texts:
+                sarc.files["EventFlowMsg/NaviChat.msbt"] = add_messages(sarc.files["EventFlowMsg/NaviChat.msbt"],
+                                                                        navi_texts)
             data = sarc.to_bytes()
             rel = path.relative_to(self.romfs).as_posix()
             self.restbl.resize_like(rel[:-3], len(raw), len(data))
@@ -1507,6 +1511,61 @@ class ModBuilder:
             out[f"{actor}_GetCaption"] = f"It is on its way to {owner}'s game.".encode()
         return out
 
+    NAVI_PACK = "Pack/NaviBallonMess.pack"
+    NAVI_PARAM = "Game/NaviBalloonMessageParam/{}.game__navi__NaviBalloonMessageParam"
+    NAVI_BASE = "Return000"  # "You OK?" after a fall: asked for, ignores the interval between two balloons
+    NAVI_LONG = 1835921017  # flag_hash("Long"), value of DisplayTime / DestructionTime
+
+    @staticmethod
+    def _navi_label(number: str) -> str:
+        return f"OoTRR_Navi_{int(number):03d}"
+
+    def _navi_texts(self, balloons: dict[str, list[str]]) -> dict[str, bytes]:
+        """{NaviChat label: text} of the multiworld balloons, English in every language (as `_mw_texts`)."""
+        from .formats.msbt import tag
+        from .mw_log import labeller
+        from .mw_navi import text
+        label, on, off = labeller(self.romfs), tag(0, 3, b"\x00\x00"), tag(0, 3, b"\xff\xff")
+        return {self._navi_label(n): text(sender, label(item) if item else "", on, off)
+                for n, (sender, item) in balloons.items()}
+
+    def _write_navi_balloons(self, balloons: dict[str, list[str]], out_romfs: Path) -> list[str]:
+        """Navi's multiworld balloons (mw_navi): parameters copied from NAVI_BASE and their line in the balloon table."""
+        from .formats.byml import U32
+        from .formats.gamedata import flag_hash
+        from .formats.sarc import Sarc
+        from .mw_navi import raw_value
+
+        path = self.romfs / f"{self.NAVI_PACK}.zs"
+        raw = self.codec.decompress(path)
+        sarc = Sarc(raw)
+        base = self.NAVI_PARAM.format(self.NAVI_BASE) + ".bgyml"
+        template = sarc.files[base]
+        table_path, = (self.romfs / "GameParameter" / "NaviMgrGlobalParam").glob("*.bgyml")
+        table_raw = table_path.read_bytes()
+        table = read_byml(table_raw)
+        for n in balloons:
+            param = read_byml(template)
+            param.update(Name=f"OoTRR {n}", LabelList=[{"Label": self._navi_label(n), "Proportion": 1}],
+                         DisplayTime=U32(self.NAVI_LONG), DestructionTime=U32(self.NAVI_LONG),
+                         IsNotRequestInCombat=False, IsDisplayDuringAttention=True, IsSetReadFlagIfNoRequest=False)
+            data = write_byml(param, byml_version(template))
+            name = self.NAVI_PARAM.format(f"OoTRR{int(n):03d}")
+            sarc.files[f"{name}.bgyml"], sarc.align[f"{name}.bgyml"] = data, sarc.align[base]
+            self.restbl.set(f"{name}.bgyml", self.restbl.get(base) + max(0, len(data) - len(template)) + 0x200)
+            key = flag_hash(raw_value(int(n)))
+            if table["BalloonMessageParamList"].get(key) != "":
+                raise KeyError(f"Navi balloon {n} is not free")
+            table["BalloonMessageParamList"][key] = f"Work/{name}.gyml"
+        for rel, old, new in ((f"{self.NAVI_PACK}.zs", raw, sarc.to_bytes()),
+                              (table_path.relative_to(self.romfs).as_posix(), table_raw,
+                               write_byml(table, byml_version(table_raw)))):
+            self.restbl.resize_like(rel.removesuffix(".zs"), len(old), len(new))
+            dest = out_romfs / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(self.codec.compress(dest.name, new) if rel.endswith(".zs") else new)
+        return [f"{self.NAVI_PACK}: {len(balloons)} multiworld balloons"]
+
     def _write_mw_actors(self, mw_actors: dict[str, dict[str, str]], out_romfs: Path) -> dict[str, dict[str, dict]]:
         """Actors dropped by the multiworld chests: copies of the placeholder key (multiworld.REMOTE_PLACEHOLDER,
         "NotPushToPouch": nothing goes to the pouch), one per chest so that each one has its own texts (the get
@@ -1615,7 +1674,8 @@ class ModBuilder:
               ainb_edits: dict[str, dict] | None = None,
               key_events: dict[str, tuple[str, str]] | None = None,
               mw_events: dict[str, str] | None = None,
-              mw_actors: dict[str, dict[str, str]] | None = None) -> list[str]:
+              mw_actors: dict[str, dict[str, str]] | None = None,
+              mw_navi: dict | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -1727,6 +1787,8 @@ class ModBuilder:
         if mw_events:  # multiworld: one saved Int per remote chest, and the received items counter
             from .multiworld import RECEIVED_COUNTER
             saved_ints += sorted(mw_events.values()) + [RECEIVED_COUNTER]
+        if mw_navi:
+            saved_ints.append(mw_navi["mark"])
         saved_bools = []
         if self.given_flags:
             from .world import DAMPE_FLAG, GIVEN_MODULES, WINDMILL_FLAG
@@ -1744,10 +1806,14 @@ class ModBuilder:
                 raise ValueError(f"modules edited twice: {sorted(set(logic_ints) & set(logic_patches))}")
             report += self._write_logic_ints(logic_ints, out_romfs)
         navi = (ainb_edits or {}).get("navi_return")
-        if scrub_sales or questions or mw_actors or navi:
+        navi_texts = self._navi_texts(mw_navi["balloons"]) if mw_navi else None
+        if scrub_sales or questions or mw_actors or navi or navi_texts:
             items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items)) if scrub_sales or questions else []
             report += self._write_messages(items, out_romfs, questions or [],
-                                           self._mw_texts(mw_actors) if mw_actors else None, bool(navi))
+                                           self._mw_texts(mw_actors) if mw_actors else None, bool(navi),
+                                           navi_texts)
+        if mw_navi:
+            report += self._write_navi_balloons(mw_navi["balloons"], out_romfs)
         if key_events or mw_events:
             report += self._write_key_flows(key_events or {}, out_romfs, mw_events)
         if pack_changes:

@@ -193,7 +193,8 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
                                 key_events={e: tuple(k) for e, k in (patch.get("key_events") or {}).items()}
                                 or None,
                                 mw_events=patch.get("mw_events") or None,
-                                mw_actors=patch.get("mw_actors") or None)
+                                mw_actors=patch.get("mw_actors") or None,
+                                mw_navi=patch.get("mw_navi") or None)
         load_dir = None
         if install:
             load_dir = emulator_root() / "load" / TITLE_ID
