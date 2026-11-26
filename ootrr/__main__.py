@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import __version__, settings as settings_mod, spoiler as spoiler_mod
 from .fill import FillError, generate
-from .patch import build_patch, chest_changes, pickup_changes, progressive_chest
+from .patch import build_patch, chest_changes, pickup_changes, progressive_chest, progressive_scrubs
 from .world import DataError, World
 
 
@@ -107,6 +107,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         print(f"Skulltulas d'or mélangées : {len(gs)} acteurs")
     from .world import SCRUB_SECRET_LOCATION
     scrubs, scrub_sales = scrub_changes(patch)
+    scrub_progressive = progressive_scrubs(patch)
     for h, change in scrubs.items():
         changes.setdefault(h, {}).update(change)
     secret = next(((c["item"], scrub_sales[c["item"]]) for c in patch["chests"]
@@ -176,16 +177,20 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.ground_chains = patch.get("ground_chains") or []
         builder.given_flags = True
         builder.event_ints = {f: [tuple(e) for e in v] for f, v in (patch.get("event_ints") or {}).items()}
+        builder.event_bools = {f: [tuple(e) for e in v] for f, v in (patch.get("event_bools") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
                                 timeline_skips=patch.get("timeline_skips") or None,
                                 timeline_fade_in=patch.get("timeline_fade_in") or None,
                                 start_items=start_items, moat_gate=bool(patch.get("ocarina_moat_gate")),
                                 logic_patches=logic, bool_exps=patch.get("bool_exps") or None,
+                                logic_graph_edits=patch.get("logic_graph_edits") or None,
+                                event_entry_gates=patch.get("event_entry_gates") or None,
                                 logic_ints={m: [tuple(e) for e in v] for m, v in (patch.get("logic_ints") or {}).items()} or None,
                                 start_warp=tuple(test_start.split("=", 1)) if test_start
                                 else (tuple(patch["start_warp"]) if patch.get("start_warp") else None),
                                 scrub_sales=scrub_sales or None,
+                                scrub_progressive=scrub_progressive or None,
                                 questions=patch.get("ingame_questions") or None,
                                 rsdb_changes=patch.get("rsdb_changes") or None,
                                 pack_changes=patch.get("pack_changes") or None,

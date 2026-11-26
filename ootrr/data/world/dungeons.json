@@ -35,6 +35,9 @@
         "Dodongos Cavern King Dodongo Heart": {"rule": "dc_explosives", "vanilla": "Obj_Heart_Container", "hashes": [5936534468710061389], "pickup": "boss"},
         "King Dodongo":                       {"kind": "reward", "rule": "dc_explosives", "vanilla": "Item_Stone_Fire"}
       },
+      "events": {
+        "Dodongos_Cavern_Clear": "dc_explosives"
+      },
       "exits": {
         "Death Mountain Trail": "True"
       }
@@ -44,6 +47,9 @@
       "locations": {
         "Jabu Jabus Belly Barinade Heart": {"rule": "can_use(Boomerang)", "vanilla": "Obj_Heart_Container", "hashes": [17608884438514432711], "pickup": "boss"},
         "Barinade":                        {"kind": "reward", "rule": "can_use(Boomerang)", "vanilla": "Item_Stone_Water"}
+      },
+      "events": {
+        "Jabu_Jabus_Belly_Clear": "can_use(Boomerang)"
       },
       "exits": {
         "Zoras Fountain": "True"
@@ -55,6 +61,9 @@
         "Forest Temple Phantom Ganon Heart": {"rule": "can_use(Bow) and Boss_Key_Forest_Temple", "vanilla": "Obj_Heart_Container", "hashes": [18379569660496940670], "pickup": "boss"},
         "Phantom Ganon":                     {"kind": "reward", "rule": "can_use(Bow) and Boss_Key_Forest_Temple", "vanilla": "Item_Medal_Forest"}
       },
+      "events": {
+        "Forest_Temple_Clear": "can_use(Bow) and Boss_Key_Forest_Temple"
+      },
       "exits": {
         "Sacred Forest Meadow": "True"
       }
@@ -64,6 +73,9 @@
       "locations": {
         "Fire Temple Volvagia Heart": {"rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple and has(Small_Key_Fire_Temple, 0)", "vanilla": "Obj_Heart_Container", "hashes": [9478330070473364248], "pickup": "boss"},
         "Volvagia":                   {"kind": "reward", "rule": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple and has(Small_Key_Fire_Temple, 0)", "vanilla": "Item_Medal_Fire"}
+      },
+      "events": {
+        "Fire_Temple_Clear": "can_use(Megaton_Hammer) and Boss_Key_Fire_Temple and has(Small_Key_Fire_Temple, 0)"
       },
       "exits": {
         "DMC Central": "True",
@@ -87,6 +99,9 @@
       "locations": {
         "Water Temple Morpha Heart": {"rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple and has(Small_Key_Water_Temple, 3)", "vanilla": "Obj_Heart_Container", "hashes": [14426685265732353862], "pickup": "boss"},
         "Morpha":                    {"kind": "reward", "rule": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple and has(Small_Key_Water_Temple, 3)", "vanilla": "Item_Medal_Water"}
+      },
+      "events": {
+        "Water_Temple_Clear": "can_play(Zeldas_Lullaby) and can_use_longshot and Boss_Key_Water_Temple and has(Small_Key_Water_Temple, 3)"
       },
       "exits": {
         "Lake Hylia": "True"

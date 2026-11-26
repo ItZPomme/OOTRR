@@ -379,18 +379,17 @@ def retarget_subflows(d: bytes, edits: list[tuple[int, str, dict[str, str]]]) ->
 
 
 def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | None = None) -> tuple[bytes, list[str]]:
-    """Ajoute au début du point d'entrée « entry » un petit graphe d'étapes.
+    """Insert a small event graph at the start of an entry point or before an event.
 
-    Réponses des questions du jeu : 0 = oui, 1 = non (ex. Enemy_Scrub_Business_Common :
-    « possède le sac de bâtons moyen ? » -> 0 = vend le grand sac).
-    nodes[i] : {"actor", "action" ou "query", "template": (fichier, adresse des paramètres),
-                "set": {paramètre: chaîne}, "next": cible (action) ou "cases": {valeur: cible}}
-    Une cible est l'indice d'un autre nœud, « old » (l'ancien début du point d'entrée),
-    {"event": N} (étape N existante du fichier) ou None (fin). Les acteurs, actions et questions doivent déjà exister dans le fichier.
+    Query results use the game's convention: 0 = yes, 1 = no.
+    Nodes can be actions, queries, or local/remote subflow calls. A node may copy
+    parameters from ``template``; ``set`` overrides named parameters. Targets are
+    another node index, ``"old"`` (the previous entry point), ``{"event": N}``,
+    ``"after"`` (the event after ``before``), or ``None`` (end).
 
-    Avec before=indice d'un événement, le graphe est inséré juste avant cet événement
-    (tout ce qui y menait mène au graphe) : « old » = cet événement, « after » = l'étape
-    qui le suit (pour le sauter)."""
+    With ``before=N``, all incoming paths to event N are redirected through the
+    inserted graph.
+    """
     reloc, _ = _header(d)
     fc = _flowchart_full(d)
     first = fc["n_events"]
@@ -459,7 +458,8 @@ def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | No
         if "copy_event" in node:
             src = fc["events"] + node["copy_event"] * EVENT_SIZE
             node["template"] = (d, _q(d, src + 0x10))
-        params = copy_params(*node["template"], node.get("set", {})) if node["template"][1] else 0
+        template = node.get("template")
+        params = copy_params(*template, node.get("set", {})) if template and template[1] else 0
         cases_at = None
         if "query" in node:
             # comme dans les scripts du jeu : un cas qui termine le script est omis
@@ -499,6 +499,17 @@ def insert_flow(d: bytes, entry: str | None, nodes: list[dict], before: int | No
             struct.pack_into("<QQ", body, o + 0x10, params, cases_at)
             slots += ([o + 0x10] if params else []) + [o + 0x18]
             report.append(f"{entry} : si {node['actor']}.{node['query']} {node.get('set', {})}")
+        elif "flow" in node:
+            struct.pack_into("<BBH", body, o + 8, EV_SUBFLOW, 0, target(node.get("next")))
+            struct.pack_into("<Q", body, o + 0x10, params)
+            if params:
+                slots.append(o + 0x10)
+            if node.get("flow"):
+                pending.append((o + 0x18, node["flow"]))
+            else:
+                struct.pack_into("<Q", body, o + 0x18, 0)
+            pending.append((o + 0x20, node["entry"]))
+            report.append(f"{entry} : sous-flux {node.get('flow') or '(local)'}:{node['entry']}")
         else:
             ai, k = _actor_slot(d, fc, node["actor"], node["action"], "action")
             struct.pack_into("<BBHHH", body, o + 8, EV_ACTION, 0, target(node.get("next")), ai, k)
@@ -800,6 +811,31 @@ def set_event_ints(d: bytes, edits: list[tuple[int, str, int, int]]) -> tuple[by
             report.append(f"event {event}: {param} shares its value with another parameter")
             continue
         struct.pack_into("<i", out, pv + 0x10, new)
+    return bytes(out), report
+
+
+def set_event_bools(d: bytes, edits: list[tuple[int, str, bool, bool]]) -> tuple[bytes, list[str]]:
+    """Changes boolean parameters of given events: [(event, parameter, expected value, new value)]."""
+    out = bytearray(d)
+    values = _event_param_values(d)
+    users: dict[int, int] = {}
+    for _, _, pv in values:
+        users[pv] = users.get(pv, 0) + 1
+    where = {(event, name): pv for event, name, pv in values}
+    report = []
+    for event, param, old, new in edits:
+        pv = where.get((event, param))
+        if pv is None or d[pv] != 3:  # 3 = bool
+            report.append(f"event {event}: no boolean parameter {param}")
+            continue
+        current = bool(struct.unpack_from("<I", d, pv + 0x10)[0])
+        if current is not old:
+            report.append(f"event {event}: {param} = {current}, expected {old}")
+            continue
+        if users[pv] > 1:
+            report.append(f"event {event}: {param} shares its value with another parameter")
+            continue
+        struct.pack_into("<I", out, pv + 0x10, int(new))
     return bytes(out), report
 
 

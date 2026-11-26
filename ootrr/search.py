@@ -12,9 +12,10 @@ from .world import Location, World
 EVENT_PREFIX = "[événement] "
 
 
-# Dans le remake, l'épée de légende ne renvoie Link enfant qu'une fois le Temple de la
-# Forêt terminé (module Market_Adult_Prefab_89da : SageOfForest_IsCompleted_Exp).
-RETURN_TO_CHILD = "Forest_Medallion"
+# In the remake, the Master Sword only sends Link back to childhood once the Forest Temple is done (module
+# Market_Adult_Prefab_89da: SageOfForest_IsCompleted_Exp, i.e. Phantom Ganon beaten and his blue warp taken). The
+# Forest Medallion does not count: with shuffled rewards it may come from another boss.
+RETURN_TO_CHILD = "Forest_Temple_Clear"
 
 
 class State:

@@ -6,7 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ootrr import settings as settings_mod  # noqa: E402
-from ootrr.patch import PROGRESSIVE_CHEST, chest_changes, progressive_chains, progressive_chest, progressive_gifts  # noqa: E402
+from ootrr.patch import (PROGRESSIVE_CHEST, chest_changes, progressive_chains, progressive_chest, progressive_gifts,
+                         progressive_location, progressive_scrubs)  # noqa: E402
 from ootrr.world import World  # noqa: E402
 
 
@@ -61,13 +62,14 @@ class ProgressiveChestTests(unittest.TestCase):
         strength = next(c for c in self.chains if c[0] == "Item_Gauntlet_Goron")
         self.assertIn(strength, progressive_chains(self._patch(("chest", "chest", "chest"))))
         self.assertIn(strength, progressive_chains(self._patch(("chest", "gift", "chest"))))
-        patch = self._patch(("chest", "scrub", "chest"))  # a Deku Scrub gives its item as placed
-        self.assertNotIn(strength, progressive_chains(patch))
+        patch = self._patch(("chest", "scrub", "chest"))
+        self.assertIn(strength, progressive_chains(patch))
         changes = chest_changes(patch)
-        self.assertEqual(changes[1]["Drop__DropActor"], "Item_Gauntlet_Goron")  # fixed, as placed
-        self.assertNotIn("Drop__CheckActor", changes[1])
-        self.assertEqual(changes[3]["Drop__DropActor"], "Item_Gauntlet_Gold")
+        self.assertEqual(changes[1]["Drop__DropActor"], "Item_Gauntlet_Goron")
+        self.assertIn("Drop__CheckActor", changes[1])
+        self.assertEqual(changes[3]["Drop__DropActor"], "Item_Gauntlet_Goron")
         self.assertIn("Drop__CheckActor", changes[10])  # the Hookshot chain is still progressive
+        self.assertIn("Item_Gauntlet_Silver", progressive_scrubs(patch))
 
     def test_chests_skip_the_middle_step_next_to_gifts(self):
         changes = chest_changes(self._patch(("chest", "gift", "chest")))
@@ -83,15 +85,16 @@ class ProgressiveChestTests(unittest.TestCase):
             ["Item_Gauntlet_Goron", "Armor_Child_Gauntlet_Goron"], ["Item_Gauntlet_Silver", "Item_Gauntlet_Silver"],
             ["Item_Gauntlet_Gold", "Item_Gauntlet_Gold"]]]]})
 
-    def test_bow_gift_next_to_a_quiver_on_the_ground(self):
-        """The big quiver may be taken before the bow: the bow's gift gives the bow, as placed."""
+    def test_bow_gift_next_to_a_quiver_at_a_scrub(self):
+        """A quiver sold by a scrub participates in the same progressive chain as a gift."""
         patch = self._patch(("chest", "chest", "chest"))
         patch["chests"] = [
             {"location": "G", "hashes": [], "vanilla": "X", "item": "Item_Range_Bow", "event": "keep", "gift": True},
             {"location": "P", "hashes": [20], "vanilla": "X", "item": "Item_Quiver_Large", "event": "keep",
              "scrub": True}]
         edits = {"G": [("Npc", 1, "ActorName", "X")]}
-        self.assertEqual(progressive_gifts(patch, edits), {})
+        self.assertIn("Npc", progressive_gifts(patch, edits))
+        self.assertIn("Item_Quiver_Large", progressive_scrubs(patch))
         patch["chests"][1].pop("scrub")  # in a chest: progressive
         self.assertIn("Npc", progressive_gifts(patch, edits))
 

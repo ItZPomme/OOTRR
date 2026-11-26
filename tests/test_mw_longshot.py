@@ -10,8 +10,10 @@ from ootrr import multiworld as mw
 from ootrr import mw_protocol as P
 from ootrr import settings
 from ootrr.formats.gamedata import flag_hash
-from ootrr.mw_items import BOTTLE_SLOTS, ItemGiver
-from ootrr.patch import chest_changes, progressive_chains, progressive_location
+from ootrr.longshot_control import ControlError
+from ootrr.mw_items import (BOTTLE_SLOTS, ItemGiver, JABU_FED_FLAG, LETTER_QUEST_ENUM, LETTER_QUEST_STEP,
+                            LETTER_READ_FLAG)
+from ootrr.patch import chest_changes, progressive_chains, progressive_location, progressive_scrubs
 from ootrr.tools.mw_longshot import Bridge, BridgeError
 from ootrr.tools.mw_server import Room
 from ootrr.world import World
@@ -128,12 +130,17 @@ class ItemGiverTest(unittest.TestCase):
         self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 30)
 
     def test_rupees_hearts_bundles(self):
-        g = _pouch("Item_Bomb", "Item_BombBag_Small")
+        g = _pouch("Item_Bomb", "Item_Bombchu", "Item_BombBag_Small")
         giver = ItemGiver(g)
         giver.give("TBox_Rupee_Red")
         self.assertEqual(g.ints["PlayerStatus.CurrentRupee"], 20)
         giver.give("Item_BombBundle_Small")  # no bag: 5 rupees
         self.assertEqual(g.ints["PlayerStatus.CurrentRupee"], 25)
+        giver.give("Item_BombchuBundle_Small")  # same bag as the bombs (seen: 5 bombchus without a bag)
+        self.assertEqual((g.ints["PlayerStatus.CurrentRupee"], g.ints["PouchData.Item_Bombchu.StockNum"]), (30, 0))
+        g.bools["IsGet.Item_BombBag_Small"] = True
+        giver.give("Item_BombchuBundle_Small")
+        self.assertEqual(g.ints["PouchData.Item_Bombchu.StockNum"], 5)
         giver.give("Obj_Heart_Container")
         self.assertEqual((g.ints["PlayerStatus.MaxLife"], g.ints["PlayerStatus.Life"]), (16, 16))
         for _ in range(4):
@@ -144,15 +151,31 @@ class ItemGiverTest(unittest.TestCase):
         """No counter: the first free slot of the five (main 0x110d570)."""
         g = FakeGame(bools={f"{s}.IsValid": False for s in BOTTLE_SLOTS})
         g.bools.update({f"{BOTTLE_SLOTS[0]}.IsValid": True, "IsGet.Item_Bottle": False, "IsGet.Item_Bottle_Milk": False,
-                        "IsGet.Item_Bottle_Letter": False, "Get_StoneOfWater_GetRutoLetter": False})
+                        "IsGet.Item_Bottle_Letter": False, "Get_StoneOfWater_GetRutoLetter": False,
+                        LETTER_READ_FLAG: False, JABU_FED_FLAG: False})
         g.enums = {f"{s}.BottleItem": "Empty" for s in BOTTLE_SLOTS}
+        g.enums[LETTER_QUEST_ENUM] = "Step03"
         giver = ItemGiver(g)
         for item in ("Item_Bottle", "Item_Bottle", "Item_Bottle_Milk", "Item_Bottle_Letter"):
             self.assertNotIn("nothing given", giver.give(item)[-1])
-        self.assertTrue(all(g.bools.values()))
+        self.assertTrue(g.bools["Get_StoneOfWater_GetRutoLetter"])
         self.assertEqual([g.enums[f"{s}.BottleItem"] for s in BOTTLE_SLOTS],
                          ["Empty", "Empty", "Empty", "MaxMilk", "Letter"])
+        self.assertEqual(g.enums[LETTER_QUEST_ENUM], LETTER_QUEST_STEP)
         self.assertIn("nothing given", giver.give("Item_Bottle")[-1])  # five bottles already
+
+    def test_letter_does_not_regress_a_later_quest_state(self):
+        for read, fed in ((True, False), (False, True)):
+            with self.subTest(read=read, fed=fed):
+                g = FakeGame(bools={f"{s}.IsValid": False for s in BOTTLE_SLOTS})
+                g.bools.update({"IsGet.Item_Bottle_Letter": False, "Get_StoneOfWater_GetRutoLetter": False,
+                                LETTER_READ_FLAG: read, JABU_FED_FLAG: fed})
+                g.enums = {f"{s}.BottleItem": "Empty" for s in BOTTLE_SLOTS}
+                g.enums[LETTER_QUEST_ENUM] = "Step10"
+
+                ItemGiver(g).give("Item_Bottle_Letter")
+
+                self.assertEqual(g.enums[LETTER_QUEST_ENUM], "Step10")
 
     def test_shields_and_songs(self):
         g = _pouch("Weapon_Shield_Deku")
@@ -225,8 +248,8 @@ class ProgressiveMixTest(unittest.TestCase):
             for k, world in enumerate(worlds):  # quivers and bullet bags may be sold, never the logic's chains
                 self.assertEqual(mw.fixed_chains(mw.slot_data(result, k), world), [])
 
-    def test_fixed_chains_match_the_mod(self):
-        """A chain copy sold by a Deku Scrub (an older multiworld): bridge and mod agree."""
+    def test_scrub_chain_is_progressive_in_the_mod_and_bridge(self):
+        """A chain copy sold by a Deku Scrub uses the progressive path in both the mod and bridge."""
         players = [mw.Player(n, settings.build({"shuffle_scrubs": True})) for n in "AB"]
         worlds = mw.build_worlds(players)
         result = mw.generate(players, 2, worlds=worlds)
@@ -236,9 +259,11 @@ class ProgressiveMixTest(unittest.TestCase):
         if here:
             places[here] = places[ground]
         places[ground] = (0, "Item_Hookshot")
-        self.assertEqual(mw.fixed_chains(mw.slot_data(result, 0), worlds[0]), ["Item_Hookshot"])
-        done = [c[0] for c in progressive_chains(mw.slot_patch(result, 0, worlds[0]))]
-        self.assertNotIn("Item_Hookshot", done)
+        patch = mw.slot_patch(result, 0, worlds[0])
+        self.assertEqual(mw.fixed_chains(mw.slot_data(result, 0), worlds[0]), [])
+        done = [c[0] for c in progressive_chains(patch)]
+        self.assertIn("Item_Hookshot", done)
+        self.assertIn("Item_Hookshot", progressive_scrubs(patch))
         self.assertIn("Item_Scale_Silver", done)
 
     def test_level_never_below_the_logic(self):
@@ -383,6 +408,24 @@ class BridgeTest(unittest.TestCase):
         for m in items:
             self.bridge.on_server(m)
         self.assertEqual(self.bridge.apply(), len(items))
+
+    def test_busy_write_queue_keeps_the_item(self):
+        """A failed queued write (ControlError) is not a reconnection: the item stays pending, given later."""
+        self.bridge.on_server([P.WELCOME, "2", "2", "A", "B"])
+        self.bridge.on_server([P.ITEM, "0", "1", "TBox_Rupee_Red", "Somewhere"])
+        real = self.game.set_int
+
+        def busy(name, value, add=False):
+            raise ControlError("GameData queue append failed: count moving 1 -> 2")
+        self.game.set_int = busy
+        self.bridge.on_game({"event": False, "loading": False})  # no exception
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 0)
+        self.assertEqual(len([s for s in self.said if "retrying" in s]), 1)
+        self.bridge.on_game({"event": False, "loading": False})
+        self.assertEqual(len([s for s in self.said if "retrying" in s]), 1)  # said once
+        self.game.set_int = real
+        self.bridge.on_game({"event": False, "loading": False})
+        self.assertEqual((self.game.ints[mw.RECEIVED_COUNTER], self.game.ints["PlayerStatus.CurrentRupee"]), (1, 20))
 
     def test_not_a_multiworld_mod(self):
         del self.game.ints[mw.RECEIVED_COUNTER]

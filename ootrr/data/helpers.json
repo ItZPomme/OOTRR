@@ -3,7 +3,7 @@
   "helpers": {
     "has_explosives":        "Bomb_Bag and Progressive_Strength",
     "adult_access":          "Time_Travel or setting_is(starting_age, 'adult')",
-    "child_access":          "not setting_is(starting_age, 'adult') or (Time_Travel and (free_time_travel or Forest_Medallion))",
+    "child_access":          "not setting_is(starting_age, 'adult') or (Time_Travel and (free_time_travel or Forest_Temple_Clear))",
     "can_blast_or_smash":    "has_explosives or can_use(Megaton_Hammer)",
     "can_open_grotto":       "can_blast_or_smash",
     "has_bottle":            "Bottle or Rutos_Letter",

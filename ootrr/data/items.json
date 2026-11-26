@@ -108,7 +108,7 @@
     "Item_Dungeon_Compass": {"_doc": "la boussole appartient au donjon où le coffre est ouvert"},
     "TBox_Rupee_Green": {}, "TBox_Rupee_Blue": {}, "TBox_Rupee_Red": {}, "TBox_Rupee_Purple": {}, "TBox_Rupee_Gold": {}
   },
-  "_progressive": "Progressive items: any item of a chain gives the step after the highest one Link owns. Native menu: ingame::AdjustItem (same chains, ocarinas too). PC-built mod: chests only, as Obj_TBox_A_06 chests (\"if Link owns Drop__CheckActor, give Drop__DropActor_Substitute\", validated in game 2026-11-15: a plain A_01 chest ignores the condition, an A_06 one applies it); see patch.progressive_chest.",
+  "_progressive": "Progressive items: any item of a chain gives the step after the highest one Link owns. The native menu uses ingame::AdjustItem. PC-built mods use conditional chests, exact gift and ground-pickup branches, and progressive Deku Scrub sale branches.",
   "progressive": [
     ["Item_Hookshot", "Item_Longshot"],
     ["Item_Range_Bow", "Item_Quiver_Medium", "Item_Quiver_Large"],
@@ -126,7 +126,7 @@
   "progressive_pouch": {"Item_Range_Bow": "Weapon_Range_Bow", "Item_Range_SlingShot": "Weapon_Range_SlingShot", "Item_Gauntlet_Goron": "Armor_Child_Gauntlet_Goron"},
   "_progressive_kept": "First steps that stay in the pouch after the upgrades (the weapon, and the Goron Bracelet, a child armor next to the adult gauntlets [hypothesis]; bags replace each other: only the biggest is counted, validated in game 2026-11-15). Used to spread the chest conditions of 3-step chains, see patch.progressive_chest.",
   "progressive_kept": ["Item_Range_Bow", "Item_Range_SlingShot", "Item_Gauntlet_Goron"],
-  "_progressive_logic": "Chains whose level the logic needs (has(Progressive_Hookshot, 2), has_strength2 / 3, has_gold_scale). PC-built mod: only chests are progressive, other locations give their item as placed; such a chain is progressive in a seed only when every copy is in a chest (patch.progressive_chains), otherwise its items stay fixed (the logic count never exceeds the real level).",
+  "_progressive_logic": "Chains whose level the logic needs (has(Progressive_Hookshot, 2), has_strength2 / 3, has_gold_scale). PC-built mods support conditional chests, exact gifts and ground pickups, and Deku Scrub sales; other sources give their item as placed. A chain is shuffled progressively only when every copy is in a supported source (or remote copies are handled by the multiworld bridge).",
   "progressive_logic": ["Item_Hookshot", "Item_Gauntlet_Goron", "Item_Scale_Silver"],
   "_progressive_whole": "Chains progressive in a PC-built mod only when every copy is in a chest or a gift: the ocarinas (the scenes of Saria and the moat give theirs as placed, and the Fairy Ocarina received after the Ocarina of Time replaces it, seen in game; a Fairy Ocarina chest then gives the Ocarina of Time again if Link has it, patch.chest_changes).",
   "progressive_whole": ["Item_Ocarina_Fairy"],

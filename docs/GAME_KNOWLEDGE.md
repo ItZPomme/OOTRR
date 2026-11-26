@@ -48,15 +48,14 @@ confirmed.
   start): a smaller bag received after a bigger one changes nothing (still 50 seeds); the pouch only counts the
   biggest bag (`CheckActor` = the small bomb bag with the medium one, or the medium bullet bag with the big one,
   did not match), while the bow / slingshot stays counted after its upgrades.
-- **Progressive items, PC-built mod [files]** (2026-11-15): chests only (`patch.progressive_chest`): a chest with
+- **Progressive items, PC-built mod [files]** (2026-11-15): a chest with
   an item of a chain becomes `Obj_TBox_A_06` (`_NoBake` kept), so big chests become small ones and invisible
   chests become visible. One condition per chest: 2-step chains are exact; 3-step chains always give step 1 first
   and always reach the last step (bow / slingshot: the medium quiver / bag only when its copy is found second;
-  bomb bags: small, then big). Scrubs, ground items and Skulltulas still give the placed item, so the chains
-  whose level the logic needs (Hookshot, strength, scales: `progressive_logic`) are progressive in a seed only when every
-  copy is in a chest or a gift (`patch.progressive_chains`); otherwise a chest opened first would give step 1
-  again before such a location's step 1 (two Hookshots, the logic counting a Longshot). A 3-step logic chain
-  mixed with gifts: its chests give step 1, then the last step.
+  bomb bags: small, then big). Gifts and ground pickups have their own progressive paths below. The logic chains
+  (`progressive_logic`) are progressive only when every copy is in a supported source (`patch.progressive_chains`);
+  otherwise a chest opened first could give step 1 again before an unsupported source's fixed step 1 (two Hookshots,
+  the logic counting a Longshot). A 3-step logic chain mixed with gifts gives step 1, then the last step from chests.
 - **Progressive gifts, PC-built mod [game]** (Longshot, 2026-11-16, plando test: Mido's chests, man on the roof,
   market shooting gallery and potion shop bottle): before each gift step of
   `data/gifts.json`, questions `PouchSystemActor.EventQueryIsExistInPouch` from the last step down lead to copies
@@ -70,7 +69,10 @@ confirmed.
   removed (`AddOrRemovePouchContent` -1, `IsGet` false) and the missing step added (`ModBuilder._progressive_ground`).
   Link can have too much for a moment, never too little. The get window still names the last step. The pickup event
   is asked for by the engine (`Dm_SY_Get` in main.bin) and no query compares the item's name, hence the pouch check.
-  `Dm_SY_Get_WithoutPlayer` is not edited: its pickups are put right at the next one. Deku Scrubs: still as placed.
+  `Dm_SY_Get_WithoutPlayer` is not edited: its pickups are put right at the next one.
+- **Progressive Deku Scrub sales, PC-built mod [files]** (2026-11-25, not yet validated in game): shuffled chain items
+  sold by scrubs use pouch queries in the scrub's sale flow, selecting the next step before the item is handed over
+  (`ModBuilder._scrub_sales`). This lets the logic chains remain progressive when a copy is sold by a scrub.
 - **Values the game derives when it adds an item [files]** (RSDB `ExpansionAvility`): strength =
   `PlayerStatus.LiftGrade` (Enum None / Low / Middle / High), magic = `PlayerStatus.MPMax` / `MP` (240 with the single
   magic in a save, double = 480). Writing only the pouch leaves a bracelet that lifts nothing **[game]** (2026-11-24).
@@ -169,6 +171,33 @@ confirmed.
 
 ## Songs
 
+- **Sheik's Prelude of Light (Temple of Time, adult)**: the area in front of the pedestal (`Market_Adult_Static`,
+  `Area` 3406708549665898725, module `Market_Adult_Prefab_edc2`) requests `AllSage:Market_Adult_Field_GetLightPrelude`
+  (scene `Dm_MelodyGet_Shine`) when Link is inside **and** `SageOfForest_IsCompleted_Exp`; Sheik
+  (`Npc_Hylia_Sheik_Adult`, module `_7f43`) and the area disappear once `Market_Adult_GetLightPrelude` is true.
+  `SageOfForest` only reaches `Complete` at the very end of the Forest Temple blue warp
+  (`Dm_SY_BancChange_EscapeDungeon:ForestTemple_SageOfForest_EscapeFromTempleOutSide`, step 4, after Navi's talk in
+  Kokiri Forest): owning the medallion does not count. With shuffled rewards, a Forest Medallion from another boss
+  brought no Sheik (reported 2026-11-25). The module now reads `OoTRR_HasForestMedallion_Exp` (`IsGet.Item_Medal_Forest`
+  only), `world.PRELUDE_*` **[files]** (to test in game). The way back to childhood
+  (`Market_Adult_Prefab_89da`) still needs the quest: logic event `Forest_Temple_Clear` (Phantom Ganon), not the
+  medallion (`search.RETURN_TO_CHILD`, helper `child_access`).
+- **Light Arrow cutscene (Temple of Time, adult)**: `Market_Adult_Prefab_c668` originally checked
+  `AllSage:Step02`. The runtime graph now replaces that check with `OoTRR_HasShadowSpiritMedallions_Exp`
+  (`IsGet.Item_Medal_Shadow` AND `IsGet.Item_Medal_Spirit`) and keeps a guard against replaying
+  `Dm_TimeTemple_0130` **[files]** (to test in game).
+- **Nocturne of Shadow (Kakariko, adult)**: on arrival through `Dm_SY_BancChangeArrive`, the runtime gate checks the
+  Forest, Fire, and Water Medallions, adult era, the Kakariko burn event, and that `Dm_MelodyGet_Shadow` has not
+  already played. It then calls the existing local `KakarikoVillage_MelodyGet_Shadow` entry and resumes the arrival
+  flow **[files]** (to test in game). These Sheik/Ocarina reward changes affect in-game triggers only, not placement
+  or reachability rules.
+- **Sheik in Crater (Fire Bolero)**: the location is adult-only (`is_adult`).
+  The map's `EventRequestActor` request is disabled; the DMC arrival flow now calls
+  `SageOfFire:SageOfFire_MelodyGetFire` on each crater entry route, guarded by adult age and
+  `HavePlayedEvent.Dm_MelodyGet_Fire`. That entry transitions to `Dm_MelodyGet_Fire`, whose scene runs
+  `Dm_SY_Ocarina:LearningOcarinaPlayAutoForSeek` and `GetPouchContent` for `Item_Melody_FireBolero` **[files]**.
+  No Fire Temple-clear requirement is added. Test in game.
+
 - The 12 songs are given by the common script `Dm_SY_Ocarina` (called by the `Dm_MelodyGet_*` scenes): a query
   `EventQueryMelodyTypeForNormal` (melody of the scene) leads to one inventory action per song. The Lullaby's name is
   also used there for `EventQueryCheckIsGet` (free ocarina play): only the gift action is copied with the other item
@@ -199,6 +228,12 @@ confirmed.
   listed in `data/gifts.json` (flow, event number, parameter, original text).
 - `evfl.replace_event_strings` only changes these precise events: the string "Item_BulletBag_Medium" is **shared**
   with the `IsExistInPouch` condition (single pointer), `replace_strings` would break it.
+- The DMT Power flow calls `ActionGuide:OpenActionGuideSceenForce` after the reward, for the magic guide. If that
+  reward is shuffled away from `Item_FairyBless_MP`, the mod skips the stale guide call **[files]** (not validated in game).
+- **Darunia's Joy after Dodongo's Cavern [files]**: `Dm_Goron_0030:C10` contains the gift, while post-clear entry
+  `C11` advances `Get_StoneOfFire` to `DodongoCavernOpne` without giving it. The mod now calls `C10` from `C11`
+  when `HavePlayedEvent.Dm_Goron_0030` is still false, so an unclaimed shuffled check can still be collected.
+  **Not validated in game.**
 - With the native menu, each location gives the token `OoTRR_Lnnnn` (copy of the original item) and the `PouchAdd`
   hook gives the seed item, as for ocarinas; setting `shuffle_gifts`, "Gifts" row (page 3). Without the menu, the
   placed item's name directly replaces the text. **Not fully validated in game yet.**
@@ -237,6 +272,9 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   (sets `Get_StoneOfWater_GetRutoLetter`, Step05_01) when the obtained actor has the tag `LetterBottle`, which both
   `Obj_Bottle_Letter` and `Item_Bottle_Letter` carry (RSDB `Tag`). So the letter given from elsewhere should still
   advance the quest, *if* that gift goes through `Dm_SY_Get` (unknown for chests and NPC gifts).
+- The Longshot multiworld bridge bypasses `Dm_SY_Get`; it therefore also writes the `Get_StoneOfWater` challenge Enum
+  to `Step05_01` when it gives the letter, unless the letter has already been read or Jabu-Jabu has been fed. Verified
+  against the RomFS Enum and by unit tests; not yet validated in game.
 - **Potion shop bug tutorial softlock** **[game]** (2026-11-21, Longshot, PC-built mod: with a Piece of Heart as the
   gift and no bottle, the door opens after the gift; native menu mod not tested):
   after the gift, `Item_Bottle_TutorialEvent_Talk` sets `Market_Item_Bottle_TutorialEvent_Started` (19) and
@@ -347,6 +385,7 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   `OoTRR-essai-fleche11`, `roizora4..6`, script `output/essai/exp_ice3.py`; setting built by the generator,
   `ainb_graph.ice_arrow_ai` / `red_ice_melt`, validated with the generator-built mod `OoTRR-essai-bluefire1` on
   King Zora). Two AIs linked by a saved GameData Int (`OoTRR.IceArrowShot`):
+  The setting changes the arrow and red-ice AI; it does not add Ice Arrows when the Bow is acquired **[files]**.
   - `NormalArrow` gets an AI (`AIInfoRef` -> `PostSensorAIRef`; the actor had none). It runs while the arrow is
     nocked (`QueryShootableGetState` 1) and **only 2 more frames after the shot** (state 2, then 0; selector-free
     count, `roizora6`); not in flight nor stuck. There the blackboard S32
@@ -446,6 +485,12 @@ The five bottles that exist in the game files (scan of every `Event/EventFlow` s
   Skulltulas never hold progression anyway). Untested lead for boss keys: a copy of the Gerudo key actor whose AI sets
   `DungeonInfo.<game>.IsGetBossKey` instead.
   Hashes and rooms (`DefaultDungeonRoomIndex`) are in `data/keys.json`.
+- With shuffled small keys and `key_locations = ground`, the vanilla ground-key spots (Shadow Temple giant pot and
+  Bottom of the Well) are now shuffled ground checks instead of being removed from the map. This is verified in the
+  generated patch and spoiler, **not yet validated in game**.
+- Shadow Temple room 13's `Obj_ShadowTemple_SwitchShutter_A_04` links to an enemy counter for four Keese; the key
+  graph treats the room 12-to-13 route as a non-key passage. A user reports the combat gate blocking entry on a fresh
+  save; this has not been reproduced in game, and the gate was not changed.
 - A chest gives a key through `Dm_SY_Treasurebox` (`Success_AddContent`): `EventQueryTreasureBoxIsDungeonCommonItemInside`
   (0 map, 1 compass, 2 boss key, 3 small key, 4 other) -> `GameSystemActor.EventGetDungeonSmallKey` /
   `EventGetDungeonBossKey`, **without a dungeon parameter**: the key goes to the dungeon of the current map. Hence a
@@ -572,6 +617,10 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   Complete). The door (module `Market_Common_f252`) is open if the step is **≥ Step06**.
   `Market_Child_TimeTempleDoor_Opened` only skips the animation **[game]**.
 - The remake counts **the Goron Ruby and the Zora Sapphire** for the door (`DoorOfTime_CheckStoneNum`).
+- The child Market drawbridge is controlled by `IsHyruleFieldBridgeClose`: `DoorOfTime_CheckStoneNum` sets it true
+  (raised), while `DoorOfTime_Escape` sets it false. The randomizer keeps it false on new games, changes the
+  raising event to false, always enables the lowered child-map actor, and removes the raised variant. This also
+  keeps the bridge visually down on existing saves **[files]** (in-game validation still required).
 - The moat ocarina (`Obj_Ocarina_Time_A_01`, module `HyruleField_Child_Prefab_91f9`) only exists at step **=
   Step04**; picking it up runs `DoorOfTime:DoorOfTime_GetOcarinaOfTime` (scene `Dm_MelodyGet_Time`). Open door:
   module changed for Step06 + "3 stones" presence + direct gifts in the script **[game]**.
@@ -615,6 +664,22 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   (set by `Dm_TimeTemple_0055`, cleared on arrival in an area by `Dm_SY_BancChangeArrive`). Frozen time = time
   requests ignored (Sun's Song: visual night only). The flag comes from the owl (`Goto_HyruleCastle_Kaepora_00`): set
   at the start, **validated in game** (2026-11-12). Observed speed: about 2 game minutes per second.
+- **Frozen again after the first awakening as an adult [files]** (2026-11-25): 0x345c020 (decompiled) reads quest
+  `Meet_DekuTree` (hash 0x4dbca27f, Ready 0x17bfaa46), then `HyruleField_ArriveEntrance` (0x804aec99), then returns
+  `HrlField_HasEnteredFirstTime_Adult` (0x8592aa82) as "frozen". Sheik's scene `Dm_TimeTemple_0055` (played from
+  `AllSage:Market_Adult_AllSage_Start` after `Dm_TimeTemple_0050`, entry `Ready`, step 183) sets the flag. The only
+  step that clears it is `Dm_SY_BancChangeArrive:Dm_SY_BancChangeArrive_HyruleField_02` (step 424), and only
+  `Market_Adult_Static` uses that entry (the Market gate to the field, as an adult). With warp songs or a return to
+  child, the clock would stay frozen everywhere. Step 183 is skipped in all settings (`world.ADULT_TIME_FREEZE_STEP`),
+  and the flag is cleared at every change of age (`ReplaceEquipmentForEraChange`). No other script, map or logic module
+  uses it. **To validate in game.**
+- **Fixed sun in towns [files], vanilla**: `WorldParam/FixedField` sets `IsSolarMotion: false`. Market, Kakariko,
+  Graveyard, Hyrule Castle, Zora's River, Gerudo Valley, Death Mountain Trail, Desert Colossus, Zora's Fountain and
+  Gerudo Fortress inherit it. There the sun and sky stay still while the clock and the time-of-day colors
+  (`ResEnvPaletteTimeTable`) keep changing (user report 2026-11-25: the sky does not move, the cycle works). The mod
+  does not touch WorldParam.
+- Other ways the clock stops (0x3cc480 -> 0x3cdf70): a running event whose `GameFunctionSetting` keeps the default
+  `IsWorldTimeStop` (flowchart and timeline events). NPC, SubEvent and NoPause lists use `KeepWorldTimeRunning`.
 
 ## Gerudo Fortress carpenters **[files]** (2026-11-16)
 
@@ -670,8 +735,9 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   the seed's one. Validated for Link's pocket at the start (Light Medallion -> Zora Sapphire) **[game]** (2026-11-10);
   boss scenes: same mechanism, not tested. Disabled while giving starting items (otherwise a starting medallion was
   replaced as well) **[game]** (2026-11-12). Reasons seen: 7 = event, 8 = starting equipment (wallet, tunics).
-- The Key Items tab and screen only open when an item of list 4 (spiritual stones) is obtained; the native module
-  also opens them for a medallion (hooks 0xa6ab50 and 0x181160) **[game]**.
+- The native module now forces the Key Items tab title open from the start (hook 0xa6ab50) **[files, not yet validated
+  in game]**. The separate content hook (0x181160) remains reward-gated; before a stone or medallion, the screen may
+  still say "Unavailable right now".
 
 ## Rainbow bridge
 

@@ -1070,10 +1070,8 @@ HOOK_DEFINE_TRAMPOLINE(ParsePouchRow) {
     }
 };
 
-/* Onglet Key Items (ImportantMenu, onglet 6 du menu : pierres et médaillons). Le jeu ne l'ouvre qu'une fois une
- * pierre spirituelle obtenue (constaté : ouvert avec la Pierre Kokiri, fermé « ??? » avec un médaillon seul) ; dans
- * le jeu d'origine, la première récompense est toujours une pierre. 0xa6ab50 (onglet, numéro, ouvert) écrit le
- * titre de l'onglet (« ??? » si fermé) : ouvert aussi dès qu'un médaillon est obtenu. */
+/* Key Items tab (ImportantMenu, tab 6: stones and medallions). Keep its title visible before the first reward;
+ * the separate content hook below remains unchanged. */
 constexpr u32 kRewardIsGet[] = {
     0x110b83ec, 0x8908d6ad, 0xeec383f5,                          // IsGet.Item_Stone_Forest / Fire / Water
     0x9026c187, 0xfcd8d653, 0x103a0dc7, 0xcf64e780, 0x12d63ac6, 0xe269df38,  // IsGet.Item_Medal_*
@@ -1083,24 +1081,19 @@ int g_tab_logs = 6;
 HOOK_DEFINE_TRAMPOLINE(MenuTabTitle) {
     static void Callback(void* tab, u64 index, u64 open) {
         if ((index & 0xffffffff) == 6 && !(open & 1)) {
-            bool any = false;
-            for (u32 h : kRewardIsGet) any = any || ootrr::ingame::ReadFlag(Main(), h) == 1;
-            if (any) {
-                open = 1;
-                if (g_tab_logs > 0) {
-                    g_tab_logs--;
-                    Log("OoTRR: onglet Key Items ouvert (recompense obtenue)");
-                }
+            open = 1;
+            if (g_tab_logs > 0) {
+                g_tab_logs--;
+                Log("OoTRR: Key Items tab opened");
             }
         }
         Orig(tab, index, open);
     }
 };
 
-/* Contenu de l'onglet Key Items : l'écran (0x33dd6b0) fait la même boucle que l'onglet (0xa69220) sur la liste 4
- * (pierres) et n'affiche rien (« Unavailable right now ») si aucune n'est obtenue (constaté avec un médaillon seul).
- * 0x181160 (« objet obtenu ? ») répond oui pour ces deux appels-là (retours 0xa694dc et 0x33dd82c) dès qu'une
- * pierre ou un médaillon est obtenu. */
+/* Key Items contents: the tab (0xa69220) and screen (0x33dd6b0) query list 4 (stones), and the screen shows
+ * "Unavailable right now" when none are owned. At these two call sites only (returns 0xa694dc and 0x33dd82c),
+ * 0x181160 ("item obtained?") answers yes once any stone or medallion is owned. */
 int g_keyitem_logs = 4;
 
 HOOK_DEFINE_TRAMPOLINE(ItemObtained) {

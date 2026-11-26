@@ -10,7 +10,7 @@ from . import keys as keys_mod
 from .world import Location, World
 
 PATCH_FORMAT = "ootrr-patch"
-PATCH_VERSION = 2
+PATCH_VERSION = 4
 
 
 def _merge_events(*parts: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
@@ -29,6 +29,14 @@ def _start_warp(world: World) -> list[str] | None:
 
 def build_patch(world: World, result: Result, seed_hash: str, remote_chains: bool = False) -> dict[str, Any]:
     """remote_chains (multiworld): copies of the progressive chains may come from other worlds."""
+    event_skips = world.event_skips()
+    dmt_fairy = world.locations["DMT Great Fairy Reward"]
+    if dmt_fairy.shuffle and result.placements[dmt_fairy.name] != dmt_fairy.vanilla:
+        guide = "OpenActionGuideSceenForce"
+        skips = event_skips.setdefault("Dm_FairyFountain_Power", [])
+        if guide not in skips:
+            skips.append(guide)
+
     chests = []
     rank = {name: i for i, name in enumerate(world.locations)}  # same order as the native kLocations
     for loc in sorted(world.shuffled_locations(), key=lambda l: l.name):
@@ -64,7 +72,7 @@ def build_patch(world: World, result: Result, seed_hash: str, remote_chains: boo
         "hash": seed_hash,
         "settings": world.settings,
         "start_flags": world.start_flags(),
-        "event_skips": world.event_skips(),
+        "event_skips": event_skips,
         "timeline_skips": world.timeline_skips()[0],
         "timeline_fade_in": world.timeline_skips()[1],
         "rsdb_changes": rsdb,
@@ -82,8 +90,11 @@ def build_patch(world: World, result: Result, seed_hash: str, remote_chains: boo
         "ocarina_guard": not world.settings.get("shuffle_ocarinas"),
         "start_warp": _start_warp(world),
         "logic_patches": world.logic_patches(),
+        "logic_graph_edits": world.logic_graph_edits(),
+        "event_entry_gates": world.event_entry_gates(),
         "logic_ints": {m: [list(e) for e in v] for m, v in world.logic_ints().items()},
         "event_ints": {f: [list(e) for e in v] for f, v in world.event_ints().items()},
+        "event_bools": {f: [list(e) for e in v] for f, v in world.event_bools().items()},
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},
         "ainb_edits": world.ainb_edits(),
@@ -160,10 +171,11 @@ def progressive_chest(item: str, chains: list[list[str]], pouch: dict[str, str] 
 
 
 def _source(chest: dict) -> str | None:
-    """How a PC-built mod makes this location progressive: "gift" (questions before the gift in its script,
-    exact), "chest" (conditional chest), "ground" (pickup script, exact) or None (the item is given as placed)."""
+    """How a PC-built mod makes this location progressive: "gift", "chest", "ground", "scrub", or None."""
     if chest.get("gift"):
         return "gift"
+    if chest.get("scrub"):
+        return "scrub"
     if chest.get("hashes") and not any(chest.get(k) for k in ("pickup", "scrub", "skulltula", "shop", "ocarina")):
         return "chest"
     if chest.get("pickup") or chest.get("skulltula"):
@@ -173,7 +185,7 @@ def _source(chest: dict) -> str | None:
 
 def progressive_location(loc: Location) -> bool:
     """`_source` of a Location is not None: a chain item placed there is given as the next step."""
-    return loc.gift or bool(loc.pickup) or loc.skulltula or (loc.is_chest and not loc.ocarina)
+    return loc.gift or bool(loc.pickup) or loc.scrub or loc.skulltula or (loc.is_chest and not loc.ocarina)
 
 
 def _sources(patch: dict[str, Any], chain: list[str]) -> list[str | None]:
@@ -204,7 +216,20 @@ def _skip_middle(patch: dict[str, Any], chain: list[str]) -> bool:
     Same with copies received from other worlds (exact too)."""
     where = _sources(patch, chain)
     return (len(chain) > 2 and chain[0] in set(patch.get("progressive_logic") or ())
-            and ("gift" in where or bool(patch.get("progressive_remote") and len(where) < len(chain))))
+            and (bool({"gift", "scrub"} & set(where))
+                 or bool(patch.get("progressive_remote") and len(where) < len(chain))))
+
+
+def progressive_scrubs(patch: dict[str, Any]) -> dict[str, list[list[str]]]:
+    """Progressive chain steps sold by PC-built scrub shops, with their pouch names."""
+    pouch = patch.get("progressive_pouch") or {}
+    chains = {step: chain for chain in progressive_chains(patch) for step in chain}
+    out = {}
+    for chest in patch["chests"]:
+        chain = chains.get(chest["item"])
+        if chest.get("scrub") and chain:
+            out[chest["item"]] = [[step, pouch.get(step, step)] for step in chain]
+    return out
 
 
 def progressive_gifts(patch: dict[str, Any], gift_edits: dict[str, list]) -> dict[str, list]:

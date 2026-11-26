@@ -101,9 +101,11 @@ class ModBuilder:
                       moat_gate: bool = False,
                       start_warp: tuple[str, str] | None = None,
                       scrub_sales: dict[str, int] | None = None,
+                      scrub_progressive: dict[str, list[list[str]]] | None = None,
                       questions: list[str] | None = None,
                       timeline_skips: dict[str, list[str]] | None = None,
-                      timeline_fade_in: list[str] | None = None) -> list[str]:
+                      timeline_fade_in: list[str] | None = None,
+                      event_entry_gates: dict[str, dict[str, dict[str, str]]] | None = None) -> list[str]:
         """Modifie des flux d'événements (Event/EventFlow/<flux>.bfevfl.zs).
 
         event_changes : {flux: {ancien nom: nouveau nom}} (ex. l'objet donné)
@@ -111,7 +113,7 @@ class ModBuilder:
         start_items   : objets ajoutés à l'inventaire au début de l'introduction
         timeline_skips: {script: [scenes]} skippable timelines replaced with their "already seen" flag"""
         from .formats.evfl import (add_actions, find_action, insert_flow, replace_event_strings, replace_strings,
-                                   set_event_ints, skip_event_steps)
+                                   set_event_bools, set_event_ints, skip_event_steps)
 
         report = []
         event_skips = event_skips or {}
@@ -120,7 +122,27 @@ class ModBuilder:
         guards = [g for g in self.EVENT_GUARDS]
         if self.ocarina_guard:
             guards.append(None)  # garde de l'Ocarina des fées (OCARINA_GUARD)
-        flows = {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards} | {self.ERA_FLOW, self.DAMPE_FLOW} | set(event_changes) | set(self.gift_edits) | set(self.gift_progressive) | set(self.event_ints)             | ({self.START_FLOW} if self.spawn_branch else set()) | ({self.SONG_FLOW} if self.song_gives else set()) | set(song_scenes) | set(event_skips) | set(timeline_skips) | ({self.COLLAPSE_FLOW} if self.skip_collapse else set()) | ({self.START_FLOW} if start_items or start_warp or questions else set())             | ({self.MOAT_FLOW} if moat_gate else set()) | ({self.SCRUB_FLOW} if scrub_sales else set())
+        event_entry_gates = event_entry_gates or {}
+        event_bools = self.event_bools or {}
+        flows = (
+            {self.OCARINA_GUARD[0] if g is None else g[0] for g in guards}
+            | {self.ERA_FLOW, self.DAMPE_FLOW}
+            | set(event_changes)
+            | set(self.gift_edits)
+            | set(self.gift_progressive)
+            | set(self.event_ints)
+            | set(event_bools)
+            | ({self.START_FLOW} if self.spawn_branch else set())
+            | ({self.SONG_FLOW} if self.song_gives else set())
+            | set(song_scenes)
+            | set(event_skips)
+            | set(timeline_skips)
+            | set(event_entry_gates)
+            | ({self.COLLAPSE_FLOW} if self.skip_collapse else set())
+            | ({self.START_FLOW} if start_items or start_warp or questions else set())
+            | ({self.MOAT_FLOW} if moat_gate else set())
+            | ({self.SCRUB_FLOW} if scrub_sales else set())
+        )
         if self.given_flags:
             flows.add(self.WINDMILL_FLOW)
         if self.ground_chains:
@@ -160,6 +182,11 @@ class ModBuilder:
                 if int_report:
                     raise KeyError(f"{flow}: {'; '.join(int_report)}")
                 report += [f"{flow}: event {e} {p} {a} -> {b}" for e, p, a, b in self.event_ints[flow]]
+            if flow in event_bools:
+                new, bool_report = set_event_bools(new, event_bools[flow])
+                if bool_report:
+                    raise KeyError(f"{flow}: {'; '.join(bool_report)}")
+                report += [f"{flow}: event {e} {p} {a} -> {b}" for e, p, a, b in event_bools[flow]]
             if start_items and flow == self.START_FLOW:
                 # action « ajouter à l'inventaire » copiée de la scène où Saria donne l'ocarina (sans animation)
                 template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
@@ -170,7 +197,7 @@ class ModBuilder:
                                               [{"Actor": item} for item in start_items])
                 report += add_report
             if scrub_sales and flow == self.SCRUB_FLOW:
-                new, scrub_report = self._scrub_sales(new, scrub_sales)
+                new, scrub_report = self._scrub_sales(new, scrub_sales, scrub_progressive)
                 report += scrub_report
             if self.ocarina_guard and flow == self.OCARINA_GUARD[0]:
                 new, guard_report = self._guard_fairy_ocarina(new)
@@ -231,6 +258,27 @@ class ModBuilder:
             if moat_gate and flow == self.MOAT_FLOW:
                 new, moat_report = insert_flow(new, self.MOAT_ENTRY, self._moat_gate(new))
                 report += moat_report
+            for entry, gate in event_entry_gates.get(flow, {}).items():
+                from .formats.evfl import ensure_actor_member, find_query
+
+                query_flow = new
+                query = find_query(query_flow, "GameDataActor", "EventQueryIsGameDataBoolExp")
+                if query is None:
+                    query_flow = self.codec.decompress(
+                        self.romfs / "Event" / "EventFlow" / "DoorOfTime.bfevfl.zs")
+                    query = find_query(query_flow, "GameDataActor", "EventQueryIsGameDataBoolExp")
+                    if query is None:
+                        raise KeyError("DoorOfTime: no GameDataActor.EventQueryIsGameDataBoolExp template")
+                    new = ensure_actor_member(new, "GameDataActor", "query", "EventQueryIsGameDataBoolExp")
+                nodes = [
+                    {"actor": "GameDataActor", "query": "EventQueryIsGameDataBoolExp",
+                     "template": (query_flow, query), "set": {"GameDataName": gate["condition"]},
+                     "cases": {0: 1, 1: "old"}},
+                    {"flow": gate.get("flow", ""), "entry": gate["entry"], "next": "old"},
+                ]
+                before = int(gate["before"]) if "before" in gate else None
+                new, gate_report = insert_flow(new, entry, nodes, before=before)
+                report += gate_report
             rel = path.relative_to(self.romfs).as_posix()
             self.restbl.resize_like(rel[:-3], len(raw), len(new))
             dest = out_romfs / rel
@@ -655,6 +703,7 @@ class ModBuilder:
             report.append(f"progressive gift, event {event}: {' / '.join(s[0] for s in steps)}")
         return flow, report
     event_ints: dict = {}  # {flow: [(event, parameter, vanilla value, new value)]}
+    event_bools: dict[str, list[tuple[int, str, bool, bool]]] = {}
     moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
     # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
     # (flux, acteur, action, paramètre, valeur, drapeau). Coffre de l'épée Kokiri : son événement
@@ -819,10 +868,14 @@ class ModBuilder:
     # EventScrubBusinessWriteGameDataBancItemName ignore un nom inconnu ; il sert de marque)
     scrub_sold: dict[str, str] = {}
 
-    def _scrub_sales(self, flow: bytes, sales: dict[str, int]) -> tuple[bytes, list[str]]:
+    def _scrub_sales(self, flow: bytes, sales: dict[str, int],
+                     progressive: dict[str, list[list[str]]] | None = None) -> tuple[bytes, list[str]]:
         """Peste Mojo : avant les comparaisons d'origine, une question par objet vendu
         (« l'objet à vendre est-il X ? » ; 0 = oui) qui mène à la vente unique de X à son prix."""
         from .formats.evfl import _flowchart_full, _q, _string_at, _header, EVENT_SIZE, find_query, insert_flow
+        if progressive and any(item in progressive for item in sales):
+            from .formats.evfl import ensure_actor_member
+            flow = ensure_actor_member(flow, "PouchSystemActor", "query", "EventQueryIsExistInPouch")
         import struct as _st
         if self.scrub_price_entries:  # question « entier GameData » (prix choisi en jeu)
             from .formats.evfl import ensure_actor_member
@@ -887,10 +940,14 @@ class ModBuilder:
         blocks = []
         for item in items:
             sold = self.scrub_sold.get(item, item)
-            block = [{"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
-                      "set": {"Value": item}, "cases": {}},
-                     {"copy_event": set_name, "next": 2, "set": {"Value": sold}}]
-            block += self._scrub_sale_nodes(flow, sale, sold, int(sales[item]), base=2)
+            chain = progressive.get(item) if progressive and item not in self.scrub_sold else None
+            if chain:
+                block = self._progressive_scrub_block(flow, ask, sale, set_name, item, int(sales[item]), chain)
+            else:
+                block = [{"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": ask,
+                          "set": {"Value": item}, "cases": {}},
+                         {"copy_event": set_name, "next": 2, "set": {"Value": sold}}]
+                block += self._scrub_sale_nodes(flow, sale, sold, int(sales[item]), base=2)
             blocks.append(block)
         nodes = []
         for k, block in enumerate(blocks):
@@ -907,6 +964,47 @@ class ModBuilder:
                 nodes.append(node)
         flow, sale_report = insert_flow(flow, None, nodes, before=compare)
         return flow, report + sale_report
+
+    def _progressive_scrub_block(self, flow: bytes, item_query: tuple[bytes, int], sale: int, set_name: int,
+                                 item: str, price: int, steps: list[list[str]]) -> list[dict]:
+        from .formats.evfl import find_query
+
+        actor, query = "PouchSystemActor", "EventQueryIsExistInPouch"
+        template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.DAMPE_FLOW}.bfevfl.zs")
+        pouch_query = find_query(template, actor, query)
+        if pouch_query is None:
+            raise KeyError(f"{self.DAMPE_FLOW}: no {query} to copy")
+        block = [{"actor": "GameDataActor", "query": "EventQueryIsGameDataString64", "template": item_query,
+                  "set": {"Value": item}, "cases": {}}]
+        has_weapon = steps[0][1].startswith("Weapon_") and steps[0][1] != steps[0][0]
+        weapon_query = None
+        if has_weapon:
+            weapon_query = len(block)
+            block.append({"actor": actor, "query": query, "template": (template, pouch_query),
+                          "set": {"Actor": steps[0][1]}, "cases": {}})
+
+        checks = []
+        for owned in range(len(steps) - 1, -1, -1):
+            checks.append(len(block))
+            block.append({"actor": actor, "query": query, "template": (template, pouch_query),
+                          "set": {"Actor": steps[owned][1]}, "cases": {}})
+
+        outcomes = {}
+        for step, (name, _pouch) in enumerate(steps):
+            outcomes[step] = len(block)
+            block.append({"copy_event": set_name, "next": len(block) + 1, "set": {"Value": name}})
+            sale_start = len(block)
+            block += self._scrub_sale_nodes(flow, sale, name, price, base=sale_start)
+
+        for position, owned in enumerate(range(len(steps) - 1, -1, -1)):
+            next_check = checks[position + 1] if position + 1 < len(checks) else outcomes[0]
+            block[checks[position]]["cases"] = {
+                0: outcomes[min(owned + 1, len(steps) - 1)],
+                1: next_check,
+            }
+        if weapon_query is not None:
+            block[weapon_query]["cases"] = {0: checks[0], 1: outcomes[0]}
+        return block
 
     # prix des Peste Mojo choisi en jeu : {jeton: entier GameData (prix / 5)} (menu natif) ; sans lui,
     # prix fixe
@@ -1080,7 +1178,8 @@ class ModBuilder:
     # was equipped but not in the pouch, and lost as soon as Link changed swords (save read 2026-11-24:
     # IsGet.Weapon_Sword_Master false as adult). Given here when Link, child, has none. The adult's map flag
     # (world.ADULT_MAP_FLAG) and the one that lets night come (world.NIGHT_FLAG, at every change of age) are set here
-    # too, for the saves made before they were start flags.
+    # too, for the saves made before they were start flags. world.ADULT_TIME_FREEZE_FLAG is cleared at every change of
+    # age, for the saves where Sheik's scene already set it.
     def _give_master_sword(self, flow: bytes) -> tuple[bytes, list[str]]:
         from .formats.evfl import ensure_actor_member, find_action, find_query, insert_flow
 
@@ -1089,10 +1188,10 @@ class ModBuilder:
         ask = (flow, find_query(flow, "PouchSystemActor", "EventQueryIsExistInPouch"))
         src = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.TIMELINE_TEMPLATE}.bfevfl.zs")
         flow = ensure_actor_member(flow, "GameDataActor", "action", "EventTriggerSetGameDataBool")
-        from .world import ADULT_MAP_FLAG, NIGHT_FLAG
+        from .world import ADULT_MAP_FLAG, ADULT_TIME_FREEZE_FLAG, NIGHT_FLAG
         set_bool = (src, find_action(src, "GameDataActor", "EventTriggerSetGameDataBool"))
         nodes = [{"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": set_bool,
-                  "set": {"GameDataName": NIGHT_FLAG, "Value": 1}, "next": 1},
+                  "set": {"GameDataName": NIGHT_FLAG, "Value": 1}, "next": 5},
                  {"actor": "Player_Event", "query": "EventQueryPlayerIsChild", "template": (flow, 0),
                   "cases": {0: 2, 1: "old"}},
                  {"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": set_bool,
@@ -1101,7 +1200,9 @@ class ModBuilder:
                   "set": {"Actor": "Weapon_Sword_Master"}, "cases": {0: "old", 1: 4}},
                  {"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
                   "template": (template, find_action(template, *self.POUCH_ACTION)),
-                  "set": {"Actor": "Weapon_Sword_Master"}, "next": "old"}]
+                  "set": {"Actor": "Weapon_Sword_Master"}, "next": "old"},
+                 {"actor": "GameDataActor", "action": "EventTriggerSetGameDataBool", "template": set_bool,
+                  "set": {"GameDataName": ADULT_TIME_FREEZE_FLAG, "Value": 0}, "next": 1}]
         new, report = insert_flow(flow, self.ERA_FLOW, nodes)
         return new, report + [f"{self.ERA_FLOW}: Master Sword given on the way to adulthood"]
 
@@ -1349,6 +1450,71 @@ class ModBuilder:
             dest = out_romfs / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(bytes(data))
+        return report
+
+    def _write_logic_graph_edits(self, edits: dict[str, dict], out_romfs: Path) -> list[str]:
+        """Replace an AINB logic node while preserving its index and graph connections."""
+        import copy
+        import ainb
+
+        report = []
+        for module, edit in sorted(edits.items()):
+            rel = f"Logic/{module}.logic.module.ainb"
+            script = ainb.AINB.from_binary((self.romfs / rel).read_bytes())
+            index = edit["node"]
+            if not 0 <= index < len(script.nodes):
+                raise IndexError(f"{module}: node {index} is outside the module")
+            target = script.nodes[index]
+            if target.name != edit["expected"]:
+                raise KeyError(f"{module}: node {index} is {target.name}, expected {edit['expected']}")
+            target_inputs = {p.name: p.default_value for p in (target.params.string_inputs or [])}
+            if any(target_inputs.get(name) != value for name, value in edit["expected_inputs"].items()):
+                raise ValueError(f"{module}: node {index} inputs changed: {target_inputs}")
+
+            template_rel = f"Logic/{edit['template_module']}.logic.module.ainb"
+            template_script = ainb.AINB.from_binary((self.romfs / template_rel).read_bytes())
+            template_index = edit["template_node"]
+            if not 0 <= template_index < len(template_script.nodes):
+                raise IndexError(f"{edit['template_module']}: node {template_index} is outside the module")
+            template = template_script.nodes[template_index]
+            if template.name != edit["template_node_name"]:
+                raise KeyError(f"{edit['template_module']}: node {template_index} is {template.name}, "
+                               f"expected {edit['template_node_name']}")
+            output_index = next((i for i, p in enumerate(template.params.bool_outputs or [])
+                                 if p.name == edit["output"]), None)
+            if output_index is None:
+                raise KeyError(f"{edit['template_module']}: {template.name} has no {edit['output']} output")
+            for consumer in edit["consumers"]:
+                consumer_index = consumer["node"]
+                if not 0 <= consumer_index < len(script.nodes):
+                    raise IndexError(f"{module}: consumer node {consumer_index} is outside the module")
+                consumer_node = script.nodes[consumer_index]
+                if consumer_node.name != consumer["expected"]:
+                    raise KeyError(f"{module}: consumer node {consumer_index} is {consumer_node.name}, "
+                                   f"expected {consumer['expected']}")
+                input_plug = next((p for p in (consumer_node.params.bool_inputs or [])
+                                   if p.name == consumer["input"]), None)
+                if input_plug is None:
+                    raise KeyError(f"{module}: node {consumer_index} has no {consumer['input']} input")
+                sources = input_plug.source if isinstance(input_plug.source, list) else [input_plug.source]
+                matches = [source for source in sources if source.src_node_index == index]
+                if len(matches) != 1 or matches[0].src_output_index != consumer["source_output"]:
+                    raise ValueError(f"{module}: node {consumer_index} {consumer['input']} does not use "
+                                     f"node {index} output {consumer['source_output']}")
+                matches[0].src_output_index = output_index
+            replacement = copy.deepcopy(template)
+            replacement.index = target.index
+            replacement.guid = target.guid
+            condition = next((p for p in (replacement.params.string_inputs or [])
+                              if p.name == "GameDataNameBoolExp"), None)
+            if condition is None:
+                raise KeyError(f"{edit['template_module']}: {template.name} has no GameDataNameBoolExp input")
+            condition.default_value = edit["expression"]
+            script.nodes[index] = replacement
+            dest = out_romfs / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(script.to_binary())
+            report.append(f"{rel}: node {index} {target.name} -> {template.name} ({edit['expression']})")
         return report
 
     def _write_logic_ints(self, patches: dict[str, list], out_romfs: Path) -> list[str]:
@@ -1668,6 +1834,7 @@ class ModBuilder:
               bool_exps: dict[str, list] | None = None,
               start_warp: tuple[str, str] | None = None,
               scrub_sales: dict[str, int] | None = None,
+              scrub_progressive: dict[str, list[list[str]]] | None = None,
               questions: list[str] | None = None,
               timeline_skips: dict[str, list[str]] | None = None,
               timeline_fade_in: list[str] | None = None,
@@ -1675,7 +1842,9 @@ class ModBuilder:
               key_events: dict[str, tuple[str, str]] | None = None,
               mw_events: dict[str, str] | None = None,
               mw_actors: dict[str, dict[str, str]] | None = None,
-              mw_navi: dict | None = None) -> list[str]:
+              mw_navi: dict | None = None,
+              logic_graph_edits: dict[str, dict] | None = None,
+              event_entry_gates: dict[str, dict[str, dict[str, str]]] | None = None) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
@@ -1798,9 +1967,16 @@ class ModBuilder:
             report += self._write_gamedata(start_flags or {}, out_romfs, bool_exps, saved_ints, saved_bools)
         if True:  # ERA_FLOW (épée Kokiri au changement d'époque) est toujours modifié
             report += self._write_events(event_changes or {}, out_romfs, event_skips, start_items, moat_gate,
-                                         start_warp, scrub_sales, questions, timeline_skips, timeline_fade_in)
+                                         start_warp, scrub_sales, scrub_progressive, questions, timeline_skips,
+                                         timeline_fade_in, event_entry_gates)
         if logic_patches:
             report += self._write_logic(logic_patches, out_romfs)
+        if logic_graph_edits:
+            edited_modules = set(logic_patches or {}) | set(logic_ints or {})
+            duplicates = set(logic_graph_edits) & edited_modules
+            if duplicates:
+                raise ValueError(f"modules edited twice: {sorted(duplicates)}")
+            report += self._write_logic_graph_edits(logic_graph_edits, out_romfs)
         if logic_ints:
             if set(logic_ints) & set(logic_patches or {}):
                 raise ValueError(f"modules edited twice: {sorted(set(logic_ints) & set(logic_patches))}")
@@ -1808,7 +1984,9 @@ class ModBuilder:
         navi = (ainb_edits or {}).get("navi_return")
         navi_texts = self._navi_texts(mw_navi["balloons"]) if mw_navi else None
         if scrub_sales or questions or mw_actors or navi or navi_texts:
-            items = sorted(set(scrub_sales or {}) | set(self.scrub_message_items)) if scrub_sales or questions else []
+            progressive_items = {step[0] for chain in (scrub_progressive or {}).values() for step in chain}
+            items = sorted(set(scrub_sales or {}) | progressive_items | set(self.scrub_message_items)) \
+                if scrub_sales or questions else []
             report += self._write_messages(items, out_romfs, questions or [],
                                            self._mw_texts(mw_actors) if mw_actors else None, bool(navi),
                                            navi_texts)

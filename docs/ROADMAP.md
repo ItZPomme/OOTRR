@@ -66,6 +66,10 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   of location `pickup: "item"` (+ `actor`): shuffled with `shuffle_gifts`, the actor becomes a token (copy of
   `Obj_Arrow_Fire`) like freestanding hearts, "ground" items only. Always in the spoiler. Native generator identical
   to Python; **to validate in game** (also depends on the day/night cycle).
+- [ ] Shadow Temple giant pot: with shuffled small keys and `key_locations=ground`, the vanilla key pickup is now a
+  ground check and appears in the spoiler (verified in the generated patch and RomFS build, **to validate in game**).
+  Room 13's combat shutter is linked to the four Keese; a report says it blocks entry on a fresh save, not reproduced
+  in game and not changed.
 - [x] Exit of Dampé's grave: the Hookshot is required to leave the arrival room and it is in the race chest.
   `ModBuilder._dampe_exit`: after the chest (state `OpenedHookShot`), without Longshot or Hookshot, talking to Dampé
   runs a standalone copy of the fall's area change (step 70: `Graveyard_Adult`, point `4`) then ends the script. A
@@ -120,11 +124,12 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   Python seeds); **to validate in game with the menu**.
 
 ### Menu / settings
-- [x] Key Items tab: the game only opens it (tab 0xa69220 and screen 0x33dd6b0) if an item of list 4 (spiritual
-  stones) is obtained: closed "???" / "Unavailable right now" with only a medallion at the start. Native hooks: tab
-  title (0xa6ab50) and "item obtained" test (0x181160, only for these two calls) open as soon as a stone or a
-  medallion is obtained; **validated in game** (2026-11-12). Threads of Time tab: `UI_IsFinishChallengeMenuOpenEvent`
-  set at the start (validated in game). The "MsgNotFound" in Threads of Time (skipped quest steps) remain to look at.
+- [ ] Key Items tab: the game previously hid it until a stone or medallion was obtained (the gated behavior was
+  **validated in game**, 2026-11-12). The native tab-title hook (0xa6ab50) now keeps tab 6 visible from the start;
+  the separate content hook (0x181160) is unchanged, so the screen may still say "Unavailable right now" before a
+  reward. **New behavior not yet validated in game.**
+- [x] Threads of Time tab: `UI_IsFinishChallengeMenuOpenEvent` is set at the start (validated in game). The
+  "MsgNotFound" in Threads of Time (skipped quest steps) remain to look at.
 - [x] Menu: end-of-page button and navigation, **validated in game** (2026-11-12). "Next Page" / "Start the Game"
   title: `MessageInFile` hook (0xa6b250, texts of `Pa_…` panes); right-hand state "Press A"
   (`<prefix>ZeldaNote_00/01`). Press: a button row does not go through TrigA; the screen detects it and the script

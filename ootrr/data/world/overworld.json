@@ -175,9 +175,9 @@
     },
     "Hyrule Field": {
       "locations": {
-        "HF Ocarina of Time Item":   {"rule": "is_child and has_all_stones", "vanilla": "Item_Ocarina_Time", "ocarina": true},
+        "HF Ocarina of Time Item":   {"rule": "is_child and Deku_Tree_Clear and Dodongos_Cavern_Clear and Jabu_Jabus_Belly_Clear", "vanilla": "Item_Ocarina_Time", "ocarina": true},
         "HF Deku Scrub Heart Piece": {"rule": "is_child and can_open_grotto", "vanilla": "Obj_Heart_Piece", "hashes": [10364468093017215295, 1888007325063123154], "scrub": true, "price": 40, "_note": "Peste Mojo vendeuse (objet unique) ; règle à confirmer en jeu"},
-        "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and has_all_stones", "vanilla": "Item_Melody_TimeSong"}
+        "Song from Ocarina of Time": {"kind": "song", "rule": "is_child and Deku_Tree_Clear and Dodongos_Cavern_Clear and Jabu_Jabus_Belly_Clear", "vanilla": "Item_Melody_TimeSong"}
       },
       "exits": {
         "Lost Woods Bridge": "True",
@@ -196,7 +196,7 @@
         "Kak Man on Roof":               {"rule": "is_child or can_use(Progressive_Hookshot)", "vanilla": "Obj_Heart_Piece", "gift": true},
         "Kak Windmill Freestanding PoH": {"rule": "is_adult or can_use(Boomerang)", "vanilla": "Obj_Heart_Piece", "hashes": [13389209437182306002], "pickup": "freestanding"},
         "Song from Windmill":            {"kind": "song", "rule": "is_adult and Ocarina", "vanilla": "Item_Melody_StormSong"},
-        "Sheik in Kakariko":             {"kind": "song", "rule": "is_adult and Forest_Medallion and Fire_Medallion and Water_Medallion", "vanilla": "Item_Melody_ShadowNocturne"},
+        "Sheik in Kakariko":             {"kind": "song", "rule": "is_adult and Forest_Temple_Clear and Fire_Temple_Clear and Water_Temple_Clear", "vanilla": "Item_Melody_ShadowNocturne"},
         "Kak Shooting Gallery Reward":   {"rule": "can_use(Bow)", "vanilla": "Item_Quiver_Medium", "gift": true},
         "Kak Second Freestanding PoH":   {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [17926402522258180222], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu (maison d'Impa ?) : jamais d'objet nécessaire"}
       },
@@ -213,9 +213,6 @@
       }
     },
     "Kokiri Forest": {
-      "locations": {
-        "KF Deku Scrub Stick Upgrade": {"rule": "has_explosives", "vanilla": "Item_StickBag_Medium", "hashes": [182031956235860994, 7488448334396031424], "scrub": true, "price": 40}
-      },
       "exits": {
         "Lost Woods": "True",
         "Lost Woods Bridge": "is_adult or forest_exit_open",
@@ -322,7 +319,7 @@
     "Temple of Time": {
       "locations": {
         "ToT Light Arrows Cutscene": {"rule": "is_adult and Shadow_Medallion and Spirit_Medallion", "vanilla": "Item_Arrow_Light", "gift": true},
-        "Sheik at Temple":           {"kind": "song", "rule": "is_adult and Forest_Medallion", "vanilla": "Item_Melody_LightPrelude"}
+        "Sheik at Temple":           {"kind": "song", "rule": "is_adult and Forest_Temple_Clear", "vanilla": "Item_Melody_LightPrelude"}
       },
       "exits": {
         "Market": "True",
@@ -386,7 +383,7 @@
     "ZR Front": {
       "exits": {
         "Hyrule Field": "True",
-        "Zora River": "is_adult or has_explosives"
+        "Zora River": "has_explosives"
       }
     }
   }

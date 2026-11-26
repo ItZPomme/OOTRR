@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from ootrr import settings as settings_mod  # noqa: E402
-from ootrr.fill import generate  # noqa: E402
+from ootrr.fill import Result, generate  # noqa: E402
 from ootrr.formats.byml import F64, I64, U32, U64, HashDict, read_byml, write_byml  # noqa: E402
 from ootrr.patch import build_patch, chest_changes, progressive_chains  # noqa: E402
 from ootrr.rules import RuleCompiler, RuleError  # noqa: E402
@@ -263,12 +263,25 @@ class GenerationTests(unittest.TestCase):
             changes = world.gift_event_changes(result.placements)
             for loc in gifts:
                 item = result.placements[loc.name]
-                self.assertFalse(item.startswith("Item_BombBundle") or item.startswith("TBox_Rupee_"), loc.name)
+                self.assertFalse(item.startswith(("Item_BombBundle", "Item_BombchuBundle", "TBox_Rupee_")), loc.name)
                 for flow, event, param, old in world.gift_edits[loc.name]:
                     got = [e for e in changes.get(flow, []) if e[:3] == (event, param, old)]
                     self.assertEqual(bool(got), item != old, (loc.name, item))
                     if got:
                         self.assertEqual(got[0][3], item)
+
+    def test_shuffled_dmt_fairy_skips_magic_guide(self):
+        world = World(settings_mod.build())
+        placements = {name: loc.vanilla for name, loc in world.locations.items()}
+        guide = "OpenActionGuideSceenForce"
+
+        placements["DMT Great Fairy Reward"] = "Obj_Heart_Container"
+        patch = build_patch(world, Result(1, 1, placements), "test")
+        self.assertIn(guide, patch["event_skips"]["Dm_FairyFountain_Power"])
+
+        placements["DMT Great Fairy Reward"] = world.locations["DMT Great Fairy Reward"].vanilla
+        patch = build_patch(world, Result(1, 1, placements), "test")
+        self.assertNotIn(guide, patch["event_skips"].get("Dm_FairyFountain_Power", []))
 
     def test_deterministic(self):
         a = generate(World(settings_mod.build()), 42).placements

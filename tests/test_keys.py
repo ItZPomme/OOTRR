@@ -6,8 +6,10 @@ import unittest
 
 from ootrr import keys as keys_mod
 from ootrr import settings
+from ootrr.fill import generate
 from ootrr.patch import build_patch, chest_changes, pickup_changes, skulltula_changes
 from ootrr.search import State
+from ootrr.spoiler import build as build_spoiler
 from ootrr.world import DATA_DIR, World
 from seed_pool import submit_cases
 
@@ -117,6 +119,23 @@ class KeysTest(unittest.TestCase):
             self.assertEqual(own.small_key_count(kd), len(kd.small) + len(kd.freestanding), kd.name)
         # vanilla small keys: the ground keys stay
         self.assertFalse(World(settings.build({"boss_keys": "own_dungeon"})).removed_actors())
+
+    def test_ground_key_sources_are_spoiler_locations(self):
+        world = World(settings.build({"small_keys": "own_dungeon", "key_locations": "ground"}))
+        name = "Shadow Temple Giant Pot Small Key"
+        loc = world.locations[name]
+        item = keys_mod.item_name(keys_mod.SMALL, "ShadowTemple")
+        self.assertTrue(loc.shuffle)
+        self.assertEqual(loc.pickup, "key")
+        self.assertTrue(loc.key_spot)
+        self.assertNotIn(12562389953863361839, world.removed_actors())
+        self.assertTrue(world.can_place(item, loc))
+        self.assertEqual([i for i, _ in world.pool()].count(item), world.small_key_count(
+            world.key_dungeons["Shadow Temple"]))
+
+        result = generate(world, seed=1)
+        areas = build_spoiler(world, result)["locations"]
+        self.assertIn(name, [location for locations in areas.values() for location in locations])
 
     def test_prudent_rules(self):
         world = World(settings.build({"small_keys": "any_dungeon", "boss_keys": "any_dungeon"}))

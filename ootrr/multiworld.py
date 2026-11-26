@@ -153,9 +153,8 @@ def _candidates(worlds: list[World], item: Placed, locations: list[tuple[int, Lo
 
 def _accepts(worlds: list[World], k: int, loc: Location, item: Placed) -> bool:
     """Location `loc` of world `k` may hold `item`: the world's own rules, and another player's item only in a
-    chest that can hold one (`can_hold_remote`). Items of a progressive chain with a logic item only go where the PC-built mod gives
-    the next step (chests, gifts): a ground item gives its item as placed (seen in game, 2026-11-24: the biggest
-    quiver on Gohma's heart, no bow)."""
+    chest that can hold one (`can_hold_remote`). Progressive chain items may use chests, gifts, ground pickups, and
+    scrub sales, whose PC-built mod paths now all grant the next step."""
     if not worlds[k].can_place(item[1], loc) or not (item[0] == k or can_hold_remote(loc)):
         return False
     return progressive_location(loc) or not any(item[1] in chain for chain in strict_chains(worlds[k]))
@@ -209,8 +208,7 @@ def _attempt(worlds: list[World], rng: random.Random) -> list[dict[str, Placed]]
         own_only = [l for kk, l in empty if kk == k and not can_hold_remote(l)]
         own_only.sort(key=lambda l: sum(p[0] == k and _accepts(worlds, k, l, p) for p in rest))
         for loc in own_only:
-            # shuffled Deku Scrubs accept little else than quivers and bullet bags: as placed rather than no seed
-            # (the bow and the slingshot themselves are progression, placed above)
+            # Scrubs accept only a narrow subset of items; fallback candidates preserve seed generation if required.
             fits = ([p for p in rest if p[0] == k and _accepts(worlds, k, loc, p)]
                     or [p for p in rest if p[0] == k and worlds[k].can_place(p[1], loc)])
             if not fits:

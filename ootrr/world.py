@@ -95,6 +95,112 @@ OPEN_DOOR_OCARINA = {"HyruleField_Child_Prefab_91f9": {"Step04": "Step06"}}
 HAS_ALL_STONES_EXP = "OoTRR_HasAllStones_Exp"
 BOOL_EXPS = {HAS_ALL_STONES_EXP: [("Bool", "IsGet.Item_Stone_Forest"), ("Bool", "IsGet.Item_Stone_Fire"), ("AND",),
                                   ("Bool", "IsGet.Item_Stone_Water"), ("AND",)]}
+PRELUDE_MEDALLION_EXP = "OoTRR_HasForestMedallion_Exp"
+PRELUDE_EXPS = {PRELUDE_MEDALLION_EXP: [("Bool", "IsGet.Item_Medal_Forest")]}
+PRELUDE_MODULES = {
+    "Market_Adult_Prefab_edc2": {"SageOfForest_IsCompleted_Exp": PRELUDE_MEDALLION_EXP}
+}
+LIGHT_ARROW_MEDALLIONS_EXP = "OoTRR_HasShadowSpiritMedallions_Exp"
+NOCTURNE_MEDALLIONS_EXP = "OoTRR_CanGetNocturne_Exp"
+CRATER_SHEIK_EXP = "OoTRR_CanGetFireBolero_Exp"
+DARUNIA_JOY_PENDING_EXP = "OoTRR_DaruniaJoyPending_Exp"
+RUNTIME_EVENT_EXPS = {
+    **PRELUDE_EXPS,
+    LIGHT_ARROW_MEDALLIONS_EXP: [
+        ("Bool", "IsGet.Item_Medal_Shadow"),
+        ("Bool", "IsGet.Item_Medal_Spirit"),
+        ("AND",),
+        ("Bool", "HavePlayedEvent.Dm_TimeTemple_0130"),
+        ("NOT",),
+        ("AND",),
+    ],
+    NOCTURNE_MEDALLIONS_EXP: [
+        ("Bool", "IsGet.Item_Medal_Forest"),
+        ("Bool", "IsGet.Item_Medal_Fire"),
+        ("AND",),
+        ("Bool", "IsGet.Item_Medal_Water"),
+        ("AND",),
+        ("Bool", "Sequence_IsChildhood"),
+        ("NOT",),
+        ("AND",),
+        ("Bool", "HavePlayedEvent.Dm_Kakariko_0040"),
+        ("AND",),
+        ("Bool", "HavePlayedEvent.Dm_MelodyGet_Shadow"),
+        ("NOT",),
+        ("AND",),
+    ],
+    CRATER_SHEIK_EXP: [
+        ("Bool", "Sequence_IsChildhood"),
+        ("NOT",),
+        ("Bool", "HavePlayedEvent.Dm_MelodyGet_Fire"),
+        ("NOT",),
+        ("AND",),
+    ],
+    DARUNIA_JOY_PENDING_EXP: [
+        ("Bool", "HavePlayedEvent.Dm_Goron_0030"),
+        ("NOT",),
+    ],
+}
+LIGHT_ARROW_LOGIC_GRAPH_EDITS = {
+    "Market_Adult_Prefab_c668": {
+        "node": 2,
+        "expected": "HoldChallengeCurrentStepCheckOrder",
+        "expected_inputs": {
+            "ChallengeName": "Work/Challenge/AllSage.game__challenge__Challenge.gyml",
+            "ChallengeStepName": "Step02",
+        },
+        "template_module": "Market_Adult_Prefab_edc2",
+        "template_node": 3,
+        "template_node_name": "HoldGameDataGetBoolExpSimple",
+        "expression": LIGHT_ARROW_MEDALLIONS_EXP,
+        "output": "Bool",
+        "consumers": [{"node": 4, "expected": "OperateAND", "input": "BoolMulti",
+                       "source_output": 2}],
+    }
+}
+KAKARIKO_NOCTURNE_ENTRY = "KakarikoVillage_MelodyGet_Shadow"
+KAKARIKO_NOCTURNE_ENTRIES = {
+    "Dm_SY_BancChangeArrive": {
+        "Dm_SY_BancChangeArrive_KakarikoVillage_01": {
+            "condition": NOCTURNE_MEDALLIONS_EXP,
+            "entry": KAKARIKO_NOCTURNE_ENTRY,
+        },
+        "Dm_SY_BancChangeArrive_KakarikoVillage_02": {
+            "condition": NOCTURNE_MEDALLIONS_EXP,
+            "entry": KAKARIKO_NOCTURNE_ENTRY,
+        },
+    }
+}
+CRATER_SHEIK_EVENT_ACTOR = 13416397632384752550
+CRATER_SHEIK_ARRIVAL_GATES = {
+    "GoTo_DeathMountainCrater": {
+        "condition": CRATER_SHEIK_EXP,
+        "flow": "SageOfFire",
+        "entry": "SageOfFire_MelodyGetFire",
+        "before": "94",
+    },
+    "DeathMountainCrater_Arrive": {
+        "condition": CRATER_SHEIK_EXP,
+        "flow": "SageOfFire",
+        "entry": "SageOfFire_MelodyGetFire",
+        "before": "96",
+    },
+    "Dm_SY_BancChangeArrive_DeathMountainCrater_02": {
+        "condition": CRATER_SHEIK_EXP,
+        "flow": "SageOfFire",
+        "entry": "SageOfFire_MelodyGetFire",
+        "before": "258",
+    },
+}
+DARUNIA_JOY_POST_CLEAR_GATES = {
+    "Dm_Goron_0030": {
+        "C11": {
+            "condition": DARUNIA_JOY_PENDING_EXP,
+            "entry": "C10",
+            "before": "129",
+        },
+    },
+}
 OCARINA_OF_TIME_ACTOR = 2802436684568022035  # Obj_Ocarina_Time_A_01, douves (HyruleField_Child_Static)
 # La scène de Zelda dans les douves ne se déclenche pas avec la porte ouverte, et un ocarina
 # ramassé au sol n'est pas jouable (seuls les « dons » des scènes et des coffres le sont).
@@ -105,6 +211,12 @@ MOAT_CHEST_SOURCE = 5755485285664292988  # Obj_TBox_A_01_NoBake de HyruleField_C
 MOAT_CHEST = 0x007A7253_0000_0002        # nouvel acteur (hash libre dans la carte)
 MOAT_LAND_POS = [-2.5, 150.4, 55.5]      # sol, sortie du pont-levis, à côté du point d'arrivée StartPos_DoorOfTime (-0.08, 150.4, 54.2)
 MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
+# The child drawbridge is controlled by one flag and two conditional actors in HyruleField_Child_Static.
+CHILD_BRIDGE_FLAG = "IsHyruleFieldBridgeClose"
+CHILD_BRIDGE_DOWN_ACTOR = 10233645194156655880
+CHILD_BRIDGE_UP_ACTOR = 13633262183050288401
+CHILD_BRIDGE_FLOW = "DoorOfTime"
+CHILD_BRIDGE_CLOSE_EVENT = 30
 # skip_cutscenes=safe : scènes de Kaepora Gaebora mises de côté par le tri automatique (elles posent
 # des drapeaux) mais sans objet, et la découverte de la forêt à la sortie de la maison (Dm_Kokiri_0045 : caméra, nom du lieu ;
 # écartée par le tri car elle replace Link devant sa porte)
@@ -126,6 +238,14 @@ FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
 # 6 h 00 pendant toute la partie, demandes 0 h et 20 h ignorées). HyruleField_ArriveEntrance n'est posé que par la
 # scène du hibou (Goto_HyruleCastle_Kaepora_00, étape 132), jamais jouée avec les scènes passées ou Zelda passée.
 TIME_FLOW_FLAG = "HyruleField_ArriveEntrance"
+# The same check (0x345c020) freezes the clock again while HrlField_HasEnteredFirstTime_Adult is true. Sheik's scene at
+# the first awakening as an adult (Dm_TimeTemple_0055, entry Ready, step 183) sets it; the only step that clears it is
+# the arrival in the adult field through the Market gate (Dm_SY_BancChangeArrive_HyruleField_02, step 424, used only by
+# Market_Adult_Static) [files]. With warp songs or a return to child, Link may never take that gate, and time would
+# stay frozen in every area. The step that sets it is skipped (all settings); modbuild also clears the flag at every
+# change of age, for the saves where it is already true. No other script, map or logic module reads it.
+ADULT_TIME_FREEZE_FLAG = "HrlField_HasEnteredFirstTime_Adult"
+ADULT_TIME_FREEZE_STEP = ("Dm_TimeTemple_0055", "#183")
 # Night: the same time advance (0x3cdf70) holds the clock at 15:00 (54000 s, 0x3420da0) while the scene of Impa leading
 # child Link out of the castle has not been played. That scene is reached from Zelda's courtyard (DoorOfTime, event 1,
 # which does not test the flag): never with Zelda skipped or an adult start, so night only came with the Sun's Song.
@@ -147,7 +267,8 @@ OCARINA_OF_TIME_LOCATION = "HF Ocarina of Time Item"
 SONG_OF_TIME_LOCATION = "Song from Ocarina of Time"  # aussi donné directement aux douves (moat_items)
 # jamais de bombes à ces deux lieux (sans sac, un coffre de bombes donne le sac de bombes, constaté en jeu ;
 # le même risque n'a pas pu être écarté pour une scène) ; même règle dans generator.cpp (CanPlace)
-OCARINA_FORBIDDEN_PREFIX = "Item_BombBundle"
+# Bombchus too: same bag (RSDB PouchActorInfo Item_Bombchu: SmallBagActor Item_BombBag_Small) [files]
+OCARINA_FORBIDDEN_PREFIX = ("Item_BombBundle", "Item_BombchuBundle")
 # Adult Link has no map at all (minimap, map menu: "Unavailable right now") until the scene on the way out of the Temple
 # of Time has been seen: main 0x582cf0 (is the map shown?) reads HavePlayedEvent.Dm_TimeTemple_0065 when Link is an
 # adult. Nothing plays it in most seeds (reported in game 2026-11-24: maps only in child dungeons). The flag only
@@ -486,7 +607,7 @@ class Location:
     event: str | None = None  # "keep" | "drop" | None
     dungeon_item: str | None = None  # "map" | "compass" | None
     conditional: bool = False  # coffre A_06 à contenu conditionnel
-    pickup: str | None = None  # "freestanding" | "boss" : cœur posé au sol ; "item" : autre objet au sol (shuffle_gifts)
+    pickup: str | None = None  # "freestanding" | "boss": hearts; "item": ground gift; "key": vanilla ground-key check
     actor: str | None = None  # pickup "item" : type de l'acteur posé au sol (ex. Obj_Arrow_Fire)
     no_progression: bool = False  # emplacement incertain : jamais d'objet nécessaire pour finir
     scrub: bool = False  # Peste Mojo vendeuse : hashes = l'acteur Enemy_Scrub_Business (enfant / adulte)
@@ -675,13 +796,16 @@ class World:
         return str(src)
 
     def _add_key_data(self, regions_raw: dict[str, dict], extra_locations: dict[str, dict]) -> None:
-        """Key chests become locations (vanilla item: the dungeon's key item) when their setting is not
-        vanilla, in their "region" (keys.json, default: the dungeon's "region"); the events of data/keys.json are
-        added to their regions."""
+        """Shuffled key chests and, with key_locations=ground, freestanding keys become locations; key-data events
+        are added to their regions."""
         for kd in self.key_dungeons.values():
             for chest in kd.small + ([kd.boss_key] if kd.boss_key else []):
                 if chest.get("region", kd.region) not in kd.regions:
                     raise DataError(f"keys.json: {kd.name}: key chest region {chest['region']!r} is not one of the "
+                                    "dungeon's regions")
+            for key in kd.freestanding:
+                if key.get("region", kd.region) not in kd.regions:
+                    raise DataError(f"keys.json: {kd.name}: ground key region {key['region']!r} is not one of the "
                                     "dungeon's regions")
             self._add_events(regions_raw, kd.events)
             if self.key_mode(keys_mod.SMALL) != "vanilla":
@@ -690,6 +814,13 @@ class World:
                         "region": chest.get("region", kd.region), "rule": self._key_chest_rule(kd, chest, kd.small_location(i)),
                         "hashes": [chest["hash"]],
                         "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game), "key_room": chest["room"]}
+                if self.keys_on_ground:
+                    for i, key in enumerate(kd.freestanding):
+                        name = key.get("name") or f"{kd.name} Ground Small Key {i + 1}"
+                        extra_locations[name] = {
+                            "region": key.get("region", kd.region), "rule": key.get("rule", kd.rule),
+                            "hashes": [key["hash"]], "vanilla": keys_mod.item_name(keys_mod.SMALL, kd.game),
+                            "pickup": "key", "key_room": key.get("room")}
             if kd.boss_key and self.boss_mode(kd) != "vanilla":
                 # the chest's event (Navi's line, ForesetTemple_GetBossKey) belongs to the boss key: "drop"
                 extra_locations[kd.boss_location] = {
@@ -791,8 +922,7 @@ class World:
 
     @property
     def ground_keys_moved(self) -> bool:
-        """Shuffled small keys (own_dungeon, any_dungeon, random): the ground keys leave the maps and their keys
-        join the item pool, placed like the chest keys (own_dungeon: in a key spot of their own dungeon)."""
+        """Shuffled small keys (own_dungeon, any_dungeon, random): freestanding keys join the item pool."""
         return self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED
 
     def location_game_dungeon(self, loc: Location) -> str | None:
@@ -904,7 +1034,9 @@ class World:
             loc.no_progression = True  # the trade sequence is out of the logic: never an item needed to finish
         if loc.dungeon_item and self.settings.get("maps_compasses", "vanilla") == "vanilla":
             loc.shuffle = False
-        if loc.pickup:
+        if loc.pickup == "key":
+            loc.shuffle = self.key_mode(keys_mod.SMALL) in keys_mod.SHUFFLED
+        elif loc.pickup:
             mode = self.settings.get("shuffle_hearts", "none")
             loc.shuffle = mode == "all" or (mode == "freestanding" and loc.pickup == "freestanding")
             if loc.pickup == "item":  # objet unique posé au sol (Flèche de feu) : comme les cadeaux
@@ -981,9 +1113,15 @@ class World:
                     raise DataError(f"hash {h} utilisé par {seen_hashes[h]} et {loc.name}")
                 seen_hashes[h] = loc.name
             if loc.pickup:
-                if loc.pickup not in ("freestanding", "boss", "item"):
-                    raise DataError(f"lieu {loc.name} : pickup doit valoir freestanding, boss ou item")
-                if loc.pickup == "item":
+                if loc.pickup not in ("freestanding", "boss", "item", "key"):
+                    raise DataError(f"lieu {loc.name} : pickup invalide")
+                if loc.pickup == "key":
+                    key = keys_mod.parse_item(loc.vanilla)
+                    if not loc.hashes or not key or key[0] != keys_mod.SMALL or loc.key_dungeon is None:
+                        raise DataError(f"lieu {loc.name} : une clé au sol doit avoir un hash et être une petite clé")
+                    if self._key_game[key[1]].name != loc.key_dungeon:
+                        raise DataError(f"lieu {loc.name} : la clé vanilla doit appartenir à son donjon")
+                elif loc.pickup == "item":
                     if not loc.actor or not loc.hashes:
                         raise DataError(f"lieu {loc.name} : un objet au sol doit avoir un hash et son acteur (actor)")
                 elif loc.vanilla not in self.ground_native or not loc.hashes:
@@ -1019,8 +1157,8 @@ class World:
                 out.append((JUNK_REPLACEMENT, None))  # removed keys: the counters start full (start_flags)
             else:
                 out.append((loc.vanilla, None))
-        if self.ground_keys_moved:
-            # the ground keys leave the map (removed_actors): their keys replace rupees of the pool
+        if self.ground_keys_moved and not self.keys_on_ground:
+            # With chests-only placement, ground key actors leave the map and replace rupees in the pool.
             extra = [keys_mod.item_name(keys_mod.SMALL, kd.game)
                      for kd in self.key_dungeons.values() for _ in kd.freestanding]
             for i, (item, dungeon) in enumerate(out):
@@ -1039,6 +1177,7 @@ class World:
         flags[TIME_FLOW_FLAG] = True
         flags[NIGHT_FLAG] = True
         flags[ADULT_MAP_FLAG] = True
+        flags[CHILD_BRIDGE_FLAG] = False
         # adult Goron City: the rolling Goron is there whatever the entrance, see ROLLING_GORON_FLAGS
         flags.update(ROLLING_GORON_FLAGS)
         # onglet des quêtes du menu (tapisserie : pierres, médaillons) : voir CHALLENGE_MENU_FLAG
@@ -1112,8 +1251,8 @@ class World:
             out += OPEN_FOREST_REMOVALS["exit"]
         if mode == "open":
             out += OPEN_FOREST_REMOVALS["deku"]
-        if self.ground_keys_moved:
-            out += [k["hash"] for kd in self.key_dungeons.values() for k in kd.freestanding]  # keys in the pool
+        if self.ground_keys_moved and not self.keys_on_ground:
+            out += [k["hash"] for kd in self.key_dungeons.values() for k in kd.freestanding]
         return out
 
     def skip_rauru(self) -> bool:
@@ -1190,6 +1329,7 @@ class World:
     def logic_patches(self) -> dict[str, dict[str, str]]:
         """Chaînes à remplacer dans les modules de logique (Logic/<module>.logic.module.ainb)."""
         out: dict[str, dict[str, str]] = {}
+        out.update(PRELUDE_MODULES)
         if self.settings.get("free_time_travel"):
             out.update(FREE_TIME_TRAVEL)
         if self.settings.get("open_door_of_time"):
@@ -1197,6 +1337,20 @@ class World:
         if self.settings.get("bridge", "vanilla") != "vanilla":
             out.update(BRIDGE_MODULE)
         out.update(ROLLING_GORON_MODULES)
+        return out
+
+    def logic_graph_edits(self) -> dict[str, dict]:
+        """Runtime AI-module gates that cannot be represented by same-length string replacements."""
+        return dict(LIGHT_ARROW_LOGIC_GRAPH_EDITS)
+
+    def event_entry_gates(self) -> dict[str, dict[str, dict[str, str]]]:
+        """Conditions that start existing story entries during map arrival flows."""
+        out = {flow: {entry: dict(gate) for entry, gate in entries.items()}
+               for flow, entries in KAKARIKO_NOCTURNE_ENTRIES.items()}
+        out.setdefault("Dm_SY_BancChangeArrive", {}).update(
+            {entry: dict(gate) for entry, gate in CRATER_SHEIK_ARRIVAL_GATES.items()})
+        out.update({flow: {entry: dict(gate) for entry, gate in entries.items()}
+                    for flow, entries in DARUNIA_JOY_POST_CLEAR_GATES.items()})
         return out
 
     def logic_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
@@ -1219,13 +1373,17 @@ class World:
             out[POE_FLOW] = [(e, "Value", old, new) for e in POE_FLOW_EVENTS]
         return out
 
+    def event_bools(self) -> dict[str, list[tuple[int, str, bool, bool]]]:
+        """Boolean parameters to change in scripts: {flow: [(event, parameter, vanilla value, new value)]}."""
+        return {CHILD_BRIDGE_FLOW: [(CHILD_BRIDGE_CLOSE_EVENT, "Value", True, False)]}
+
     def ingame_questions(self) -> list[str]:
         """Réglages décidés par une question au début de la nouvelle partie."""
         return ["open_forest"] if self.settings.get("open_forest") == "ask" else []
 
     def bool_exps(self) -> dict[str, list[tuple]]:
         """Expressions booléennes ajoutées aux données de sauvegarde (non sauvegardées)."""
-        out = dict(BOOL_EXPS) if self.settings.get("open_door_of_time") else {}
+        out = {**RUNTIME_EVENT_EXPS, **(BOOL_EXPS if self.settings.get("open_door_of_time") else {})}
         out.update(bridge_exps(self.settings.get("bridge", "vanilla"), self.settings.get("bridge_count", 0)))
         out.update(ganon_key_exps(self.ganon_key, self.settings.get("ganon_boss_key_count", 0)))
         if self.settings.get("fast_bunny_hood"):
@@ -1269,6 +1427,9 @@ class World:
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
+        out[CRATER_SHEIK_EVENT_ACTOR] = {"RequestEventName": None}
+        out[CHILD_BRIDGE_DOWN_ACTOR] = {"Presence": None}
+        out[CHILD_BRIDGE_UP_ACTOR] = {"__delete": True}
         out[SHADOW_FALLING_FLOOR] = {"PreFallTime": SHADOW_FALLING_FLOOR_DELAY}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
@@ -1325,6 +1486,8 @@ class World:
             skips.setdefault("Npc_Kokiri_001_Shop_Child", []).append("DekuShield_TutorialTalk")
         # cycle jour / nuit (tous réglages) : voir FIELD_FIRST_PALETTE_STEP
         skips.setdefault(FIELD_FIRST_PALETTE_STEP[0], []).append(FIELD_FIRST_PALETTE_STEP[1])
+        # time frozen after the first awakening as an adult (all settings): see ADULT_TIME_FREEZE_STEP
+        skips.setdefault(ADULT_TIME_FREEZE_STEP[0], []).append(ADULT_TIME_FREEZE_STEP[1])
         return skips
 
     def timeline_skips(self) -> tuple[dict[str, list[str]], list[str]]:

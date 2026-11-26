@@ -298,5 +298,6 @@ class GroundKeysTest(unittest.TestCase):
                 self.assertEqual(keys_mod.parse_item(loc["item"])[1], loc["key_dungeon"])
             if ground:
                 found = True
-                self.assertIn("Item_Dungeon_SmallKey", pickups.values())
+                native_key = any(loc["pickup"] == "key" and loc["item"] == loc["vanilla"] for loc in ground)
+                self.assertTrue(native_key or "Item_Dungeon_SmallKey" in pickups.values())
         self.assertTrue(found)

@@ -87,13 +87,14 @@ the receiving player, from 0) and a text spoiler next to it (`.txt`). The server
 - Progression of every world: assumed fill over the locations of every world at once. Reachability sweeps every world
   together (`MultiState`): an item found in world A for player B goes into B's inventory.
 - **Progressive chains** with a logic item (Hookshot, bow, slingshot, bomb bags, strength, scales; `strict_chains`):
-  in chests, gifts and on the ground, where the PC-built mod gives the next step (GAME_KNOWLEDGE, "Progressive ground
-  items"). Exception: shuffled Deku Scrubs may sell quivers and bullet bags as placed (they accept little else). Copies of a chain may be split between worlds: own
-  chests / gifts and the bridge all give the next step (`patch.progressive_chains` with `progressive_remote`). The
+  in chests, gifts, ground pickups and shuffled Deku Scrub sales, where the PC-built mod gives the next step
+  (GAME_KNOWLEDGE, "Progressive ground items" and "Progressive Deku Scrub sales"). Copies of a chain may be split
+  between worlds: own supported locations and the bridge all give the next step (`patch.progressive_chains` with
+  `progressive_remote`). The
   game's pouch count reads `PouchData.<item>.StockNum` (decompiled, main 0x17a580), which the bridge writes.
-  **Verified in the files and by tests** (every order of chests, gifts and received copies: level >= copies found);
-  **to validate in game**. A chain whose logic matters with a copy sold by a Deku Scrub stays as placed, received
-  copies too (`multiworld.fixed_chains`). A multiworld in progress: reinstall the mod (*Install and play*);
+  **Verified in the files and by tests** (chain classification and chest, gift and received-copy ordering);
+  scrub sale flow changes are not yet validated in game. `multiworld.fixed_chains` remains for any chain with an
+  unsupported source. A multiworld in progress: reinstall the mod (*Install and play*);
   the multiworld file keeps the version that made it, so its hash does not change with an update.
 - Items placed in random order with one sweep each (as Archipelago does). The single-world order (fewest possible
   locations first) costs one sweep per remaining item per step: N^3 with N players, minutes for 4.

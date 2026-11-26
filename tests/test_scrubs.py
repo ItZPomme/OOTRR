@@ -1,4 +1,4 @@
-"""Shuffled Deku Scrubs: 5 different items, prices from scrub_prices (PC-built mod)."""
+"""Shuffled Deku Scrubs: 4 different items, prices from scrub_prices (PC-built mod)."""
 
 import os
 import unittest
@@ -19,7 +19,7 @@ class ScrubItemsTest(unittest.TestCase):
         overrides = {"shuffle_scrubs": True, "logic": "none"}
         world = World(settings.build(overrides))
         scrubs = [n for n, loc in world.locations.items() if loc.scrub]
-        self.assertEqual(len(scrubs), 5)
+        self.assertEqual(len(scrubs), 4)
         for seed, result in submit_cases({"scrubs": overrides}, range(1, N_SEEDS + 1))["scrubs"]:
             items = [result.placements[n] for n in scrubs]
             self.assertEqual(len(set(items)), len(items), f"seed {seed}: {items}")

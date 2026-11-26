@@ -1,7 +1,7 @@
 {
   "_doc": [
     "Small keys and boss keys (settings small_keys and boss_keys). With vanilla keys the key chests are not locations: each key (chest, ground or boss key) is an event, collected when its own rule is met, and the key counts of the rules count these events.",
-    "Per dungeon: game = DungeonInfo.<game> (GameData counter SmallKeyNum, flag IsGetBossKey) and the Banc folder; regions = logic regions of the dungeon (Ganon's Castle is an overworld region); region = region of the key chests; rule = prudent rule of every key chest (everything the dungeon may need, as the boss rules); small = small key chests (hash, room = DefaultDungeonRoomIndex in the map); freestanding = small keys lying on the ground (Obj_Dungeon_SmallKey: they stay with own_dungeon and removed, and are removed from the map with any_dungeon and random, their keys going to the item pool); boss_key = boss key chest; boss = locations behind the boss door; boss_events = events behind it.",
+    "Per dungeon: game = DungeonInfo.<game> (GameData counter SmallKeyNum, flag IsGetBossKey) and the Banc folder; regions = logic regions of the dungeon (Ganon's Castle is an overworld region); region = region of the key chests; rule = prudent rule of every key chest (everything the dungeon may need, as the boss rules); small = small key chests (hash, room = DefaultDungeonRoomIndex in the map); freestanding = small keys lying on the ground (Obj_Dungeon_SmallKey): with shuffled small keys and key_locations=ground, they become ground checks; with shuffled keys and chests-only placement, they leave the map and their keys go to the item pool; with vanilla keys they stay vanilla events; boss_key = boss key chest; boss = locations behind the boss door; boss_events = events behind it.",
     "Rule of one key chest: optional \"rule\" in its small / boss_key entry (default: the dungeon's rule). Without its key terms it must ask nothing more than the dungeon's rule (with own_dungeon the key chests are the key spots); a key count in it is used with any_dungeon and random.",
     "Key counts: any location, event or exit rule may ask for keys itself, e.g. has(Small_Key_Forest_Temple, 2) or Boss_Key_Forest_Temple. With shuffled keys this replaces the prudent 'all the dungeon's small keys' (or the boss key) of its location; with vanilla keys (always the case in the native generator) it counts the keys in their vanilla places; with removed keys the term is always true.",
     "layout: true once every rule of the dungeon that needs small keys says how many, in the worst case (the player may have opened other doors first): a rule without a key count then needs no key, nothing prudent is added, and small_keys=own_dungeon places the dungeon's keys anywhere in it by the logic. Without it (default) the logic stays prudent and own_dungeon keeps each key in a chest of its vanilla room.",
@@ -27,7 +27,8 @@
       ],
       "freestanding": [],
       "boss_key": {"hash": 5306318520835485827, "room": null, "rule": "can_use(Bow) and has(Small_Key_Forest_Temple, 3)"},
-      "boss": ["Forest Temple Phantom Ganon Heart", "Phantom Ganon"]
+      "boss": ["Forest Temple Phantom Ganon Heart", "Phantom Ganon"],
+      "boss_events": ["Forest_Temple_Clear"]
     },
     "Fire Temple": {
       "game": "FireTemple",

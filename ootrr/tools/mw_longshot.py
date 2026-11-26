@@ -56,7 +56,7 @@ class Bridge:
         self.giver = ItemGiver(game, fixed=fixed)  # fixed: multiworld.fixed_chains
         self.label = label or plain_label
         self.navi = Announcer(game, layout(incoming), names)  # incoming: multiworld.SlotData.incoming
-        self.navi_error = ""  # last one said
+        self.navi_error = self.apply_error = ""  # last one said
         self.pending: dict[int, tuple[int, str, str]] = {}  # received index -> (from slot, item, location)
         self.sent: set[str] = set()
         self.ready = False  # WELCOME received
@@ -109,10 +109,19 @@ class Bridge:
             if loc is not None and isinstance(value, int) and value > 0:
                 self._check(loc)
         if self.ready and not game.get("event") and not game.get("loading"):
-            self.apply()
+            # write queue busy: the next look at the game tries again (not a reconnection: seen 2026-11-25, the
+            # bridge reconnected every 12 s for minutes and the item never came)
+            try:
+                self.apply()
+            except ControlError as exc:
+                if str(exc) != self.apply_error:
+                    self.apply_error = str(exc)
+                    self.say(f"  item not given yet, retrying: {exc}")
+                return
+            self.apply_error = ""
             try:
                 self.navi.step()
-            except ControlError as exc:  # write queue busy: the next look at the game tries again
+            except ControlError as exc:
                 if str(exc) != self.navi_error:
                     self.navi_error = str(exc)
                     self.say(f"  Navi: {exc}")
@@ -125,10 +134,13 @@ class Bridge:
             count = max(count, self.written)
         given = 0
         while count in self.pending:
-            finder, item, loc = self.pending.pop(count)
+            finder, item, loc = self.pending[count]
             received = self.giver.adjusted(item)
+            # a failed write (ControlError) keeps the item pending: given again in full later (absolute writes)
             writes = self.giver.give(item)
-            count = self._counted(count)
+            self._counted(count)
+            del self.pending[count]
+            count += 1
             given += 1
             self.navi.add(finder - 1, received)
             self.say(f"  given in game: {self.label(item)} (from {self.names[finder - 1]}, {loc}; {'; '.join(writes)})")

@@ -35,6 +35,7 @@ save + reload). Writing the entry directly, even with its +0x0c "written" flag, 
 from __future__ import annotations
 
 import json
+import random
 import time
 from typing import Any, Iterator
 
@@ -192,8 +193,12 @@ class Longshot:
             # (seen in play, 2026-11-20: count 2 on one frame, 0 on the next; writing 3 then made the game
             # apply stale entries again: one received item given four times)
             n = self.u32(mgr + count_off) & 0xfffff
-            if self.u32(mgr + count_off) & 0xfffff != n:
-                problems.append("count moving")
+            again = self.u32(mgr + count_off) & 0xfffff
+            if again != n:
+                # seen in play (2026-11-25): six such frames in a row, the bridge then reconnected for minutes;
+                # wait a little (another phase of the game's frame) before the next try
+                problems.append(f"count moving {n} -> {again}")
+                time.sleep(0.02 + 0.03 * random.random())
                 continue
             if not buf or n + 1 >= min(cap, 0x10000):
                 raise ControlError("GameData write queue unavailable or full")
@@ -212,9 +217,9 @@ class Longshot:
                 return
             problems.append(f"count {n} -> {before} before, {after} after")
             time.sleep(0.05)
-        raise ControlError(f"GameData queue append failed: {'; '.join(problems)}")
+        raise ControlError(f"GameData queue append failed: {'; '.join(dict.fromkeys(problems))}")
 
-    QUEUE_TRIES = 6
+    QUEUE_TRIES = 20
 
     def batch(self, requests: list[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
         """Sends the requests together (served within one game frame) and returns their answers in order."""

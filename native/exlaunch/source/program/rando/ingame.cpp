@@ -372,7 +372,8 @@ const char* AdjustItem(std::uintptr_t main_base, const char* item, int32_t* rupe
         return Same(wanted, item) ? nullptr : wanted;
     }
     if (const char* progressive = ProgressiveItem(main_base, item)) return progressive;
-    if (Prefix(item, "Item_BombBundle")) {
+    // bombchus share the bomb bag (RSDB PouchActorInfo Item_Bombchu: SmallBagActor Item_BombBag_Small)
+    if (Prefix(item, "Item_BombBundle") || Prefix(item, "Item_BombchuBundle")) {
         bool bag = false;
         for (uint32_t h : kIsGetBombBags) {
             int v = ReadFlag(main_base, h);

@@ -7,7 +7,7 @@ queues (`longshot_control.Longshot.set_int` / `set_bool`, saved like the game's 
 - `IsGet.<pouch name>` = true and `PouchData.<pouch name>.StockNum` (1, or +1 for bottles and tokens). Seen in
   game (Longshot, 2026-11-17): a Hookshot given this way is shown, equipped, fires and is saved.
 - The adjustments of the native module (`ingame::AdjustItem`): progressive chains (the step after the highest one
-  owned, read from `IsGet.*`), ocarinas (Fairy, then Time), bombs without a bomb bag -> 5 rupees.
+  owned, read from `IsGet.*`), ocarinas (Fairy, then Time), bombs and bombchus without a bomb bag -> 5 rupees.
 - What the game does on its own when it adds an item, as seen in the GameData changes of a chest giving the
   Medium Bomb Bag (2026-11-17): the bag's ammunition is filled (`PouchData.Item_Bomb.StockNum` = 30).
 - Rupees: `PlayerStatus.CurrentRupee` + value, up to the wallet's limit. Strength: `PlayerStatus.LiftGrade`. Magic:
@@ -38,6 +38,10 @@ DATA = Path(__file__).parent / "data" / "items.json"
 
 RUPEES = {"Green": 1, "Blue": 5, "Red": 20, "Purple": 50, "Gold": 200}
 BOMB_RUPEES = 5  # bombs without a bag: the native module gives 5 rupees (the game would give the bag)
+# ammunition held in the bomb bag: bombchus too (RSDB PouchActorInfo Item_Bombchu: SmallBagActor Item_BombBag_Small,
+# MaxNumGameData Bomb, as Item_Bomb). Without a bag their maximum is 0, but a written StockNum showed 5 bombchus in
+# the menu (multiworld, 2026-11-25)
+BAG_AMMO = ("Item_Bomb", "Item_Bombchu")
 
 # flags meaning "this chain step is owned" (native kChains; the bow and slingshot have no IsGet.Item_Range_* flag)
 STEP_FLAGS = {
@@ -72,6 +76,12 @@ BOTTLE_SLOTS = tuple(f"PlayerStatus.AssignableItem.BottleInfo.Bottle{s}" for s i
 # flag set with an item by the game's get scene, which does not run here: the quest reads it
 # (Get_StoneOfWater:StoneOfWater_GetRutoletter; reading the letter then moves the quest on, StoneOfWater_UseRutoletter)
 QUEST_FLAGS = {"Item_Bottle_Letter": "Get_StoneOfWater_GetRutoLetter"}
+# This anonymous Enum is the Get_StoneOfWater challenge state. The bottle's quest Bool alone does not advance it;
+# the original pickup event also moves the challenge to Step05_01 so King Zora and Jabu-Jabu use the right state.
+LETTER_QUEST_ENUM = "#1539965606"
+LETTER_QUEST_STEP = "Step05_01"
+LETTER_READ_FLAG = "Get_StoneOfWater_ReadRutoLetter"
+JABU_FED_FLAG = "GaveFishToJabJab"
 # what the game computes when it adds an item, and keeps as its own value (PlayerStatus, found in the files):
 # strength, read to lift things (received bracelet that lifted nothing, 2026-11-24) and magic (MPMax 24 / 48 in
 # PouchActorInfo, x10 in PlayerStatus: 240 in a save with the single magic)
@@ -203,6 +213,11 @@ class ItemGiver:
         for flag in (f"IsGet.{item}", QUEST_FLAGS.get(item)):
             if flag and self.gd.get_bool(flag) is not None:
                 self._bool(flag)
+        if item == "Item_Bottle_Letter":
+            if (self.gd.get_bool(LETTER_READ_FLAG) is False
+                    and self.gd.get_bool(JABU_FED_FLAG) is False):
+                self.gd.set_enum(LETTER_QUEST_ENUM, LETTER_QUEST_STEP)
+                self.log.append(f"{LETTER_QUEST_ENUM} = {LETTER_QUEST_STEP}")
 
     def give(self, item: str) -> list[str]:
         """Writes `item` into the game; returns the writes (also kept in `log`)."""
@@ -227,7 +242,7 @@ class ItemGiver:
             return self.log
         if item in BUNDLES:
             ammo, amount = BUNDLES[item]
-            if ammo == "Item_Bomb" and not any(self.gd.get_bool(f"IsGet.{b}") for b in
+            if ammo in BAG_AMMO and not any(self.gd.get_bool(f"IsGet.{b}") for b in
                                                ("Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large")):
                 self._rupees(BOMB_RUPEES)
                 return self.log

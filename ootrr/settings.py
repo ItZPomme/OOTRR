@@ -125,7 +125,8 @@ SETTINGS: dict[str, tuple[Any, Any, str]] = {
     # PC-built mod only (key items given by ground items); added last, see small_keys
     "key_locations": ("chests", ("chests", "ground"),
                       "Where shuffled small keys may go: chests = chests only; ground = chests and ground items "
-                      "(freestanding and boss Heart Containers, Pieces of Heart, Gold Skulltula drops), a ground "
+                      "(freestanding and boss Heart Containers, Pieces of Heart, Gold Skulltula drops), and the "
+                      "vanilla ground-key spots become checks; a ground "
                       "item only holding a small key of the dungeon it lies in (the game adds a ground key to the "
                       "dungeon of the current map). Boss keys stay in chests"),
     # PC-built mod only (start flags of the mod); added last, see small_keys

@@ -68,7 +68,8 @@ APP_TEXTS: dict[str, tuple[str, str, dict[str, str]]] = {
                   "any dungeon. Removed: owned from the start. Random: anywhere, Ganon's Castle included.", {}),
     # PC-only: ground items given as dungeon keys (see small_keys)
     "key_locations": ("Key Locations", "Chests: shuffled small keys only go to chests. Ground: also to ground "
-                      "items (Heart Containers, Pieces of Heart, Gold Skulltula drops) inside their own dungeon. "
+                      "items (Heart Containers, Pieces of Heart, Gold Skulltula drops) inside their own dungeon; "
+                      "vanilla ground-key spots become checks too. "
                       "Boss keys stay in chests.", {"chests": "Chests", "ground": "Chests + Ground"}),
     # PC-only: the native menu's generator always shuffles the card with the gifts (no row)
     "gerudo_card": ("Gerudo Card", "Random: the Gerudo Membership Card is in the item pool and the Gerudo who gives "

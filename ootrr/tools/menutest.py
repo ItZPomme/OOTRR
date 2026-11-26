@@ -135,6 +135,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
                   start_warp=tuple(start.split("=", 1)) if start else None,
                   start_items=world.start_items() + list(give or []))
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}
+    mb.event_bools = world.event_bools()
     if tokens:
         # un jeton doit être un vrai acteur (le coffre lit aussi le nom ailleurs et refuse de s'ouvrir
         # sur un acteur inconnu) : copie du rubis vert de coffre, sans changer son modèle
@@ -260,11 +261,15 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
         tokens_actors = None
     # Porte du Temps (fichiers valables porte ouverte comme fermée) : ocarina des douves visible avec les
     # 3 pierres, dons directs dans la scène des douves ; module des douves modifié plus bas
-    from ..world import BOOL_EXPS, HAS_ALL_STONES_EXP, OCARINA_OF_TIME_ACTOR
+    from ..world import (BOOL_EXPS, HAS_ALL_STONES_EXP, OCARINA_OF_TIME_ACTOR, PRELUDE_MODULES,
+                         RUNTIME_EVENT_EXPS)
     actor_changes[OCARINA_OF_TIME_ACTOR] = {"Presence": {"FlagName": HAS_ALL_STONES_EXP, "IsCheckLazy": False,
                                                          "IsNegation": False}}
     report += mb.build(actor_changes, out, pickups=tokens_actors, rsdb_changes=world.rsdb_changes() or None,
-                       bool_exps={**BOOL_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps(menu.option_enums(read_byml(mb.codec.decompress(
+                       logic_patches=dict(PRELUDE_MODULES),  # Sheik's Prelude with the Forest Medallion
+                       logic_graph_edits=world.logic_graph_edits(),
+                       event_entry_gates=world.event_entry_gates(),
+                       bool_exps={**BOOL_EXPS, **RUNTIME_EVENT_EXPS, **menu.MENU_BOOL_EXPS, **menu.bridge_menu_exps(menu.option_enums(read_byml(mb.codec.decompress(
                            next((romfs / "GameData").glob("GameDataList*.byml.zs"))))))},
                        moat_gate=True, ainb_edits={"navi_return": world.navi_return()}, **common)
 

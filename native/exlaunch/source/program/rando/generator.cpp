@@ -80,10 +80,13 @@ struct World {
 
     bool IsProgression(int item) const { return item >= 0 && item_logic[item] >= 0; }
 
-    static bool IsRupee(const char* name) {
-        const char* prefix = "TBox_Rupee_";
+    static bool StartsWith(const char* name, const char* prefix) {
         while (*prefix && *name == *prefix) { name++; prefix++; }
         return !*prefix;
+    }
+    static bool IsRupee(const char* name) { return StartsWith(name, "TBox_Rupee_"); }
+    static bool IsBombBundle(const char* name) {  // world.OCARINA_FORBIDDEN_PREFIX
+        return StartsWith(name, "Item_BombBundle") || StartsWith(name, "Item_BombchuBundle");
     }
 
     bool CanPlace(int item, int loc) const {
@@ -94,19 +97,10 @@ struct World {
         // one copy only (world.repeated_items): the 5 scrubs sell 5 different items
         if (info.scrub && (!kItems[item].ground || IsRupee(kItems[item].name) || item_repeated[item])) return false;
         if (info.shop && !kItems[item].ground) return false;  // vendu par le jeton (rubis ajoutés par le module)
-        if (info.ocarina) {  // pas de bombes données par Saria / les douves (world.OCARINA_FORBIDDEN_PREFIX)
-            const char* name = kItems[item].name;
-            const char* prefix = "Item_BombBundle";
-            while (*prefix && *name == *prefix) { name++; prefix++; }
-            if (!*prefix) return false;
-        }
-        if (info.gift) {  // ni bombes (sac) ni rubis (pas d'inventaire) : world.can_place
-            const char* name = kItems[item].name;
-            const char* prefix = "Item_BombBundle";
-            while (*prefix && *name == *prefix) { name++; prefix++; }
-            if (!*prefix) return false;
-            if (IsRupee(kItems[item].name)) return false;
-        }
+        // no bombs or bombchus given by Saria / the moat / a scene: without a bag the game may give the bag
+        // (world.OCARINA_FORBIDDEN_PREFIX); no rupees from a scene either (no inventory)
+        if ((info.ocarina || info.gift) && IsBombBundle(kItems[item].name)) return false;
+        if (info.gift && IsRupee(kItems[item].name)) return false;
         if (loc_no_progression[loc] && IsProgression(item)) return false;
         return true;
     }
