@@ -21,6 +21,8 @@ import os
 import queue
 import random
 import subprocess
+import sys
+import tempfile
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -31,7 +33,7 @@ from .. import mw_protocol as P
 from .. import settings as settings_mod
 from ..mw_code import CodeError, RoomCode, decode
 from ..mw_session import Host, SessionError, fetch_slot, join_room, room_players, room_state, save_slot
-from .longshot_support import app_data_dir, longshot_binary
+from .longshot_support import app_data_dir, longshot_game_binary
 
 APP_DIR = app_data_dir() / "OoTRR"
 MW_DIR = APP_DIR / "multiworld"
@@ -467,17 +469,40 @@ class MultiworldWindow:
             patch = mw.slot_patch(data)
             with contextlib.redirect_stdout(QueueText(self.q)):
                 build_mod(patch, self.romfs, "OoTRR", False, self.longshot / "mods")
-            self.say("Mod installed. Starting Longshot (start a new game, or load this multiworld's save)...")
-            env = dict(os.environ, HOS_CONTROL=PIPE, HOS_CONTROL_MEM="rw")
-            executable = longshot_binary(self.longshot)
+            executable = longshot_game_binary(self.longshot)
             if executable is None:
-                raise SessionError("Longshot executable not found in its folder")
-            subprocess.Popen([str(executable)], cwd=str(self.longshot), env=env)
+                raise SessionError("Longshot game executable not found in its folder")
+            control_dir = None
+            pipe = PIPE
+            if sys.platform == "linux":
+                runtime = os.environ.get("XDG_RUNTIME_DIR")
+                control_dir = tempfile.TemporaryDirectory(prefix="ootrr-", dir=runtime or None)
+                pipe = str(Path(control_dir.name) / "control.sock")
+            env = dict(os.environ, HOS_CONTROL=pipe, HOS_CONTROL_MEM="rw")
+            if sys.platform == "linux" and getattr(sys, "frozen", False):
+                original_library_path = env.pop("LD_LIBRARY_PATH_ORIG", None)
+                if original_library_path is None:
+                    env.pop("LD_LIBRARY_PATH", None)
+                else:
+                    env["LD_LIBRARY_PATH"] = original_library_path
+            try:
+                process = subprocess.Popen([str(executable)], cwd=str(self.longshot), env=env)
+            except Exception:
+                if control_dir is not None:
+                    control_dir.cleanup()
+                raise
+            self.say("Mod installed. Starting Longshot (start a new game, or load this multiworld's save)...")
+            def watch_game():
+                result = process.wait()
+                if control_dir is not None:
+                    control_dir.cleanup()
+                self.say(f"Longshot exited (code {result}).")
+            threading.Thread(target=watch_game, daemon=True).start()
             self.bridge_stop = threading.Event()
             self.q.put(("bridge", True))
             from .mw_longshot import run_until_stopped
             threading.Thread(target=run_until_stopped, args=(path, server, self.bridge_stop, self.say),
-                             kwargs={"pipe": PIPE}, daemon=True).start()
+                             kwargs={"pipe": pipe}, daemon=True).start()
 
         self._start(work)
 

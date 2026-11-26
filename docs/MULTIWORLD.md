@@ -32,8 +32,10 @@ The app's **Multiworld** button (footer, "+") opens the Multiworld window (`ootr
   OoTRR version as the host is needed; joining again under the same name replaces them); the window then watches
   the room and says when the host has started. Then: your name -> *Install and play*: the app fetches **your
   player's data only** (`GETSLOT`: your world, never the others', no spoiler), builds your mod into Longshot's
-  `mods/OoTRR`, starts Longshot with its control pipe (`HOS_CONTROL=ootrr-mw`, `HOS_CONTROL_MEM=rw`) and runs the
-  bridge in the app; the log shows who sent what to whom. Longshot only for now.
+  `mods/OoTRR`, starts Longshot with its control endpoint (`HOS_CONTROL_MEM=rw`) and runs the
+  bridge in the app; the log shows who sent what to whom. On Linux the game binary is started directly and the
+  endpoint is a Unix socket in a private temporary directory. Longshot only for now; Linux multiworld is not yet
+  validated in game.
 - Waiting room (`tools.mw_server.Lobby`, `mw_session.Host.open_room` / `generate`, `join_room`, `room_state`):
   **validated** with the desktop app on one PC (2026-11-21): the host opened the room, a test player joined with
   other settings, *Generate and start* then *Install and play* worked (mod built, Longshot started).
@@ -154,10 +156,11 @@ Longshot is a static recompilation of the game (`hos` layer, log `logs/longshot_
 only** (`mods/<name>/romfs`, no exefs / subsdk) and does **not** implement `nn::socket` (its log:
 `unimplemented import _ZN2nn6socket10InitializeERKNS0_6ConfigE`). The game itself cannot reach the server there.
 
-**But Longshot has a control pipe** (found in the strings of `bin/longshot.exe`, then used live on 2026-11-17,
+**But Longshot has a control endpoint** (found in the strings of `bin/longshot.exe`, then used live on 2026-11-17,
 Longshot v3.0.0-rc.6, a save in play in Goron City): started with `HOS_CONTROL=<name>` (environment, or
 `longshot_env.txt` in its folder, which only takes `HOS_` / `LONGSHOT_` switches), it serves a JSON API on
-`\\.\pipe\<name>`, this Windows user only, no TCP. `HOS_CONTROL_MEM=ro` / `rw` opens guest memory reads / writes
+`\\.\pipe\<name>` on Windows, or a Unix-domain socket at the specified path on Linux, no TCP. Linux requires a
+private socket directory owned by the user. `HOS_CONTROL_MEM=ro` / `rw` opens guest memory reads / writes
 (Longshot warns that writes can corrupt the game: throwaway save). Client: `ootrr/longshot_control.py` (its
 docstring has the details), `python -m ootrr.longshot_control PlayerStatus.MaxLife`.
 

@@ -2,8 +2,8 @@
 docs/MULTIWORLD.md, "Longshot").
 
 Longshot (the PC recompilation) runs no native code of ours and has no `nn::socket`, but it serves a JSON control
-API on a named pipe when started with `HOS_CONTROL=<pipe name>` (environment or `longshot_env.txt` in its folder),
-this Windows user only. Guest memory commands need `HOS_CONTROL_MEM=ro` (reads) or `rw` (writes too).
+API on a Windows named pipe or a Linux Unix-domain socket when started with `HOS_CONTROL=<endpoint>` (environment
+or `longshot_env.txt` in its folder). Guest memory commands need `HOS_CONTROL_MEM=ro` (reads) or `rw` (writes too).
 Verified with Longshot v3.0.0-rc.6 (2026-11-17), strings of `bin/longshot.exe` and live calls:
 
 - One JSON object per line, `{"id": n, "cmd": ...}`; answer `{"id": n, "ok": true|false, "frame": ..., ...}`
@@ -35,7 +35,9 @@ save + reload). Writing the entry directly, even with its +0x0c "written" flag, 
 from __future__ import annotations
 
 import json
+import os
 import random
+import socket
 import time
 from typing import Any, Iterator
 
@@ -62,15 +64,20 @@ class ControlError(OSError):
 
 class Longshot:
     def __init__(self, pipe: str = "1", timeout: float = 10.0) -> None:
-        path = pipe if pipe.startswith("\\\\") else rf"\\.\pipe\{pipe}"
+        path = (pipe if pipe.startswith("\\\\") else rf"\\.\pipe\{pipe}") if os.name == "nt" else pipe
         deadline = time.time() + timeout
         while True:
             try:
-                self._pipe = open(path, "r+b", buffering=0)
+                if os.name == "nt":
+                    self._pipe = open(path, "r+b", buffering=0)
+                else:
+                    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
+                        conn.connect(path)
+                        self._pipe = conn.makefile("rwb", buffering=0)
                 break
             except OSError as exc:  # between two client instances the pipe is briefly missing
                 if time.time() > deadline:
-                    raise ControlError(f"no Longshot control pipe at {path} (HOS_CONTROL not set?)") from exc
+                    raise ControlError(f"no Longshot control endpoint at {path} (HOS_CONTROL not set?)") from exc
                 time.sleep(0.2)
         self._id = 0
         self._events: list[dict[str, Any]] = []

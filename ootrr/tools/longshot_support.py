@@ -37,6 +37,13 @@ def longshot_binary(folder: Path) -> Path | None:
     return None
 
 
+def longshot_game_binary(folder: Path) -> Path | None:
+    if sys.platform == "linux":
+        path = folder / "bin" / "longshot"
+        return path if path.is_file() and os.access(path, os.X_OK) else None
+    return longshot_binary(folder)
+
+
 def _version_key(name: str) -> tuple:
     main, _, pre = name.lstrip("vV").partition("-")
     nums = tuple(int(x) if x.isdigit() else 0 for x in main.split("."))

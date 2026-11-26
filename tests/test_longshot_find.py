@@ -8,7 +8,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from ootrr.tools.longshot_support import _version_key, find_longshot, game_running, saved_longshot
+from ootrr.tools.longshot_support import _version_key, find_longshot, game_running, longshot_game_binary, saved_longshot
 
 
 def _install(base: Path, *parts: str) -> Path:
@@ -28,6 +28,16 @@ class FindLongshotTest(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    @unittest.skipUnless(sys.platform == "linux", "Linux game executable layout")
+    def test_game_executable_is_not_the_launcher(self):
+        folder = _install(self.base, "stable", "v3.2.0")
+        self.assertIsNone(longshot_game_binary(folder))
+        game = folder / "bin" / "longshot"
+        game.parent.mkdir()
+        game.write_bytes(b"")
+        game.chmod(0o755)
+        self.assertEqual(longshot_game_binary(folder), game)
 
     def test_versions_compare_as_numbers(self):
         names = ["v3.0.0-rc.4", "v3.0.0", "v3.0.0-rc.10", "v2.10.0", "v2.9.1"]
