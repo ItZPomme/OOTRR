@@ -48,6 +48,9 @@ confirmed.
   start): a smaller bag received after a bigger one changes nothing (still 50 seeds); the pouch only counts the
   biggest bag (`CheckActor` = the small bomb bag with the medium one, or the medium bullet bag with the big one,
   did not match), while the bow / slingshot stays counted after its upgrades.
+- **Multiworld Bow + quiver [files]**: if a larger quiver arrived before the Bow, the bridge could skip the small
+  quiver needed alongside it. It now adds the small quiver whenever that specific upgrade is missing (regression
+  tested; the reported order still needs in-game validation).
 - **Progressive items, PC-built mod [files]** (2026-11-15): a chest with
   an item of a chain becomes `Obj_TBox_A_06` (`_NoBake` kept), so big chests become small ones and invisible
   chests become visible. One condition per chest: 2-step chains are exact; 3-step chains always give step 1 first
@@ -110,7 +113,13 @@ confirmed.
   `Armor_Adult_Gauntlet_Gold` (RSDB `ActorInfo.ActorName`); flags `IsGet.Armor_*` (no `IsGet.Item_Gauntlet_*`).
   `CheckActor = Armor_Child_Gauntlet_Goron` matches once the bracelet is owned **[game]** (2026-11-16: Mido chest
   gave the bracelet, then the Lost Woods chest the Golden Gauntlets, strength mixed with a gift). Still a
-  hypothesis: the bracelet stays counted after the adult gauntlets (matters only for all-chest seeds).
+  hypothesis: the bracelet stays counted after the adult gauntlets (matters only for all-chest seeds). A Longshot
+  report: Silver Gauntlets received as adult, with the bracelet owned, appeared in the pouch but did not let Link
+  lift silver blocks; the bridge queues `PlayerStatus.LiftGrade = Middle`, but the applied value is unverified. The
+  Silver row in `PouchActorInfo` also has `ExpansionAvility=LiftGradeUP`, `LiftableGrade=Middle`,
+  `PouchSpecialDeal=Gauntlet`, and an adult equipment actor **[files]**. A file-verified Multiworld test dispatcher
+  now routes received Gauntlets through `EventTriggerAddOrRemovePouchContent`; whether it restores lifting and the
+  proper equipment still requires an in-game test.
 - Bombs require the bag **and** the Goron Bracelet **[game]** (`has_explosives`).
 - A chest's "GetEventName" may belong to the item (Kokiri Sword: the sword appears on the back) -> `event: drop` when
   the item changes; or to the location (Dampé, Ruto) -> `keep`.
@@ -168,6 +177,12 @@ confirmed.
   menu = the scenes give the location's token (copy of the ocarina), the module gives the seed item; progressive
   ocarinas (the second one obtained is the Ocarina of Time); double gift at the moat (direct gift + scene) ignored
   **[files]** (to test in game).
+- Longshot multiworld report: a received ocarina appeared in the pouch but was not assigned to a D-pad button, even
+  after saving and reloading. The vanilla Ocarina of Time event calls
+  `PouchSystemActor.EventTriggerAddOrRemovePouchContent`; the shared `GetPouchContent` flow uses the same action with
+  `IsEquipDIrect=False` **[files]**. No separate D-pad assignment action was found in that flow, and the assignment
+  state has not been identified. A file-verified Multiworld test dispatcher now routes received ocarinas through the
+  same native action; D-pad assignment remains to be tested in game.
 
 ## Songs
 

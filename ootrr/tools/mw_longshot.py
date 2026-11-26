@@ -25,6 +25,7 @@ import socket
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -32,13 +33,25 @@ from .. import multiworld as mw
 from .. import mw_protocol as P
 from ..formats.gamedata import flag_hash
 from ..longshot_control import ControlError
-from ..mw_items import ItemGiver
+from ..mw_items import (POUCH_ACTION_ACK, POUCH_ACTION_CODES, POUCH_ACTION_REQUEST, ItemGiver)
 from ..mw_log import Log, labeller, plain_label
 from ..mw_navi import Announcer, layout
 
 
 class BridgeError(RuntimeError):
     pass
+
+
+@dataclass
+class _PendingPouchAction:
+    index: int
+    finder: int
+    item: str
+    location: str
+    received_item: str
+    code: int
+    writes: list[str]
+    phase: str = "clear"
 
 
 class Bridge:
@@ -58,6 +71,7 @@ class Bridge:
         self.navi = Announcer(game, layout(incoming), names)  # incoming: multiworld.SlotData.incoming
         self.navi_error = self.apply_error = ""  # last one said
         self.pending: dict[int, tuple[int, str, str]] = {}  # received index -> (from slot, item, location)
+        self.pouch_action: _PendingPouchAction | None = None
         self.sent: set[str] = set()
         self.ready = False  # WELCOME received
         # last count written: a queued write is applied at the game's next frame, a read before that is stale
@@ -133,9 +147,37 @@ class Bridge:
         if self.written is not None:
             count = max(count, self.written)
         given = 0
+        if self.pouch_action is not None:
+            action = self.pouch_action
+            ack = self.game.get_int(POUCH_ACTION_ACK)
+            if ack is None:
+                raise BridgeError(f"no {POUCH_ACTION_ACK} in the game: it does not run this player's multiworld mod")
+            if action.phase == "clear":
+                if ack != 0:
+                    self.game.set_int(POUCH_ACTION_ACK, 0)
+                    return 0
+                self.game.set_int(POUCH_ACTION_REQUEST, action.code)
+                action.phase = "await"
+                return 0
+            if ack != action.code:
+                return 0
+            self._counted(action.index)
+            del self.pending[action.index]
+            count = action.index + 1
+            given += 1
+            self.navi.add(action.finder - 1, action.received_item)
+            self.say(f"  given in game: {self.label(action.item)} (from {self.names[action.finder - 1]}, "
+                     f"{action.location}; {'; '.join(action.writes)})")
+            self.pouch_action = None
         while count in self.pending:
             finder, item, loc = self.pending[count]
             received = self.giver.adjusted(item)
+            action_code = POUCH_ACTION_CODES.get(received)
+            if action_code is not None:
+                writes = self.giver.give(item, defer_pouch_action=True)
+                self.pouch_action = _PendingPouchAction(count, finder, item, loc, received, action_code, writes)
+                self.say(f"  waiting for the game's pouch action: {self.label(received)}")
+                break
             # a failed write (ControlError) keeps the item pending: given again in full later (absolute writes)
             writes = self.giver.give(item)
             self._counted(count)

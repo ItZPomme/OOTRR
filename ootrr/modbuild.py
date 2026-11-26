@@ -313,6 +313,9 @@ class ModBuilder:
             if kind == "navi_return":
                 report += self._write_navi_module(edit, out_romfs, templates)
                 continue
+            if kind == "mw_pouch_actions":
+                report += self._write_mw_pouch_module(edit, out_romfs, templates)
+                continue
             if kind != "fast_walk":
                 raise KeyError(f"unknown AINB edit: {kind}")
             clash = set(edit["actors"]) & set(pack_changes or {})
@@ -365,9 +368,32 @@ class ModBuilder:
             report.append(f"  pack {actor}")
         return report
 
+    def _write_mw_pouch_module(self, edit: dict, out_romfs: Path, templates) -> list[str]:
+        """Ask the current map's item-action EventFlow while a received pouch action is pending."""
+        from . import ainb_graph
+        from .formats.sarc import Sarc
+
+        inner, report = edit["file"], []
+        for actor in edit["actors"]:
+            path = self.romfs / "Pack" / "Actor" / f"{actor}.pack.zs"
+            rel = path.relative_to(self.romfs).as_posix()
+            dest = out_romfs / rel
+            raw = self.codec.decompress(dest if dest.exists() else path)
+            sarc = Sarc(raw)
+            new_inner = ainb_graph.mw_pouch_actions(sarc.files[inner], templates, edit["request"], edit["event"])
+            ainb_graph.inner_size_entry(self.restbl, inner, len(new_inner))
+            sarc.files[inner] = new_inner
+            new = sarc.to_bytes()
+            self.restbl.resize_like(rel[:-3], len(raw), len(new) + ainb_graph.INNER_MARGIN)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(self.codec.compress(path.name, new))
+            report.append(f"{inner}: asks the map's event for a received item action in {actor}")
+        return report
+
     # Way back: one event per map, named after the map (asked for by Link's AI), all in one script, a renamed copy of
     # WarpEvent (it has the actors needed and 14 entry points: 12 dungeons, child outside, adult outside).
     RETURN_FLOW, RETURN_BASE = "OoTRR_Return", "WarpEvent"
+    MW_POUCH_FLOW, MW_POUCH_ENTRY = "OoTRR_MW_PouchAction", "EntryPoint0"
     RETURN_ROW = "NaviTips_Gauntlet_00"  # plain FlowchartEvent asked for by Link's AI
     RETURN_FILE = "EventFlowMsg/Enemy_Event"
     RETURN_LABELS = {"entrance": 9111, "start": 9112, "cancel": 9113}
@@ -454,6 +480,61 @@ class ModBuilder:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(self.codec.compress(dest.name, flow))
         return ([f"{rel}: way back asked by Navi, {len(graphs)} questions, {len(setting)} maps"],
+                {"EventSetting": setting, "GameAnalyzedEventInfo": analyzed})
+
+    def _write_mw_pouch_actions(self, out_romfs: Path) -> tuple[list[str], dict[str, dict[str, dict]]]:
+        """Run the game's pouch-add action for selected remotely received items."""
+        from .formats.evfl import ensure_actor_member, find_action, find_query, insert_flow, rename_flow
+        from .mw_items import POUCH_ACTION_ACK, POUCH_ACTION_ITEMS, POUCH_ACTION_REQUEST
+
+        folder = self.romfs / "Event" / "EventFlow"
+        base_flow = "Dm_MelodyGet_Time"
+        raw = self.codec.decompress(folder / f"{base_flow}.bfevfl.zs")
+        flow = rename_flow(raw, base_flow, self.MW_POUCH_FLOW)
+        for actor, kind, member in (("GameDataActor", "action", "EventTriggerSetGameDataInt"),
+                                    ("GameDataActor", "query", "EventQueryGameDataIntBranch"),
+                                    ("PouchSystemActor", "action", self.POUCH_ACTION[1])):
+            flow = ensure_actor_member(flow, actor, kind, member)
+
+        branch_flow = self.codec.decompress(folder / f"{self.INT_BRANCH_TEMPLATE}.bfevfl.zs")
+        set_flow = self.codec.decompress(folder / "Dm_LostWood_0040.bfevfl.zs")
+        branch = find_query(branch_flow, "GameDataActor", "EventQueryGameDataIntBranch")
+        set_int = find_action(set_flow, "GameDataActor", "EventTriggerSetGameDataInt")
+        add_item = find_action(raw, *self.POUCH_ACTION)
+        if branch is None or set_int is None or add_item is None:
+            raise KeyError("missing vanilla template for the multiworld pouch-action event")
+
+        nodes = [{"actor": "GameDataActor", "query": "EventQueryGameDataIntBranch",
+                  "template": (branch_flow, branch), "set": {"GameDataName": POUCH_ACTION_REQUEST},
+                  "cases": {code: 1 + (code - 1) * 3 for code in range(1, len(POUCH_ACTION_ITEMS) + 1)}}]
+        for code, item in enumerate(POUCH_ACTION_ITEMS, 1):
+            start = 1 + (code - 1) * 3
+            nodes.extend([
+                {"actor": "GameDataActor", "action": "EventTriggerSetGameDataInt",
+                 "template": (set_flow, set_int), "set": {"GameDataName": POUCH_ACTION_REQUEST, "Value": 0},
+                 "next": start + 1},
+                {"actor": "PouchSystemActor", "action": self.POUCH_ACTION[1],
+                 "template": (raw, add_item),
+                 "set": {"Actor": item, "Num": 1, "IsEquipDIrect": 0,
+                         "IsSetMessageTargetActorName": 1, "IsGetEvent": 0},
+                 "next": start + 2},
+                {"actor": "GameDataActor", "action": "EventTriggerSetGameDataInt",
+                 "template": (set_flow, set_int), "set": {"GameDataName": POUCH_ACTION_ACK, "Value": code},
+                 "next": None},
+            ])
+        flow, steps = insert_flow(flow, self.MW_POUCH_ENTRY, nodes)
+        rel = f"Event/EventFlow/{self.MW_POUCH_FLOW}.bfevfl"
+        source_rel = f"Event/EventFlow/{base_flow}.bfevfl"
+        self.restbl.set(rel, self.restbl.get(source_rel) + max(0, len(flow) - len(raw)))
+        dest = out_romfs / (rel + ".zs")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(self.codec.compress(dest.name, flow))
+
+        setting = {self.MW_POUCH_FLOW: {"__new": True, "__copy_from": self.RETURN_ROW,
+                                        "EntryPointName": self.MW_POUCH_ENTRY,
+                                        "FlowchartFileName": f"Work/Event/EventFlow/{self.MW_POUCH_FLOW}.evfc"}}
+        analyzed = {self.MW_POUCH_FLOW: {"__new": True, "__copy_from": self.RETURN_ROW}}
+        return ([f"{rel}: PouchAdd event for {len(POUCH_ACTION_ITEMS)} item types ({'; '.join(steps)})"],
                 {"EventSetting": setting, "GameAnalyzedEventInfo": analyzed})
 
     def _write_still_floors(self, edit: dict[str, list], out_romfs: Path,
@@ -1844,11 +1925,23 @@ class ModBuilder:
               mw_actors: dict[str, dict[str, str]] | None = None,
               mw_navi: dict | None = None,
               logic_graph_edits: dict[str, dict] | None = None,
-              event_entry_gates: dict[str, dict[str, dict[str, str]]] | None = None) -> list[str]:
+              event_entry_gates: dict[str, dict[str, dict[str, str]]] | None = None,
+              mw_item_actions: bool = False) -> list[str]:
         """changes : {hash: {"Drop__DropActor": "...", "GetEventName": ... ou None pour supprimer}}
         start_flags : {nom de drapeau: valeur au début d'une nouvelle partie}
         event_changes : {flux d'événements: {ancien objet: nouvel objet}}"""
         out_romfs = Path(out_romfs)
+        if mw_item_actions:
+            from .mw_items import POUCH_ACTION_ACK, POUCH_ACTION_REQUEST
+            from .world import PLAYER_PACKS
+
+            ainb_edits = dict(ainb_edits or {})
+            if "mw_pouch_actions" in ainb_edits:
+                raise ValueError("mw_pouch_actions AINB edit is managed by mw_item_actions")
+            ainb_edits["mw_pouch_actions"] = {
+                "actors": list(PLAYER_PACKS), "file": "AI/Player.action.root.ainb",
+                "request": POUCH_ACTION_REQUEST, "event": self.MW_POUCH_FLOW,
+            }
         report = []
         applied: set[int] = set()
         for path in self.find_files_with(set(changes)):
@@ -1954,10 +2047,16 @@ class ModBuilder:
             raise KeyError(f"acteurs introuvables : {sorted(missing)}")
         saved_ints = [e["timer"] for e in (ainb_edits or {}).values() if "timer" in e]
         if mw_events:  # multiworld: one saved Int per remote chest, and the received items counter
+            saved_ints += sorted(mw_events.values())
+        if mw_events or mw_item_actions:
             from .multiworld import RECEIVED_COUNTER
-            saved_ints += sorted(mw_events.values()) + [RECEIVED_COUNTER]
+            saved_ints.append(RECEIVED_COUNTER)
+        if mw_item_actions:
+            from .mw_items import POUCH_ACTION_ACK, POUCH_ACTION_REQUEST
+            saved_ints += [POUCH_ACTION_REQUEST, POUCH_ACTION_ACK]
         if mw_navi:
             saved_ints.append(mw_navi["mark"])
+        saved_ints = list(dict.fromkeys(saved_ints))
         saved_bools = []
         if self.given_flags:
             from .world import DAMPE_FLAG, GIVEN_MODULES, WINDMILL_FLAG
@@ -2002,6 +2101,11 @@ class ModBuilder:
         if navi:
             navi_report, rows_by_table = self._write_navi_return(navi, out_romfs)
             report += navi_report
+            for table, rows in rows_by_table.items():
+                rsdb_all.setdefault(table, {}).update(rows)
+        if mw_item_actions:
+            pouch_report, rows_by_table = self._write_mw_pouch_actions(out_romfs)
+            report += pouch_report
             for table, rows in rows_by_table.items():
                 rsdb_all.setdefault(table, {}).update(rows)
         if pickups:

@@ -145,8 +145,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 See [`MULTIWORLD.md`](MULTIWORLD.md). Done: shared fill over several worlds (`ootrr/multiworld.py`), protocol and relay
 server (`ootrr/tools/mw_server.py`), per-player mod (`tools/mw_mod.py`) and the Longshot bridge
 (`tools/mw_longshot.py`): **validated in game** in Longshot v3.0.0 (2026-11-20: a found chest reaches the server,
-received items given and kept after save + reload). **To do**: Heart Containers / Pieces received in Longshot (max
-life is rewritten every frame), the other item kinds to check (bottles, seeds, songs, swords, magic), GOAL detection,
+received items given and kept after save + reload). The file-verified pouch-action dispatcher now routes received
+Gauntlets and ocarinas through the game's add-to-pouch action; **to do**: validate that test in game, including Silver
+Gauntlet lifting and ocarina D-pad assignment after reload. Also test Heart Containers / Pieces received in Longshot
+(max life is rewritten every frame), validate the Bow + small-quiver fix when an upgraded quiver arrives first,
+check other item kinds (bottles, seeds, songs, swords, magic), GOAL detection,
 a player on another network (room code + UPnP: validated on one PC only, 2026-11-21), the Eden client in the native
 module (`nn::socket` from sdk), then coop. The desktop app's Multiworld window (host with a room code, join, install
 and play) is validated in game on one PC.

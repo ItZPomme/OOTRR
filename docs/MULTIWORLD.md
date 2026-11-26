@@ -192,6 +192,8 @@ The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld s
 - **Received items** (`mw_items.ItemGiver`): queued GameData writes, given when Link is in play (no scene, no
   loading), counted in the saved Int `OoTRR.MW.Received` (`SYNC`). Validated **[game]**: Hookshot, progressive bomb
   bag (Large -> Small) + 20 bombs, Bow + small quiver + 30 arrows, rupees, all kept after save + reload.
+  The bridge now also ensures the Bow's small quiver is present if a larger quiver arrived first (unit-tested;
+  **to validate in game**).
   - **Only queued writes count**: writing a value's entry directly (+0x1c, even with its +0x0c "written" flag) is
     shown for a while but lost after save + reload, and leaves a stale entry (the rupees and the pouch live in other
     objects, which only queued writes reach).
@@ -214,6 +216,13 @@ The **PC bridge** (`ootrr/tools/mw_longshot.py`): Longshot pipe <-> multiworld s
   - **Received items and derived values** (2026-11-25, **to validate in game**): strength, magic and double defense also
     write what the game derives (`PlayerStatus.LiftGrade`, `MPMax` / `MP`, an unnamed Bool); the first magic upgrade
     received is the single magic; rupees stop at the wallet's limit (200 / 500 / 1000).
+  - **Reported; test dispatcher implemented, not validated in game**: Silver Gauntlets received as adult appeared in
+    the inventory but did not let Link lift silver blocks; a received ocarina was not assigned to a D-pad button,
+    including after saving and reloading. The Multiworld build now defers the Goron/Silver/Gold Gauntlets and both
+    ocarinas to a registered EventFlow, which calls `PouchSystemActor.EventTriggerAddOrRemovePouchContent`; the
+    Longshot bridge counts each item only after the EventFlow's saved acknowledgement. The generated event and mod
+    were verified from the files. Whether the native action supplies the missing strength/equipment or D-pad effects
+    still needs an in-game test **[reported issue; not yet reproduced or fixed in game]**.
   - An item logged "nothing given" is counted as received: it is not sent again unless an older save is loaded.
   - Not seen in game yet: Pieces of Heart (same problem expected), seeds with the Slingshot
     (`PouchData.Item_DekuSeed.StockNum` exists, not filled yet), swords, magic. No get-item window: the bridge prints
@@ -247,6 +256,11 @@ No animation came out of it and the scene disturbed play, so it was removed (use
 given by GameData writes (`mw_items.ItemGiver`), invisible in game, and the logs say what was received.
 
 The same pipe-and-memory approach cannot drive Eden (no such pipe), so Eden keeps the native client.
+
+The current pouch-action dispatcher is a separate **test path** from the walking-scene experiment above: Link's root
+AI requests a fixed EventFlow automatically while a saved request is pending. The generated flow does not call the
+get-item window, and the bridge does not advance `OoTRR.MW.Received` until the action acknowledges completion. This
+is verified in the generated files only; test it in game before treating the equipment behavior as fixed.
 
 ## Coop (after the multiworld)
 

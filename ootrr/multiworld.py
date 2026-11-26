@@ -437,6 +437,7 @@ def slot_patch(source: MultiResult | SlotData, slot: int | None = None, world: W
         raise ValueError(f"player {data.slot + 1}: {len(remote) - len(events)} remote items outside the chests")
     patch["mw_events"] = events
     patch["mw_actors"] = actors
+    patch["mw_item_actions"] = True
     table = mw_navi.layout(data.incoming)
     if table:
         patch["mw_navi"] = {"mark": mw_navi.mark(table, data.names),

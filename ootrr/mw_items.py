@@ -1,8 +1,8 @@
-"""Giving a received multiworld item by GameData writes (Longshot bridge, `ootrr.tools.mw_longshot`).
+"""Giving a received multiworld item (Longshot bridge, `ootrr.tools.mw_longshot`).
 
-In Longshot no code of ours runs in the game, so a received item cannot go through the game's own "add to pouch"
-(the native module's `PouchAdd`). The bridge writes what that would have changed, through the game's GameData write
-queues (`longshot_control.Longshot.set_int` / `set_bool`, saved like the game's own writes):
+Longshot cannot call game code directly. Most received items are written through the game's GameData write queues
+(`longshot_control.Longshot.set_int` / `set_bool`, saved like the game's own writes); Gauntlets and ocarinas instead
+use a game-side EventFlow dispatcher to call the native pouch-add action:
 
 - `IsGet.<pouch name>` = true and `PouchData.<pouch name>.StockNum` (1, or +1 for bottles and tokens). Seen in
   game (Longshot, 2026-11-17): a Hookshot given this way is shown, equipped, fires and is saved.
@@ -87,6 +87,11 @@ JABU_FED_FLAG = "GaveFishToJabJab"
 # PouchActorInfo, x10 in PlayerStatus: 240 in a save with the single magic)
 LIFT_GRADE, MP_MAX, MP = "PlayerStatus.LiftGrade", "PlayerStatus.MPMax", "PlayerStatus.MP"
 LIFT_GRADES = {"Item_Gauntlet_Goron": "Low", "Item_Gauntlet_Silver": "Middle", "Item_Gauntlet_Gold": "High"}
+POUCH_ACTION_ITEMS = ("Item_Gauntlet_Goron", "Item_Gauntlet_Silver", "Item_Gauntlet_Gold",
+                      "Item_Ocarina_Fairy", "Item_Ocarina_Time")
+POUCH_ACTION_CODES = {item: code for code, item in enumerate(POUCH_ACTION_ITEMS, 1)}
+POUCH_ACTION_REQUEST = "OoTRR.MW.PouchActionRequest"
+POUCH_ACTION_ACK = "OoTRR.MW.PouchActionAck"
 MAGIC = {"Item_FairyBless_MP": 240, "Item_FairyBless_MPDouble": 480}
 MAGIC.update(dict.fromkeys(("Item_DinFire", "Item_FaroreWind", "Item_NayruLove", "Item_GlassTruth", "Item_Arrow_Fire",
                             "Item_Arrow_Ice", "Item_Arrow_Light"), 240))  # they bring the first magic too
@@ -219,8 +224,8 @@ class ItemGiver:
                 self.gd.set_enum(LETTER_QUEST_ENUM, LETTER_QUEST_STEP)
                 self.log.append(f"{LETTER_QUEST_ENUM} = {LETTER_QUEST_STEP}")
 
-    def give(self, item: str) -> list[str]:
-        """Writes `item` into the game; returns the writes (also kept in `log`)."""
+    def give(self, item: str, defer_pouch_action: bool = False) -> list[str]:
+        """Writes `item`, or leaves a selected pouch action to the game-side dispatcher; returns the log."""
         self.log = []
         rest = item.removeprefix("Obj_Rupee_").removeprefix("TBox_Rupee_")
         if rest != item and rest in RUPEES:
@@ -264,6 +269,9 @@ class ItemGiver:
         real = self.adjusted(item)
         if real != item:
             self.log.append(f"{item} -> {real}")
+        if defer_pouch_action and real in POUCH_ACTION_CODES:
+            self.log.append(f"{real}: waiting for the game's pouch action")
+            return self.log
         name = self.pouch.get(real, real)
         # the pouch name may be another actor's: Weapon_Range_Bow, Armor_GlassTruth (Lens of Truth: given as nothing
         # without this one, 2026-11-21), Armor_Adult_Gauntlet_Silver...
@@ -275,9 +283,8 @@ class ItemGiver:
             self.log.append(f"{real}: no pouch counter found ({', '.join(dict.fromkeys(candidates))}), nothing given")
             return self.log
         self._status(real)
-        chain = next((c for c in self.chains if c[0] == real), [])
-        if not any(self._owns_step(step) for step in chain[1:]):  # a bigger quiver is already there: keep it
-            for extra in WITH.get(real, ()):
+        for extra in WITH.get(real, ()):
+            if not self._owns_step(extra):
                 self._pouch_item(extra)
         if real in BAGS:
             ammo, capacity = BAGS[real]

@@ -499,6 +499,20 @@ def navi_return(raw: bytes, templates: Templates) -> bytes:
     return g.to_binary()
 
 
+def mw_pouch_actions(raw: bytes, templates: Templates, request_flag: str, event_name: str) -> bytes:
+    """Request the registered multiworld pouch-action event while its saved request Int is positive."""
+    g = Logic(raw, templates)
+    pending = g.int_data("get_int", request_flag)
+    requested = g.compare("less_s32", "int", 0, pending)
+    request = g.add("request_event")
+    g._link(next(p for p in request.params.string_inputs if p.name == "EventName"), value=event_name)
+    for prop in request.properties.bool_properties:
+        if prop.name == "ExecuteEveryFrame":
+            prop.default_value = False
+    g.wrap_root(g.selector(requested, request, g.add("dummy")))
+    return g.to_binary()
+
+
 def fast_walk(raw: bytes, templates: Templates, bool_exp: str, head_flag: str, head_actor: str,
               factor: float) -> bytes:
     """Player.action.walk.module: while `bool_exp` is true AND the String64 `head_flag` equals `head_actor`, the

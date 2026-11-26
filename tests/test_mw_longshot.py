@@ -11,8 +11,8 @@ from ootrr import mw_protocol as P
 from ootrr import settings
 from ootrr.formats.gamedata import flag_hash
 from ootrr.longshot_control import ControlError
-from ootrr.mw_items import (BOTTLE_SLOTS, ItemGiver, JABU_FED_FLAG, LETTER_QUEST_ENUM, LETTER_QUEST_STEP,
-                            LETTER_READ_FLAG)
+from ootrr.mw_items import (BOTTLE_SLOTS, POUCH_ACTION_ACK, POUCH_ACTION_CODES, POUCH_ACTION_REQUEST, ItemGiver,
+                            JABU_FED_FLAG, LETTER_QUEST_ENUM, LETTER_QUEST_STEP, LETTER_READ_FLAG)
 from ootrr.patch import chest_changes, progressive_chains, progressive_location, progressive_scrubs
 from ootrr.tools.mw_longshot import Bridge, BridgeError
 from ootrr.tools.mw_server import Room
@@ -82,7 +82,8 @@ class ItemGiverTest(unittest.TestCase):
         g.ints["PouchData.Item_Arrow_Normal.StockNum"] = 50
         ItemGiver(g).give("Item_Quiver_Medium")
         self.assertTrue(g.bools["IsGet.Weapon_Range_Bow"])
-        self.assertFalse(g.bools["IsGet.Item_Quiver_Small"])
+        self.assertTrue(g.bools["IsGet.Item_Quiver_Small"])
+        self.assertEqual(g.ints["PouchData.Item_Quiver_Small.StockNum"], 1)
         self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 50)
 
     def test_strength_and_magic_status(self):
@@ -118,16 +119,18 @@ class ItemGiverTest(unittest.TestCase):
         giver.give("Item_Hookshot")  # never below what Link owns
         self.assertFalse(g.bools["IsGet.Item_Hookshot"])
 
+    def test_first_bow_includes_small_quiver(self):
+        g = _pouch("Weapon_Range_Bow", "Item_Quiver_Small", "Item_Quiver_Medium", "Item_Arrow_Normal")
+        ItemGiver(g).give("Item_Range_Bow")
+        self.assertTrue(g.bools["IsGet.Weapon_Range_Bow"] and g.bools["IsGet.Item_Quiver_Small"])
+        self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 30)
+
     def test_bags_fill_ammo(self):
         g = _pouch("Item_BombBag_Small", "Item_BombBag_Medium", "Item_BombBag_Large", "Item_Bomb")
         ItemGiver(g).give("Item_BombBag_Large")  # progressive: the small one first
         self.assertTrue(g.bools["IsGet.Item_BombBag_Small"])
         self.assertEqual(g.ints["PouchData.Item_Bomb.StockNum"], 20)
         self.assertTrue(g.bools["IsGet.Item_Bomb"])  # without it the menu shows no bombs (seen in game)
-        g = _pouch("Weapon_Range_Bow", "Item_Quiver_Small", "Item_Quiver_Medium", "Item_Arrow_Normal")
-        ItemGiver(g).give("Item_Range_Bow")
-        self.assertTrue(g.bools["IsGet.Weapon_Range_Bow"] and g.bools["IsGet.Item_Quiver_Small"])
-        self.assertEqual(g.ints["PouchData.Item_Arrow_Normal.StockNum"], 30)
 
     def test_rupees_hearts_bundles(self):
         g = _pouch("Item_Bomb", "Item_Bombchu", "Item_BombBag_Small")
@@ -299,6 +302,7 @@ class SlotPatchTest(unittest.TestCase):
     def test_remote_chests(self):
         for slot in range(2):
             patch = mw.slot_patch(self.result, slot)
+            self.assertTrue(patch["mw_item_actions"])
             sent = self.result.sent(slot)
             remote = [c for c in patch["chests"] if c.get("remote")]
             self.assertEqual({c["location"] for c in remote}, set(sent))
@@ -351,8 +355,12 @@ class BridgeTest(unittest.TestCase):
         self.watch = mw.remote_watch(self.result, 1)  # we are player 2 (B)
         ints = {name: 0 for name in self.watch}
         ints.update({mw.RECEIVED_COUNTER: 0, "PlayerStatus.CurrentRupee": 0, "PlayerStatus.MaxLife": 12,
-                     "PlayerStatus.Life": 12, "PouchData.Obj_Heart_Piece.StockNum": 0})
-        self.game = FakeGame(ints, {})
+                     "PlayerStatus.Life": 12, "PouchData.Obj_Heart_Piece.StockNum": 0,
+                     POUCH_ACTION_REQUEST: 0, POUCH_ACTION_ACK: 0})
+        bools = {"IsGet.Armor_Child_Gauntlet_Goron": True, "IsGet.Armor_Adult_Gauntlet_Silver": False,
+                 "IsGet.Armor_Adult_Gauntlet_Gold": False, "IsGet.Item_Ocarina_Fairy": False,
+                 "IsGet.Item_Ocarina_Time": False}
+        self.game = FakeGame(ints, bools)
         self.out: list[tuple] = []
         self.said: list[str] = []
         self.bridge = Bridge(self.game, self.watch, self.room.hash, 2, ["A", "B"],
@@ -408,6 +416,36 @@ class BridgeTest(unittest.TestCase):
         for m in items:
             self.bridge.on_server(m)
         self.assertEqual(self.bridge.apply(), len(items))
+
+    def test_pouch_actions_wait_for_ack_and_clear_stale_ack(self):
+        self.bridge.on_server([P.ITEM, "0", "1", "Item_Gauntlet_Silver", "Silver Check"])
+        self.bridge.on_server([P.ITEM, "1", "1", "Item_Ocarina_Fairy", "Ocarina Check"])
+
+        self.assertEqual(self.bridge.apply(), 0)  # stage the first action, do not count it yet
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 0)
+        self.assertFalse(self.game.bools["IsGet.Armor_Adult_Gauntlet_Silver"])
+        self.assertEqual(self.bridge.apply(), 0)  # request the silver gauntlets
+        self.assertEqual(self.game.ints[POUCH_ACTION_REQUEST], POUCH_ACTION_CODES["Item_Gauntlet_Silver"])
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 0)
+
+        self.game.ints[POUCH_ACTION_REQUEST] = 0  # EventFlow cleared the request and ran PouchAdd
+        self.game.ints[POUCH_ACTION_ACK] = POUCH_ACTION_CODES["Item_Gauntlet_Silver"]
+        self.game.bools["IsGet.Armor_Adult_Gauntlet_Silver"] = True
+        self.assertEqual(self.bridge.apply(), 1)
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 1)
+
+        self.assertEqual(self.bridge.apply(), 0)  # clear the old acknowledgement before the next request
+        self.assertEqual(self.game.ints[POUCH_ACTION_ACK], 0)
+        self.assertEqual(self.game.ints[POUCH_ACTION_REQUEST], 0)
+        self.assertEqual(self.bridge.apply(), 0)
+        self.assertEqual(self.game.ints[POUCH_ACTION_REQUEST], POUCH_ACTION_CODES["Item_Ocarina_Fairy"])
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 1)
+
+        self.game.ints[POUCH_ACTION_REQUEST] = 0
+        self.game.ints[POUCH_ACTION_ACK] = POUCH_ACTION_CODES["Item_Ocarina_Fairy"]
+        self.game.bools["IsGet.Item_Ocarina_Fairy"] = True
+        self.assertEqual(self.bridge.apply(), 1)
+        self.assertEqual(self.game.ints[mw.RECEIVED_COUNTER], 2)
 
     def test_busy_write_queue_keeps_the_item(self):
         """A failed queued write (ControlError) is not a reconnection: the item stays pending, given later."""
