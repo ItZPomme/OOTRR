@@ -42,16 +42,15 @@ from .. import __version__, race, updates
 from .. import settings as settings_mod
 from .. import settings_ui
 from . import seed_icons
+from .longshot_support import (app_data_dir, find_longshot, game_running, longshot_binary, open_path,
+                               saved_longshot)
 from ..modbuild import TITLE_ID, emulator_root
 
-APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "OoTRR"
+APP_DIR = app_data_dir() / "OoTRR"
 CONFIG = APP_DIR / "longshot_app.json"
 SEEDS_DIR = APP_DIR / "seeds"
 MOD_NAME = "OoTRR"
 TARGETS = {"longshot": "Longshot", "eden": "Eden"}
-# exact image names: our own "OoTRR-App.exe" must not count as the game
-GAME_PROCESSES = {"longshot": ("longshot.exe",),
-                  "eden": ("eden.exe", "fritchii.exe", "yuzu.exe", "suyu.exe", "citron.exe", "sudachi.exe")}
 
 # ---- palette: the remake's menu (bronze leather, amber selectors, cream text) ---------------------------------
 BG_TOP, BG_BOTTOM = (36, 38, 29), (17, 16, 12)
@@ -91,60 +90,8 @@ def pretty(name, value) -> str:
     return settings_ui.value_label(name, value)
 
 
-LONGSHOT_BASES = (Path.home() / "Games" / "Longshot", Path("C:/Games/Longshot"))
-CHANNEL_ORDER = ("stable", "", "rc")  # "" = old layout, versions straight under Games/Longshot
-
-
-def _version_key(name: str) -> tuple:
-    """v3.0.0 > v3.0.0-rc.7 > v3.0.0-rc.4 > v2.9.1 (numbers compared as numbers, a release after its candidates)."""
-    main, _, pre = name.lstrip("vV").partition("-")
-    nums = tuple(int(x) if x.isdigit() else 0 for x in main.split("."))
-    pre_nums = tuple(int(x) for x in re.findall(r"\d+", pre))
-    return nums, (1,) if not pre else (0,) + pre_nums
-
-
-def find_longshot(bases: tuple[Path, ...] = LONGSHOT_BASES) -> Path | None:
-    """The Longshot version folder (the one with longshot.exe) to use: the newest stable one, else the newest of the
-    old layout (`Games/Longshot/v*`), else the newest release candidate. Since 2026-11 the launcher installs to
-    `Games/Longshot/<channel>/<version>` (`stable/v3.0.0`, `rc/v3.0.0-rc.7`)."""
-    for base in bases:
-        if not base.is_dir():
-            continue
-        for channel in CHANNEL_ORDER:
-            folder = base / channel if channel else base
-            if not folder.is_dir():
-                continue
-            found = [p for p in folder.iterdir() if p.is_dir() and (p / "longshot.exe").is_file()]
-            if found:
-                return max(found, key=lambda p: _version_key(p.name))
-        others = sorted((c for c in base.iterdir() if c.is_dir() and c.name not in CHANNEL_ORDER), key=lambda c: c.name)
-        for channel in others:  # a channel this version of the app does not know
-            found = [p for p in channel.iterdir() if p.is_dir() and (p / "longshot.exe").is_file()]
-            if found:
-                return max(found, key=lambda p: _version_key(p.name))
-    return None
-
-
-def saved_longshot(path: str | None) -> Path | None:
-    """The Longshot folder saved in the settings if it still holds longshot.exe (the launcher deletes old versions),
-    otherwise the one found now."""
-    if path and (Path(path) / "longshot.exe").is_file():
-        return Path(path)
-    return find_longshot()
-
-
 def valid_romfs(path: Path) -> bool:
     return (path / "GameData").is_dir() and (path / "Pack").is_dir()
-
-
-def game_running(target: str = "longshot") -> bool:
-    try:
-        out = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True,
-                             creationflags=0x08000000).stdout.lower()
-    except OSError:
-        return False
-    names = tuple(f'"{n}"' for n in GAME_PROCESSES[target])
-    return any(line.startswith(names) for line in out.splitlines())
 
 
 def mix(a, b, t):
@@ -560,7 +507,7 @@ class App:
         bw = 134
         if self.target == "longshot":
             buttons = (("Game Folder", "pick_game", self.pick_game, True,
-                        "Choose the Longshot version folder (the one with longshot.exe)."),
+                        "Choose the Longshot version folder (the one with the Longshot executable)."),
                        ("RomFS", "pick_romfs", self.pick_romfs, True,
                         "RomFS used to build the mod. Defaults to Longshot's own romfs folder."),
                        ("Mods Folder", "modsdir", self.open_mods, ok, "Open Longshot's mods folder."))
@@ -835,11 +782,11 @@ class App:
                 self.status = ("No load folder in that folder", RED)
             return
         d = filedialog.askdirectory(title="Longshot version folder", initialdir=str(self.longshot or Path.home()))
-        if d and (Path(d) / "longshot.exe").is_file():
+        if d and longshot_binary(Path(d)):
             self.longshot, self.romfs_override = Path(d), None
             self._save_cfg()
         elif d:
-            self.status = ("longshot.exe not found in that folder", RED)
+            self.status = ("Longshot executable not found in that folder", RED)
 
     def pick_romfs(self):
         from tkinter import filedialog
@@ -855,7 +802,7 @@ class App:
 
     def open_spoiler(self):
         if self.result.get("spoiler"):
-            os.startfile(self.result["spoiler"])
+            open_path(self.result["spoiler"])
 
     def open_multiworld(self):
         """Host or join a multiworld (tools.mw_app), with these settings for every player when hosting."""
@@ -875,7 +822,7 @@ class App:
     def open_mods(self):
         mods = self._mods_dir()
         mods.mkdir(parents=True, exist_ok=True)
-        os.startfile(mods)
+        open_path(mods)
 
     # ---- install --------------------------------------------------------------------------------------------
     def install(self):

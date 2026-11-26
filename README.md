@@ -47,6 +47,10 @@ the command line name them (`Hash symbols: ...`) so racers can compare. Once the
 **Copy with Seed** also carries the seed hash, and a racer's app then says after the install whether they got the
 same seed. See [`docs/GUIDE.md`](docs/GUIDE.md).
 
+On Linux, build a distributable AppImage with `python -m ootrr.tools.build_appimage`. Install the packages in
+`requirements.txt`, PyInstaller, your distribution's Tkinter package, and `appimagetool` first. The app supports
+Longshot's native `longshot` executable and the AppImage does not bundle game files.
+
 ## Settings
 
 `python -m ootrr --list-settings` gives the up-to-date list.

@@ -31,8 +31,9 @@ from .. import mw_protocol as P
 from .. import settings as settings_mod
 from ..mw_code import CodeError, RoomCode, decode
 from ..mw_session import Host, SessionError, fetch_slot, join_room, room_players, room_state, save_slot
+from .longshot_support import app_data_dir, longshot_binary
 
-APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "OoTRR"
+APP_DIR = app_data_dir() / "OoTRR"
 MW_DIR = APP_DIR / "multiworld"
 PIPE = "ootrr-mw"  # Longshot's HOS_CONTROL value (its control pipe name)
 WAIT_EVERY = 3.0  # seconds between two looks at a waiting room (joined player)
@@ -468,7 +469,10 @@ class MultiworldWindow:
                 build_mod(patch, self.romfs, "OoTRR", False, self.longshot / "mods")
             self.say("Mod installed. Starting Longshot (start a new game, or load this multiworld's save)...")
             env = dict(os.environ, HOS_CONTROL=PIPE, HOS_CONTROL_MEM="rw")
-            subprocess.Popen([str(self.longshot / "longshot.exe")], cwd=str(self.longshot), env=env)
+            executable = longshot_binary(self.longshot)
+            if executable is None:
+                raise SessionError("Longshot executable not found in its folder")
+            subprocess.Popen([str(executable)], cwd=str(self.longshot), env=env)
             self.bridge_stop = threading.Event()
             self.q.put(("bridge", True))
             from .mw_longshot import run_until_stopped

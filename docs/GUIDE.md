@@ -261,9 +261,9 @@ Call Navi (D-pad right): she offers to bring you back to the entrance of the dun
 point. It also works outside, as child or adult and when Navi cannot normally be called. Validated in game on Longshot;
 the PC-built mod holds it for every platform, not tried on an emulator or a console yet.
 
-### Desktop app (`OoTRR-App.exe`) and races
+### Desktop app and races
 
-The desktop app (`OoTRR-App.exe` from the release, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
+The desktop app (Windows release `OoTRR-App.exe`, Linux AppImage, or `python -m ootrr.tools.longshot_app`) builds the same PC mod
 for Longshot or Eden, with the settings on pages instead of `--set`. At start it checks GitHub for a newer release:
 if there is one, an **Update available** button (bottom left) opens its page, where you download the new
 `OoTRR-App.exe` (the app downloads nothing itself; offline, it just says nothing). For a race:
@@ -283,6 +283,10 @@ if there is one, an **Update available** button (bottom left) opens its page, wh
 Everyone must use the same OoTRR version: the same string and seed give the same placement only with the same
 generator (a different version gives different symbols, which shows the mismatch). Text seeds are shared as the
 number the generator uses (same seed).
+
+To build the Linux AppImage from source, install the packages in `requirements.txt`, PyInstaller, your distribution's
+Tkinter package and `appimagetool`, then run `python -m ootrr.tools.build_appimage`. The app detects Longshot's native
+`longshot` executable and writes its mod to the selected Longshot folder; the AppImage does not include game files.
 
 ### Plandomizer (choose where items are)
 

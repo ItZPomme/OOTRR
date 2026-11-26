@@ -29,6 +29,7 @@ from .. import settings_ui, starting
 from ..modbuild import emulator_root
 from ..world import DataError, World
 from .longshot_app import CONFIG, QueueWriter, TARGETS, game_running, saved_longshot, valid_romfs
+from .longshot_support import longshot_binary
 
 APP_DIR = CONFIG.parent
 OUT = APP_DIR / "plando"
@@ -600,13 +601,13 @@ class PlandoApp:
     def pick_game(self):
         eden = self.target_var.get() == "eden"
         name = filedialog.askdirectory(parent=self.root, title="Emulator data folder (the one with load/)" if eden
-                                       else "Longshot version folder (the one with longshot.exe)")
+                                       else "Longshot version folder (the one with the Longshot executable)")
         if not name:
             return
         if eden and not (Path(name) / "load").is_dir():
             messagebox.showerror("Emulator", "No load folder in that folder.")
-        elif not eden and not (Path(name) / "longshot.exe").is_file():
-            messagebox.showerror("Longshot", "longshot.exe not found in that folder.")
+        elif not eden and not longshot_binary(Path(name)):
+            messagebox.showerror("Longshot", "Longshot executable not found in that folder.")
         else:
             self.game_var.set(name)
 

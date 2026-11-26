@@ -1,11 +1,11 @@
 """Builds the standalone desktop apps with PyInstaller: the seed installer for Longshot and Eden
-(output/OoTRR-App.exe), the plandomizer (output/OoTRR-Plando.exe) and the live coordinates overlay
-(output/OoTRR-Overlay.exe).
+(output/OoTRR-App[.exe]), the plandomizer (output/OoTRR-Plando[.exe]) and the live coordinates overlay
+(output/OoTRR-Overlay[.exe]).
 
     python -m pip install pyinstaller
-    python -m ootrr.tools.build_longshot_app              # OoTRR-App.exe
-    python -m ootrr.tools.build_longshot_app --plando     # OoTRR-Plando.exe
-    python -m ootrr.tools.build_longshot_app --overlay    # OoTRR-Overlay.exe
+    python -m ootrr.tools.build_longshot_app              # OoTRR-App[.exe]
+    python -m ootrr.tools.build_longshot_app --plando     # OoTRR-Plando[.exe]
+    python -m ootrr.tools.build_longshot_app --overlay    # OoTRR-Overlay[.exe]
     python -m ootrr.tools.build_longshot_app --all        # all three
 
 The app and the plandomizer are windowed exes (no console) with the logo as their icon, Python, the libraries
@@ -52,18 +52,21 @@ def build(name: str, module: str, out: Path) -> Path:
         launcher.write_text(PAUSE.format(module=module) if light
                             else f"from {module} import main\nraise SystemExit(main())\n", encoding="utf-8")
         cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--noconfirm",
-               "--name", name, "--icon", str(ICON), "--distpath", str(out), "--workpath", str(tmp / "build"),
+               "--name", name, "--distpath", str(out), "--workpath", str(tmp / "build"),
                "--specpath", str(tmp), "--paths", str(ROOT)]
+        if sys.platform == "win32":
+            cmd += ["--icon", str(ICON)]
         if not light:  # windowed app with the randomizer data and libraries
-            cmd += ["--windowed",
-                    "--add-data", f"{ROOT / 'ootrr' / 'data'}{sep}ootrr/data",
+            if sys.platform in ("win32", "darwin"):
+                cmd.append("--windowed")
+            cmd += ["--add-data", f"{ROOT / 'ootrr' / 'data'}{sep}ootrr/data",
                     "--add-data", f"{ROOT / 'ootrr' / 'assets'}{sep}ootrr/assets",
                     "--collect-submodules", "ootrr", "--collect-all", "ainb", "--hidden-import", "zstandard"]
         cmd.append(str(launcher))
         subprocess.run(cmd, check=True)
-    exe = out / f"{name}.exe"
-    print("written:", exe, f"({exe.stat().st_size // 1024} KB)")
-    return exe
+    executable = out / f"{name}.exe" if sys.platform == "win32" else out / name
+    print("written:", executable, f"({executable.stat().st_size // 1024} KB)")
+    return executable
 
 
 def main(argv=None) -> int:

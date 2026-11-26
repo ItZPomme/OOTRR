@@ -17,6 +17,8 @@ import ipaddress
 import re
 import select
 import socket
+import struct
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -97,6 +99,21 @@ class Gateway:
 
 
 def _local_ipv4() -> list[str]:
+    if sys.platform == "linux":
+        import fcntl
+
+        addrs = set()
+        for _, name in socket.if_nameindex():
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    request = struct.pack("256s", name.encode()[:15])
+                    response = fcntl.ioctl(s.fileno(), 0x8915, request)  # SIOCGIFADDR
+                addrs.add(socket.inet_ntoa(response[20:24]))
+            except OSError:
+                continue
+        usable = sorted(a for a in addrs if not a.startswith("127."))
+        if usable:
+            return usable
     try:
         addrs = {a[4][0] for a in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)}
     except OSError:
