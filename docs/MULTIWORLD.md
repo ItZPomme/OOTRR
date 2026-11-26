@@ -22,7 +22,7 @@ Coop (everyone on the same seed, an item found by one is given to all) comes aft
 
 The app's **Multiworld** button (footer, "+") opens the Multiworld window (`ootrr/tools/mw_app.py`):
 - **Host**: your name -> *Open the waiting room*: starts the server inside the app, asks the router to open the
-  port by UPnP (`ootrr/upnp.py`) and shows the **room code** to share. The players who join appear in the list
+  port by UPnP IGD (or Linux NAT-PMP fallback, `ootrr/upnp.py`) and shows the **room code** to share. The players who join appear in the list
   with their settings (*Remove player* takes one out); *Generate and start* (seed: empty = random) generates the
   multiworld, **each player with their own settings** (the host: the app's), into
   `APPDATA/OoTRR/multiworld/mw_<hash>.json` + spoiler; the code does not change. *Host a file...* serves a
@@ -40,7 +40,7 @@ The app's **Multiworld** button (footer, "+") opens the Multiworld window (`ootr
 
 The code (`ootrr/mw_code.py`, 20 characters, `K7QM-29XD-...`) holds the host's IPv4 address, the port and the room
 id (the room hash, or the id of the waiting room the multiworld comes from), with a check character (a typo is caught; I/L/O read as 1/0). The address in it:
-1. the router's internet address when UPnP opened the port (most home routers allow UPnP; the app says if not);
+1. the router's internet address when UPnP IGD or Linux NAT-PMP opened the port (the app says which protocol answered);
 2. otherwise this PC's local address: works on the same network only; for players elsewhere, open the port
    (TCP 38300) on the router by hand and type the internet address, or use a VPN (Tailscale, ZeroTier) and type its
    address (the *Address for the code* field).

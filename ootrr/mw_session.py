@@ -262,9 +262,11 @@ class Host:
         if self.use_upnp:
             gw = upnp.find_gateway()
             if gw is None:
-                self.notes.append("UPnP: no router answered (UPnP off on the box?). Players outside your network need "
+                self.notes.append("UPnP/NAT-PMP: no router answered (mapping disabled, or blocked by the network). "
+                                  "Players outside your network need "
                                   f"port {self.port} (TCP) opened on your router, or a VPN such as Tailscale/ZeroTier.")
             else:
+                protocol = getattr(gw, "protocol", "UPnP IGD")
                 lan = gw.local_ip
                 try:
                     try:  # a lease: the port closes by itself if the app dies without closing it
@@ -274,13 +276,13 @@ class Host:
                     self._gateway, self._mapped = gw, True
                     external = gw.external_ip()
                 except upnp.UpnpError as exc:
-                    self.notes.append(f"UPnP: the router refused to open the port ({exc}).")
+                    self.notes.append(f"{protocol}: the router refused to open the port ({exc}).")
                     external = ""
                 if self._mapped and upnp.is_public(external):
-                    self.notes.append(f"UPnP: port {self.port} opened on the router; the code uses your internet address.")
+                    self.notes.append(f"{protocol}: port {self.port} opened on the router; the code uses your internet address.")
                     return external
                 if self._mapped:
-                    self.notes.append("UPnP: port opened, but the router's own address is not public (4G, "
+                    self.notes.append(f"{protocol}: port opened, but the router's own address is not public (4G, "
                                       "carrier-grade NAT): players outside your network will not get through.")
         lan = lan or _lan_ip()
         self.notes.append(f"The code uses your local address ({lan}): it works on your own network only, unless you "

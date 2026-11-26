@@ -1,4 +1,4 @@
-"""UPnP port mapping on the home router (IGD), standard library only: lets a multiworld host be reached from the
+"""UPnP IGD and Linux NAT-PMP port mapping, standard library only: lets a multiworld host be reached from the
 internet without opening the port by hand (docs/MULTIWORLD.md, "Joining").
 
     gw = find_gateway()                       # SSDP discovery on the local network, None if no UPnP router
@@ -98,17 +98,113 @@ class Gateway:
         self._soap("DeletePortMapping", {"NewRemoteHost": "", "NewExternalPort": external_port, "NewProtocol": "TCP"})
 
 
+@dataclass
+class NatPmpGateway:
+    gateway_ip: str
+    local_ip: str
+    timeout: float = 1.0
+    protocol: str = "NAT-PMP"
+
+    def _exchange(self, request: bytes, opcode: int) -> bytes:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.settimeout(self.timeout)
+                sock.bind((self.local_ip, 0))
+                sock.sendto(request, (self.gateway_ip, 5351))
+                response, _ = sock.recvfrom(32)
+        except OSError as exc:
+            raise UpnpError(f"NAT-PMP: {exc}") from None
+        if len(response) < 4:
+            raise UpnpError("NAT-PMP: short response")
+        version, response_opcode, result = struct.unpack("!BBH", response[:4])
+        if version != 0 or response_opcode != opcode + 128:
+            raise UpnpError("NAT-PMP: invalid response")
+        if result:
+            reasons = {1: "unsupported version", 2: "not authorized", 3: "network failure",
+                       4: "out of resources", 5: "unsupported opcode"}
+            raise UpnpError(f"NAT-PMP: router refused the request ({reasons.get(result, f'error {result}')})")
+        return response
+
+    def external_ip(self) -> str:
+        response = self._exchange(b"\x00\x00", 0)
+        if len(response) < 12:
+            raise UpnpError("NAT-PMP: short external-address response")
+        return socket.inet_ntoa(response[8:12])
+
+    def add_mapping(self, external_port: int, internal_ip: str, internal_port: int, description: str,
+                    lease: int = 0) -> None:
+        if lease <= 0:
+            raise UpnpError("NAT-PMP requires a nonzero mapping lifetime; lifetime zero deletes the mapping")
+        self._set_mapping(external_port, internal_port, lease)
+
+    def _set_mapping(self, external_port: int, internal_port: int, lease: int) -> None:
+        request = struct.pack("!BBHHHI", 0, 2, 0, internal_port, external_port, lease)
+        response = self._exchange(request, 2)
+        if len(response) < 16:
+            raise UpnpError("NAT-PMP: short port-mapping response")
+        mapped_port = struct.unpack("!H", response[10:12])[0]
+        if mapped_port != external_port:
+            raise UpnpError(f"NAT-PMP: router mapped external port {mapped_port}, expected {external_port}")
+
+    def delete_mapping(self, external_port: int) -> None:
+        self._set_mapping(external_port, external_port, 0)
+
+
+def _interface_ipv4(name: str) -> str:
+    import fcntl
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        request = struct.pack("256s", name.encode()[:15])
+        response = fcntl.ioctl(sock.fileno(), 0x8915, request)  # SIOCGIFADDR
+    return socket.inet_ntoa(response[20:24])
+
+
+def _linux_default_gateways(route_file=None) -> list[tuple[str, str]]:
+    """Default router IPv4 and local interface address pairs from the Linux route table."""
+    if route_file is None:
+        from pathlib import Path
+        route_file = Path("/proc/net/route")
+    try:
+        lines = route_file.read_text(encoding="ascii").splitlines()[1:]
+    except OSError:
+        return []
+    gateways = []
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 4 or fields[1] != "00000000":
+            continue
+        try:
+            flags = int(fields[3], 16)
+            if flags & 0x3 != 0x3:
+                continue
+            router = socket.inet_ntoa(struct.pack("<I", int(fields[2], 16)))
+            local = _interface_ipv4(fields[0])
+        except (OSError, ValueError):
+            continue
+        if not router.startswith("127.") and not local.startswith("127."):
+            gateways.append((router, local))
+    return gateways
+
+
+def _find_natpmp_gateway(timeout: float = 1.0) -> NatPmpGateway | None:
+    if sys.platform != "linux":
+        return None
+    for router, local in _linux_default_gateways():
+        gateway = NatPmpGateway(router, local, timeout)
+        try:
+            gateway.external_ip()
+        except UpnpError:
+            continue
+        return gateway
+    return None
+
+
 def _local_ipv4() -> list[str]:
     if sys.platform == "linux":
-        import fcntl
-
         addrs = set()
         for _, name in socket.if_nameindex():
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                    request = struct.pack("256s", name.encode()[:15])
-                    response = fcntl.ioctl(s.fileno(), 0x8915, request)  # SIOCGIFADDR
-                addrs.add(socket.inet_ntoa(response[20:24]))
+                addrs.add(_interface_ipv4(name))
             except OSError:
                 continue
         usable = sorted(a for a in addrs if not a.startswith("127."))
@@ -183,9 +279,9 @@ def _gateway_from(location: str) -> Gateway | None:
 
 
 def find_gateway(timeout: float = 3.0) -> Gateway | None:
-    """The router's UPnP port mapping service, None if no router answers (UPnP off, no UPnP router)."""
+    """Find the router's UPnP IGD service, then try Linux NAT-PMP if SSDP found nothing."""
     for location in _search(timeout):
         gw = _gateway_from(location)
         if gw:
             return gw
-    return None
+    return _find_natpmp_gateway(min(timeout, 1.0))

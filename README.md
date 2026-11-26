@@ -50,6 +50,8 @@ same seed. See [`docs/GUIDE.md`](docs/GUIDE.md).
 On Linux, build a distributable AppImage with `python -m ootrr.tools.build_appimage`. Install the packages in
 `requirements.txt`, PyInstaller, your distribution's Tkinter package, and `appimagetool` first. The app supports
 Longshot's native `longshot` executable and the AppImage does not bundle game files.
+Published GitHub releases automatically receive the Linux AppImage, standalone Linux apps, and Windows executables
+from the release's tagged source.
 
 ## Settings
 
