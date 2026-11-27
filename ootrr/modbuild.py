@@ -132,6 +132,7 @@ class ModBuilder:
             | set(self.gift_progressive)
             | set(self.event_ints)
             | set(event_bools)
+            | set(self.event_strings)
             | ({self.START_FLOW} if self.spawn_branch else set())
             | ({self.SONG_FLOW} if self.song_gives else set())
             | set(song_scenes)
@@ -187,6 +188,11 @@ class ModBuilder:
                 if bool_report:
                     raise KeyError(f"{flow}: {'; '.join(bool_report)}")
                 report += [f"{flow}: event {e} {p} {a} -> {b}" for e, p, a, b in event_bools[flow]]
+            if flow in self.event_strings:
+                new, str_report = replace_event_strings(new, self.event_strings[flow])
+                if str_report:
+                    raise KeyError(f"{flow}: {'; '.join(str_report)}")
+                report += [f"{flow}: event {e} {p} {a} -> {b}" for e, p, a, b in self.event_strings[flow]]
             if start_items and flow == self.START_FLOW:
                 # action « ajouter à l'inventaire » copiée de la scène où Saria donne l'ocarina (sans animation)
                 template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
@@ -270,12 +276,17 @@ class ModBuilder:
                     if query is None:
                         raise KeyError("DoorOfTime: no GameDataActor.EventQueryIsGameDataBoolExp template")
                     new = ensure_actor_member(new, "GameDataActor", "query", "EventQueryIsGameDataBoolExp")
-                nodes = [
-                    {"actor": "GameDataActor", "query": "EventQueryIsGameDataBoolExp",
-                     "template": (query_flow, query), "set": {"GameDataName": gate["condition"]},
-                     "cases": {0: 1, 1: "old"}},
-                    {"flow": gate.get("flow", ""), "entry": gate["entry"], "next": "old"},
-                ]
+                if "skip_to" in gate:  # condition true: jump over the events up to skip_to
+                    nodes = [{"actor": "GameDataActor", "query": "EventQueryIsGameDataBoolExp",
+                              "template": (query_flow, query), "set": {"GameDataName": gate["condition"]},
+                              "cases": {0: {"event": int(gate["skip_to"])}, 1: "old"}}]
+                else:
+                    nodes = [
+                        {"actor": "GameDataActor", "query": "EventQueryIsGameDataBoolExp",
+                         "template": (query_flow, query), "set": {"GameDataName": gate["condition"]},
+                         "cases": {0: 1, 1: "old"}},
+                        {"flow": gate.get("flow", ""), "entry": gate["entry"], "next": "old"},
+                    ]
                 before = int(gate["before"]) if "before" in gate else None
                 new, gate_report = insert_flow(new, entry, nodes, before=before)
                 report += gate_report
@@ -785,6 +796,7 @@ class ModBuilder:
         return flow, report
     event_ints: dict = {}  # {flow: [(event, parameter, vanilla value, new value)]}
     event_bools: dict[str, list[tuple[int, str, bool, bool]]] = {}
+    event_strings: dict[str, list[tuple[int, str, str, str]]] = {}
     moat_items = MOAT_ITEMS  # dons directs aux douves (l'objet du lieu de l'Ocarina du Temps peut changer)
     # scènes propres à l'objet d'origine d'un coffre, sautées si l'objet n'a pas été obtenu :
     # (flux, acteur, action, paramètre, valeur, drapeau). Coffre de l'épée Kokiri : son événement

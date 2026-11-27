@@ -178,6 +178,7 @@ def build_mod(patch: dict, romfs: Path, mod_name: str, install: bool, keep_dir: 
         builder.given_flags = True
         builder.event_ints = {f: [tuple(e) for e in v] for f, v in (patch.get("event_ints") or {}).items()}
         builder.event_bools = {f: [tuple(e) for e in v] for f, v in (patch.get("event_bools") or {}).items()}
+        builder.event_strings = {f: [tuple(e) for e in v] for f, v in (patch.get("event_strings") or {}).items()}
         builder.build(changes, mod_dir / "romfs", flags, event_changes=event_changes or None,
                                 event_skips=skips, pickups=pickups or None,
                                 timeline_skips=patch.get("timeline_skips") or None,

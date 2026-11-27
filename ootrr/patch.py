@@ -95,6 +95,7 @@ def build_patch(world: World, result: Result, seed_hash: str, remote_chains: boo
         "logic_ints": {m: [list(e) for e in v] for m, v in world.logic_ints().items()},
         "event_ints": {f: [list(e) for e in v] for f, v in world.event_ints().items()},
         "event_bools": {f: [list(e) for e in v] for f, v in world.event_bools().items()},
+        "event_strings": {f: [list(e) for e in v] for f, v in world.event_strings().items()},
         "ingame_questions": world.ingame_questions(),
         "bool_exps": {k: [list(x) for x in v] for k, v in world.bool_exps().items()},
         "ainb_edits": world.ainb_edits(),

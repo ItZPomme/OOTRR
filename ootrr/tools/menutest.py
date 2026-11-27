@@ -136,6 +136,7 @@ def build(romfs: Path, out: Path, tokens: bool = True, start: str | None = None,
                   start_items=world.start_items() + list(give or []))
     actor_changes = {int(h): c for h, c in world.actor_changes().items()}
     mb.event_bools = world.event_bools()
+    mb.event_strings = world.event_strings()
     if tokens:
         # un jeton doit être un vrai acteur (le coffre lit aussi le nom ailleurs et refuse de s'ouvrir
         # sur un acteur inconnu) : copie du rubis vert de coffre, sans changer son modèle

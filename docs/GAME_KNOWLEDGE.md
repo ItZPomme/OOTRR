@@ -249,10 +249,16 @@ confirmed.
   with the `IsExistInPouch` condition (single pointer), `replace_strings` would break it.
 - The DMT Power flow calls `ActionGuide:OpenActionGuideSceenForce` after the reward, for the magic guide. If that
   reward is shuffled away from `Item_FairyBless_MP`, the mod skips the stale guide call **[files]** (not validated in game).
-- **Darunia's Joy after Dodongo's Cavern [files]**: `Dm_Goron_0030:C10` contains the gift, while post-clear entry
-  `C11` advances `Get_StoneOfFire` to `DodongoCavernOpne` without giving it. The mod now calls `C10` from `C11`
-  when `HavePlayedEvent.Dm_Goron_0030` is still false, so an unclaimed shuffled check can still be collected.
-  **Not validated in game.**
+- **Darunia's Joy after Dodongo's Cavern [files + game]** (2026-11-27): Darunia hears the ocarina once `Dm_Goron_0020` has
+  played (`ReplaceEventParam` of `Npc_Goron_Darunia_Child`, `GoronCity_CanDaruniaNotHearOcarina`); the RSDB
+  EventSetting `Meet_Darunia_PlayOcarina` always runs `Get_StoneOfFire:Get_StoneOfFire_PlayOcarina`. After Saria's Song
+  and the dance (`Dm_Goron_0025`), event 16 plays the reward scene `Dm_Goron_0030` only while
+  `Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp` is false; otherwise Darunia only talks. Clearing Dodongo's Cavern first
+  moves the quest past that step, so the check was lost (seen in game). Event 16 now reads `OoTRR_DaruniaJoyDone_Exp`
+  (`HavePlayedEvent.Dm_Goron_0030`), and the end of the scene (`C11`, event 164: step `DodongoCavernOpne`) is skipped
+  when the quest is already past it (`world.DARUNIA_JOY_*`). `Dm_Goron_0030`'s entries `C01`..`C11` are the parts of a
+  single scene (EntryPoint0 plays them in a row): `C10` gives the item, `C11` is the ending, not a post-clear entry.
+  **Validated in game** (2026-11-27: Darunia's Joy after clearing Dodongo's Cavern).
 - With the native menu, each location gives the token `OoTRR_Lnnnn` (copy of the original item) and the `PouchAdd`
   hook gives the seed item, as for ocarinas; setting `shuffle_gifts`, "Gifts" row (page 3). Without the menu, the
   placed item's name directly replaces the text. **Not fully validated in game yet.**
@@ -678,6 +684,29 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   from the start in all settings (`world.NIGHT_FLAG`) and at every change of age for older saves
   (`ReplaceEquipmentForEraChange`, **[files]**). Other readers: the owl at Zora's River (also wants Saria's Song scene),
   lines of two Market characters.
+- **Castle quest with Zelda skipped and the forest not open [files + game]** (2026-11-27): `Goto_HyruleCastle` has
+  the steps NotReady, Ready, Step01, Step02, Step02_01, Step03, Step03_01, Step03_02, Step04, Complete. `Complete`
+  moves Mido, Saria and the Kokiri (they all read `Goto_HyruleCastle_IsCompleted_Exp`), so with the forest not open it
+  starts at `Step04` (`world.MALON_HOME_QUEST`). Malon and Talon read `Goto_HyruleCastle_IsAfter_Step03_02_Exp`
+  everywhere: map presences (courtyard Malon negated; ranch Malon and Talon), Malon's AI schedule (`Act_Song` at the
+  ranch, `Act_Malon_Sleep` at night; `Act_SitChair_Wait` before), Talon's house door (`LonLonRanch_Child_NoTerrain_Prefab_3f29`,
+  `_72fc`), Ingo, ranch and market dialogues. Marking only the ranch actors present left Malon sitting as at the castle
+  and Talon's door shut (seen in game). Step04 readers: `HyruleCastle_Prefab_941f` requests the Zelda meeting
+  (`HyruleCastle_Goto_HyruleCastle_MeetZelda`, EventRequestActor 9854201107877740182) while the quest equals Step04,
+  made absent; the owl (`HyruleField_Child_Prefab_de5f`, deleted after Step01); the shop Kokiri (`_20f6`, already
+  removed); `Entry_LonLonRanch` (after Step04). **Validated in game** (2026-11-27: Malon sings at the ranch, Talon's
+  door open, nobody at the castle).
+- **Malon and Talon back at the castle [files + save]** (2026-11-27): besides the first courtyard Malon
+  (`Goto_HyruleCastle_IsAfter_Step03_02_Exp` negated) and Talon on the crates (`DoorOfTime_IsAfter_Step01_Exp`
+  negated), `HyruleCastle_Static` has a second pair by the wagon (`Npc_Hylia_Malon_Child` 8238628486503174655,
+  `Npc_Hylia_Talon_Child_SecondTime`) shown by `IsMalonAppear_HyruleCastleSecondTime` (`Market_Child_Static`: same with
+  `IsMalonAppear_Market`). It is the remake's reminder to fetch Epona's Song: leaving Dodongo's Cavern / Jabu-Jabu
+  (`Dm_SY_BancChange_EscapeDungeon`) runs `SubEvent_GetEponaSong:GetEponaSong_StepCheck`, which, while
+  `IsArrived_LonLonRanch_AfterMalonAppear` is false and `Get_StoneOfFire` is complete, sets the castle flag (no
+  Sapphire yet) or the market one. Talking to them or first entering the ranch clears it. The arrival flag is only set
+  by `Entry_LonLonRanch` (quest after Step04) and module `HyruleField_Common_5e73` (quest after Step03_02, in the
+  ranch); with the forest closed the quest stays at Ready, so seen in a save right after Dodongo's Cavern. Set true at
+  the start in all settings (`world.MALON_REMINDER_OFF_FLAG`); **validated in game** (2026-11-27, with the Step04 start).
 - `IsWorldTimeStop` / `IsDisableTimeProgress` are event settings (EventSetting), not a global state.
 - **Time only flows after `HyruleField_ArriveEntrance` [game, native trace]**: 0x345c020 freezes the time unless
   `Meet_DekuTree` is at Ready, or `HyruleField_ArriveEntrance` is true and `HrlField_HasEnteredFirstTime_Adult` false

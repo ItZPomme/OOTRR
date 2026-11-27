@@ -13,7 +13,7 @@ from ootrr.patch import build_patch, chest_changes, progressive_chains  # noqa: 
 from ootrr.rules import RuleCompiler, RuleError  # noqa: E402
 from ootrr.search import State, is_beatable  # noqa: E402
 from ootrr.spoiler import build as build_spoiler  # noqa: E402
-from ootrr.world import ADULT_MAP_FLAG, NIGHT_FLAG, ROLLING_GORON_FLAGS, World  # noqa: E402
+from ootrr.world import ADULT_MAP_FLAG, NIGHT_FLAG, ROLLING_GORON_FLAGS, SARIA_HOUSE_STOP_SEEN, World  # noqa: E402
 from seed_pool import submit_cases  # noqa: E402
 
 N_SEEDS = int(os.environ.get("OOTRR_TEST_SEEDS", "100"))
@@ -152,7 +152,8 @@ class WorldTests(unittest.TestCase):
         # a scene a logic module names is never marked as seen at the start (Dm_FireTemple_BossIn: no floor to
         # Volvagia's arena) nor replaced
         self.assertIn("Dm_FireTemple_BossIn", data["logic_played"])
-        self.assertFalse({f"HavePlayedEvent.{s}" for s in data["logic_played"]} & (seen - {ADULT_MAP_FLAG, NIGHT_FLAG}))
+        self.assertFalse({f"HavePlayedEvent.{s}" for s in data["logic_played"]} & (seen - {ADULT_MAP_FLAG, NIGHT_FLAG,
+                                                                                    SARIA_HOUSE_STOP_SEEN}))
         self.assertFalse(replaced & set(data["logic_played"]))
         # every skippable timeline is either replaced, marked as seen at the start, played by a logic module or
         # deliberately kept
@@ -228,7 +229,7 @@ class GenerationTests(unittest.TestCase):
                                  for k in flags), mode == "start_with")
             # porte du temps ouverte / scène de Rauru sautée : leurs scènes sont « déjà vues »
             door = {"HavePlayedEvent.Dm_TimeTemple_0010", "HavePlayedEvent.Dm_TimeTemple_0040",
-                    "HavePlayedEvent.Dm_Kokiri_0045"}
+                    "HavePlayedEvent.Dm_Kokiri_0045", "HavePlayedEvent.Dm_Kokiri_0060"}
             door |= {ADULT_MAP_FLAG, NIGHT_FLAG, *ROLLING_GORON_FLAGS}
             self.assertEqual(any(k.startswith("HavePlayedEvent.") and k not in door for k in flags),
                              world.settings["skip_cutscenes"] == "safe")

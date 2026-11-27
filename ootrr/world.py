@@ -106,7 +106,7 @@ PRELUDE_MODULES = {
 LIGHT_ARROW_MEDALLIONS_EXP = "OoTRR_HasShadowSpiritMedallions_Exp"
 NOCTURNE_MEDALLIONS_EXP = "OoTRR_CanGetNocturne_Exp"
 CRATER_SHEIK_EXP = "OoTRR_CanGetFireBolero_Exp"
-DARUNIA_JOY_PENDING_EXP = "OoTRR_DaruniaJoyPending_Exp"
+DARUNIA_JOY_DONE_EXP = "OoTRR_DaruniaJoyDone_Exp"
 RUNTIME_EVENT_EXPS = {
     **PRELUDE_EXPS,
     LIGHT_ARROW_MEDALLIONS_EXP: [
@@ -139,10 +139,7 @@ RUNTIME_EVENT_EXPS = {
         ("NOT",),
         ("AND",),
     ],
-    DARUNIA_JOY_PENDING_EXP: [
-        ("Bool", "HavePlayedEvent.Dm_Goron_0030"),
-        ("NOT",),
-    ],
+    DARUNIA_JOY_DONE_EXP: [("Bool", "HavePlayedEvent.Dm_Goron_0030")],
 }
 LIGHT_ARROW_LOGIC_GRAPH_EDITS = {
     "Market_Adult_Prefab_c668": {
@@ -200,13 +197,19 @@ CRATER_SHEIK_LOGIC_GRAPH_EDITS = {
                            "old": "EnterTemple", "new": "EnterTemp__"}],
     }
 }
-DARUNIA_JOY_POST_CLEAR_GATES = {
+# Darunia's Joy: Saria's Song in front of Darunia always runs Get_StoneOfFire:Get_StoneOfFire_PlayOcarina (RSDB
+# EventSetting Meet_Darunia_PlayOcarina; he hears the ocarina once Dm_Goron_0020 has played). After the dance
+# (Dm_Goron_0025), event 16 plays the reward scene Dm_Goron_0030 only while Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp
+# is false; clearing Dodongo's Cavern first moves the quest past that step, so Darunia only talked and the check was
+# lost [files]. Event 16 reads "scene already played" instead: same result in the vanilla order (validated in game
+# 2026-11-27).
+DARUNIA_JOY_FLOW = "Get_StoneOfFire"
+DARUNIA_JOY_STRINGS = [(16, "GameDataName", "Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp", DARUNIA_JOY_DONE_EXP)]
+# The end of Dm_Goron_0030 (C11, event 164) sets Get_StoneOfFire to DodongoCavernOpne: skipped (to event 47, the
+# camera reset after the progress UI) when the quest is already past it, so a late Darunia's Joy cannot rewind it.
+DARUNIA_JOY_STEP_GATES = {
     "Dm_Goron_0030": {
-        "C11": {
-            "condition": DARUNIA_JOY_PENDING_EXP,
-            "entry": "C10",
-            "before": "129",
-        },
+        "C11": {"condition": "Get_StoneOfFire_IsAfter_DodongoCavernOpne_Exp", "before": "164", "skip_to": "47"},
     },
 }
 OCARINA_OF_TIME_ACTOR = 2802436684568022035  # Obj_Ocarina_Time_A_01, douves (HyruleField_Child_Static)
@@ -352,13 +355,22 @@ SKIP_FLAGS = (
     # la Kokiri de la boutique qui fait essayer le bouclier
     "Npc_Kokiri_010_Child_Teach",
     "HaveTalked_Special.Npc_Kokiri_010_Child_FocusOnAttentionRock_ShieldDeku_Event94",
+    # Saria stopping Link outside his house, see SARIA_HOUSE_STOP_SEEN
+    "HavePlayedEvent.Dm_Kokiri_0060",
 )
+# Saria waiting outside Link's house: module KokiriForest_Child_Level_Npc_Kokiri_Saria_Child_a766 requests
+# Npc_Kokiri_Saria_Child:KokiriForest_StopInFrontOfLinkHouse (she talks to Link, then scene Dm_Kokiri_0060, then an
+# autosave) until Dm_Kokiri_0060 is seen; it sets nothing else. Other readers [files]: Saria's AI schedule (from then on
+# her usual places), module KokiriForest_Child_Level_All_02_5b4e (her warp standby), a line of Npc_Kokiri_005_Child.
+# Listed as "logic_played" in cutscenes.json, so never marked seen by the automatic sort. Validated in game (2026-11-27).
+SARIA_HOUSE_STOP_SEEN = "HavePlayedEvent.Dm_Kokiri_0060"
 # Départ de la forêt sans scènes de Saria (Dm_Kokiri_0045 vue : ses zones de déclenchement sont supprimées par le
 # module de Saria, Dm_Kokiri_0050 ne suit plus), comme avec skip_cutscenes=safe
 KOKIRI_START_SEEN = {
     "HavePlayedEvent.Dm_Kokiri_0045": True,
     "IsVisitLocation.KokiriForest": True,
     "KokiriForest_LinkHouseDoor_Open": True,
+    SARIA_HOUSE_STOP_SEEN: True,  # Saria no longer stops Link outside his house (asked 2026-11-27)
 }
 # Les demandes d'événement qui font arrêter Link par ces Kokiri sont rendues absentes (condition de
 # présence : scène d'introduction pas encore vue, donc toujours faux une fois la partie commencée)
@@ -366,10 +378,26 @@ KOKIRI_START_SEEN = {
 # (DoorOfTime >= Step01), donc avec « Zelda enfant passée » ou la porte ouverte il n'est plus là
 TALON_CASTLE = 5439531180495276262
 TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False, "IsNegation": True}
-# Malon in the courtyard (HyruleCastle_Static) is present until Goto_HyruleCastle reaches Step03_02; from then on she and
-# Talon stand in the field near the ranch (HyruleField_Child_Static) [files]
-CASTLE_MALON = 3576280271882277111
-RANCH_MALON_TALON = (16230097737274633186, 13992935491369868918)
+# Zelda skipped / door open with the forest not open: Goto_HyruleCastle cannot be Complete (Mido leaves his post, Saria
+# leaves the village: every Kokiri, Mido, Saria and Zelda read Goto_HyruleCastle_IsCompleted_Exp), so it starts at
+# Step04, the step after waking Talon (validated in game 2026-11-27). Everything that places Malon and Talon reads
+# Goto_HyruleCastle_IsAfter_Step03_02_Exp: courtyard Malon (presence negated), ranch Malon and Talon (presence), Malon's
+# AI schedule (singing at the ranch, asleep at night; sitting on her castle chair otherwise), Talon's house door
+# (LonLonRanch_Child_NoTerrain_Prefab_3f29 / _72fc), Ingo; the ranch and market dialogues read it too. Only marking the
+# actors present (2026-11-26) put Malon at the ranch in her castle pose with Talon's door shut (seen in game 2026-11-27).
+# Other Step04 readers [files]: HyruleCastle_Prefab_941f requests the Zelda meeting (EventRequestActor below) while the
+# quest IS Step04 (removed with Zelda skipped), the owl module (gone after Step01), the shop Kokiri (already removed),
+# Entry_LonLonRanch (Step04 -> IsArrived_LonLonRanch_AfterMalonAppear, set anyway).
+MALON_HOME_QUEST = ("Enum", 3683238313, "Step04")
+CASTLE_MEET_ZELDA_REQUEST = 9854201107877740182  # HyruleCastle_Goto_HyruleCastle_MeetZelda (HyruleCastle_Static)
+# Remake reminder: leaving Dodongo's Cavern / Jabu-Jabu runs SubEvent_GetEponaSong:GetEponaSong_StepCheck
+# (Dm_SY_BancChange_EscapeDungeon). While this flag is false (Link has not entered the ranch since Malon went home) and
+# the Goron Ruby quest is complete, it sets IsMalonAppear_HyruleCastleSecondTime (no Zora's Sapphire yet) or
+# IsMalonAppear_Market: a second Malon + Talon pair stands by the wagon in front of the castle (or in the market) until
+# Link talks to them or first enters the ranch. Seen in game with the forest closed and the door open (2026-11-27, the
+# flag turned true in the save after Dodongo's Cavern). Its only readers are that check, Entry_LonLonRanch and module
+# HyruleField_Common_5e73 (which set it) [files]: true from the start = no reminder, Malon and Talon stay at the ranch.
+MALON_REMINDER_OFF_FLAG = "IsArrived_LonLonRanch_AfterMalonAppear"
 # Air wall around the Hookshot switch of the Water Temple gate (Lake Hylia, HyruleField_Adult_Dynamic): present
 # until SageOfWater is after Step03 (Water Serenade), it makes the switch an invalid Hookshot target. The logic only
 # asks for the Hookshot, Iron Boots and Zora Tunic, so it is made absent in every seed. It stays in the map with a
@@ -1203,6 +1231,8 @@ class World:
         flags.update(ROLLING_GORON_FLAGS)
         # onglet des quêtes du menu (tapisserie : pierres, médaillons) : voir CHALLENGE_MENU_FLAG
         flags[CHALLENGE_MENU_FLAG] = True
+        # Malon and Talon stay at the ranch after a stone: see MALON_REMINDER_OFF_FLAG
+        flags[MALON_REMINDER_OFF_FLAG] = True
         # D-pad guide shown from the start: see NAVI_GUIDE_FLAG
         flags[NAVI_GUIDE_FLAG] = True
         if self.settings.get("maps_compasses") == "start_with":
@@ -1232,12 +1262,14 @@ class World:
             for name in SKIP_RAURU_FLAGS:
                 flags[name] = True
         if self.settings.get("skip_child_zelda") or self.settings.get("open_door_of_time"):
-            # Zelda déjà rencontrée : quête du château finie (le temps passe), Porte du Temps à Step01
-            # Goto_HyruleCastle = Complete fait quitter son poste à Mido (constaté en jeu, 2026-11-26) : seulement forêt ouverte
+            # Zelda already met: castle quest done (time flows), Door of Time at Step01
+            # Goto_HyruleCastle = Complete makes Mido leave his post (seen in game, 2026-11-26): only with the forest open;
+            # otherwise Step04, Malon and Talon back at the ranch (MALON_HOME_QUEST)
             if self.settings.get("open_forest") == "open":
                 flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
             else:
-                # sans « quête terminée », Saria reste au village et sa scène de départ se rejouerait
+                flags[f"#{MALON_HOME_QUEST[1]}"] = MALON_HOME_QUEST[2]
+                # without "quest complete", Saria stays in the village and her start scene would play again
                 flags.update(KOKIRI_START_SEEN)
             flags[KAKARIKO_GATE_FLAG] = True
             if not self.settings.get("open_door_of_time"):
@@ -1371,12 +1403,16 @@ class World:
         return {**LIGHT_ARROW_LOGIC_GRAPH_EDITS, **CRATER_SHEIK_LOGIC_GRAPH_EDITS}
 
     def event_entry_gates(self) -> dict[str, dict[str, dict[str, str]]]:
-        """Conditions that start existing story entries during map arrival flows."""
+        """Conditions inserted in scripts: call an existing entry ("entry") or jump to an event ("skip_to") when true."""
         out = {flow: {entry: dict(gate) for entry, gate in entries.items()}
                for flow, entries in KAKARIKO_NOCTURNE_ENTRIES.items()}
         out.update({flow: {entry: dict(gate) for entry, gate in entries.items()}
-                    for flow, entries in DARUNIA_JOY_POST_CLEAR_GATES.items()})
+                    for flow, entries in DARUNIA_JOY_STEP_GATES.items()})
         return out
+
+    def event_strings(self) -> dict[str, list[tuple[int, str, str, str]]]:
+        """Text parameters of precise script events: {flow: [(event, parameter, vanilla text, new text)]}."""
+        return {DARUNIA_JOY_FLOW: list(DARUNIA_JOY_STRINGS)}
 
     def logic_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
         """Integer inputs to change in logic modules: {module: [(node, input, vanilla value, new value)]}."""
@@ -1452,11 +1488,9 @@ class World:
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
         if (self.settings.get("skip_child_zelda") or self.settings.get("open_door_of_time")) \
                 and self.settings.get("open_forest") != "open":
-            # the castle quest is not set to Complete (Mido): Malon and Talon go to the ranch as it would have done
-            out[CASTLE_MALON] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
-                                              "IsNegation": True}}
-            for h in RANCH_MALON_TALON:
-                out[h] = {"Presence": None}
+            # the castle quest starts at Step04 (MALON_HOME_QUEST): no Zelda meeting in the courtyard
+            out[CASTLE_MEET_ZELDA_REQUEST] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
+                                                           "IsNegation": True}}
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
         out[CHILD_BRIDGE_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,

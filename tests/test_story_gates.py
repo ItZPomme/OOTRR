@@ -12,7 +12,7 @@ from ootrr.world import (
     CHILD_BRIDGE_FLAG,
     CHILD_BRIDGE_FLOW,
     CRATER_SHEIK_EXP,
-    DARUNIA_JOY_PENDING_EXP,
+    DARUNIA_JOY_DONE_EXP,
     World,
 )  # noqa: E402
 
@@ -60,20 +60,19 @@ class StoryGateTests(unittest.TestCase):
             ("AND",),
         ])
 
-    def test_post_clear_darunia_flow_replays_unclaimed_reward(self):
+    def test_darunia_joy_after_dodongo(self):
+        """Saria's Song plays the reward scene until it has played, whatever the Goron Ruby quest step."""
+        self.assertEqual(self.world.event_strings()["Get_StoneOfFire"], [
+            (16, "GameDataName", "Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp", DARUNIA_JOY_DONE_EXP)])
+        self.assertEqual(self.world.bool_exps()[DARUNIA_JOY_DONE_EXP], [("Bool", "HavePlayedEvent.Dm_Goron_0030")])
         gate = self.world.event_entry_gates()["Dm_Goron_0030"]["C11"]
-        self.assertEqual(gate, {
-            "condition": DARUNIA_JOY_PENDING_EXP,
-            "entry": "C10",
-            "before": "129",
-        })
-        self.assertEqual(self.world.bool_exps()[DARUNIA_JOY_PENDING_EXP], [
-            ("Bool", "HavePlayedEvent.Dm_Goron_0030"),
-            ("NOT",),
-        ])
+        self.assertEqual(gate, {"condition": "Get_StoneOfFire_IsAfter_DodongoCavernOpne_Exp", "before": "164",
+                                "skip_to": "47"})
         placements = {name: loc.vanilla for name, loc in self.world.locations.items()}
         patch = build_patch(self.world, Result(1, 1, placements), "test")
         self.assertEqual(patch["event_entry_gates"]["Dm_Goron_0030"]["C11"], gate)
+        self.assertEqual(patch["event_strings"]["Get_StoneOfFire"],
+                         [[16, "GameDataName", "Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp", DARUNIA_JOY_DONE_EXP]])
 
     def test_ocarina_checks_use_child_dungeon_clears(self):
         stones = ["Kokiri_Emerald", "Goron_Ruby", "Zora_Sapphire"]
