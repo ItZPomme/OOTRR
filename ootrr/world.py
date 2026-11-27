@@ -348,12 +348,23 @@ SKIP_FLAGS = (
     "Npc_Kokiri_010_Child_Teach",
     "HaveTalked_Special.Npc_Kokiri_010_Child_FocusOnAttentionRock_ShieldDeku_Event94",
 )
+# Départ de la forêt sans scènes de Saria (Dm_Kokiri_0045 vue : ses zones de déclenchement sont supprimées par le
+# module de Saria, Dm_Kokiri_0050 ne suit plus), comme avec skip_cutscenes=safe
+KOKIRI_START_SEEN = {
+    "HavePlayedEvent.Dm_Kokiri_0045": True,
+    "IsVisitLocation.KokiriForest": True,
+    "KokiriForest_LinkHouseDoor_Open": True,
+}
 # Les demandes d'événement qui font arrêter Link par ces Kokiri sont rendues absentes (condition de
 # présence : scène d'introduction pas encore vue, donc toujours faux une fois la partie commencée)
 # Talon devant le château (HyruleCastle_Static) : comme Impa, il disparaît une fois Zelda rencontrée
 # (DoorOfTime >= Step01), donc avec « Zelda enfant passée » ou la porte ouverte il n'est plus là
 TALON_CASTLE = 5439531180495276262
 TALON_GONE = {"FlagName": "DoorOfTime_IsAfter_Step01_Exp", "IsCheckLazy": False, "IsNegation": True}
+# Malon in the courtyard (HyruleCastle_Static) is present until Goto_HyruleCastle reaches Step03_02; from then on she and
+# Talon stand in the field near the ranch (HyruleField_Child_Static) [files]
+CASTLE_MALON = 3576280271882277111
+RANCH_MALON_TALON = (16230097737274633186, 13992935491369868918)
 # Air wall around the Hookshot switch of the Water Temple gate (Lake Hylia, HyruleField_Adult_Dynamic): present
 # until SageOfWater is after Step03 (Water Serenade), it makes the switch an invalid Hookshot target. The logic only
 # asks for the Hookshot, Iron Boots and Zora Tunic, so it is made absent in every seed. It stays in the map with a
@@ -1220,6 +1231,9 @@ class World:
             # Goto_HyruleCastle = Complete fait quitter son poste à Mido (constaté en jeu, 2026-11-26) : seulement forêt ouverte
             if self.settings.get("open_forest") == "open":
                 flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
+            else:
+                # sans « quête terminée », Saria reste au village et sa scène de départ se rejouerait
+                flags.update(KOKIRI_START_SEEN)
             flags[KAKARIKO_GATE_FLAG] = True
             if not self.settings.get("open_door_of_time"):
                 flags[f"#{MEET_ZELDA_DOOR_STEP[1]}"] = MEET_ZELDA_DOOR_STEP[2]
@@ -1433,6 +1447,13 @@ class World:
             for h in OPEN_FOREST_REMOVALS["deku"]:
                 out[h] = {"Presence": {"FlagName": FOREST_FLAGS["deku"], "IsCheckLazy": False, "IsNegation": False}}
         out[TALON_CASTLE] = {"Presence": dict(TALON_GONE)}
+        if (self.settings.get("skip_child_zelda") or self.settings.get("open_door_of_time")) \
+                and self.settings.get("open_forest") != "open":
+            # the castle quest is not set to Complete (Mido): Malon and Talon go to the ranch as it would have done
+            out[CASTLE_MALON] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
+                                              "IsNegation": True}}
+            for h in RANCH_MALON_TALON:
+                out[h] = {"Presence": None}
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
         out[CRATER_SHEIK_EVENT_ACTOR] = {"RequestEventName": None}

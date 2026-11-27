@@ -227,7 +227,8 @@ class GenerationTests(unittest.TestCase):
             self.assertEqual(any(k.startswith("DungeonInfo.") and k.endswith(("IsGetMap", "IsGetCompass"))
                                  for k in flags), mode == "start_with")
             # porte du temps ouverte / scène de Rauru sautée : leurs scènes sont « déjà vues »
-            door = {"HavePlayedEvent.Dm_TimeTemple_0010", "HavePlayedEvent.Dm_TimeTemple_0040"}
+            door = {"HavePlayedEvent.Dm_TimeTemple_0010", "HavePlayedEvent.Dm_TimeTemple_0040",
+                    "HavePlayedEvent.Dm_Kokiri_0045"}
             door |= {ADULT_MAP_FLAG, NIGHT_FLAG, *ROLLING_GORON_FLAGS}
             self.assertEqual(any(k.startswith("HavePlayedEvent.") and k not in door for k in flags),
                              world.settings["skip_cutscenes"] == "safe")
