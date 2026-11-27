@@ -52,6 +52,9 @@ REWARD_EVENTS = {
 # donc Zelda et Impa ne sont plus là : leurs objets sont donnés au départ. L'Ocarina du Temps
 # reste dans les douves (module modifié pour l'étape Step06), ramassable avec les 3 pierres.
 OPEN_DOOR_START = SKIP_CHILD_ZELDA
+# Set by the guard's ShowItem_ZeldaLetter entry (Npc_Hylia_Soldier_003) when the letter is shown [files]; skip_child_zelda
+# starts with the letter, so the gate starts open as if it had been shown.
+KAKARIKO_GATE_FLAG = "Npc_Hylia_Soldier_003_GateOpen"
 DOOR_OF_TIME_STEP = ("Enum", 931730378, "Step06")  # état de la quête (enum GameData sans nom connu)
 # Rencontrer Zelda (Goto_HyruleCastle:Goto_HyruleCastle_MeetZelda) fait passer la quête Goto_HyruleCastle à
 # Complete et DoorOfTime à Step01 ; c'est ce qui lance le cycle jour / nuit. Avec skip_child_zelda (ou la
@@ -211,10 +214,12 @@ MOAT_CHEST_SOURCE = 5755485285664292988  # Obj_TBox_A_01_NoBake de HyruleField_C
 MOAT_CHEST = 0x007A7253_0000_0002        # nouvel acteur (hash libre dans la carte)
 MOAT_LAND_POS = [-2.5, 150.4, 55.5]      # sol, sortie du pont-levis, à côté du point d'arrivée StartPos_DoorOfTime (-0.08, 150.4, 54.2)
 MOAT_CHEST_EVENT = "HyruleField_DoorOfTime_GetOcarinaOfTime"
-# The child drawbridge is controlled by one flag and two conditional actors in HyruleField_Child_Static.
+# The child drawbridge is raised by this flag; actors and their logic module (HyruleField_Child_Prefab_0ce5) stay
+# vanilla: deleting them left an invisible wall.
 CHILD_BRIDGE_FLAG = "IsHyruleFieldBridgeClose"
-CHILD_BRIDGE_DOWN_ACTOR = 10233645194156655880
-CHILD_BRIDGE_UP_ACTOR = 13633262183050288401
+# Invisible player wall on the raised bridge (module HyruleField_Child_Prefab_32f7); it blocked the lowered bridge too
+# **[game, 2026-11-26, checkwatch]**.
+CHILD_BRIDGE_AIR_WALL = 7944026494706613406
 CHILD_BRIDGE_FLOW = "DoorOfTime"
 CHILD_BRIDGE_CLOSE_EVENT = 30
 # skip_cutscenes=safe : scènes de Kaepora Gaebora mises de côté par le tri automatique (elles posent
@@ -1212,7 +1217,10 @@ class World:
                 flags[name] = True
         if self.settings.get("skip_child_zelda") or self.settings.get("open_door_of_time"):
             # Zelda déjà rencontrée : quête du château finie (le temps passe), Porte du Temps à Step01
-            flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
+            # Goto_HyruleCastle = Complete fait quitter son poste à Mido (constaté en jeu, 2026-11-26) : seulement forêt ouverte
+            if self.settings.get("open_forest") == "open":
+                flags[f"#{MEET_ZELDA_QUEST[1]}"] = MEET_ZELDA_QUEST[2]
+            flags[KAKARIKO_GATE_FLAG] = True
             if not self.settings.get("open_door_of_time"):
                 flags[f"#{MEET_ZELDA_DOOR_STEP[1]}"] = MEET_ZELDA_DOOR_STEP[2]
         if self.settings.get("start_with_consumables"):
@@ -1428,8 +1436,8 @@ class World:
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
         out[CRATER_SHEIK_EVENT_ACTOR] = {"RequestEventName": None}
-        out[CHILD_BRIDGE_DOWN_ACTOR] = {"Presence": None}
-        out[CHILD_BRIDGE_UP_ACTOR] = {"__delete": True}
+        out[CHILD_BRIDGE_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
+                                                   "IsNegation": True}}
         out[SHADOW_FALLING_FLOOR] = {"PreFallTime": SHADOW_FALLING_FLOOR_DELAY}
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:

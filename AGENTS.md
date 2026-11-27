@@ -51,7 +51,7 @@ python -m ootrr --plando FILE.json --romfs ROMFS --install   # same, from the co
 python -m ootrr.tools.coords --romfs ROMFS --area Banc/HyruleField --filter Obj_TBox --follow  # Link's position (menu mod) + nearest actors
 python -m ootrr.tools.key_graph propose --romfs ROMFS   # room graph of the key dungeons (data/key_graph.json), to check by hand
 python -m ootrr.tools.key_graph counts --romfs ROMFS --write   # worst-case small keys per location (checked dungeons)
-python -m ootrr.tools.checkwatch --romfs ROMFS           # live: GameData changes, event, nearest actor hashes (Longshot, HOS_CONTROL=1)
+python -m ootrr.tools.checkwatch --romfs ROMFS           # live: GameData changes, event, nearest actor hashes (Longshot started by the app: its control socket is found by itself)
 python -m ootrr.tools.build_installer                    # output/OoTRR-installer.exe (PyInstaller)
 python -m ootrr.tools.longshot_app                       # seed installer window, Longshot or Eden (or Longshot-Installer.bat)
 python -m ootrr.tools.build_longshot_app --all           # output/OoTRR-App.exe + OoTRR-Plando.exe (windowed) + OoTRR-Overlay.exe (PyInstaller)

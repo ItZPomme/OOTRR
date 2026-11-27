@@ -82,7 +82,7 @@
     },
     "DMC Upper": {
       "locations": {
-        "DMC Wall Freestanding PoH": {"rule": "has_explosives", "vanilla": "Obj_Heart_Piece", "hashes": [744856631664786545], "pickup": "freestanding", "_note": "prudent : mur ou volcan à confirmer"},
+        "DMC Wall Freestanding PoH": {"rule": "has_explosives", "vanilla": "Obj_Heart_Piece", "hashes": [744856631664786545], "pickup": "freestanding"},
         "DMC Deku Scrub Heart Piece": {"rule": "is_child and has_explosives", "vanilla": "Obj_Heart_Piece", "hashes": [2518138296199711695], "scrub": true, "price": 40}
       },
       "exits": {
@@ -101,7 +101,7 @@
     },
     "Gerudo Fortress": {
       "locations": {
-        "GF HBA 1000 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Obj_Heart_Piece"},
+        "GF HBA 1000 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Obj_Heart_Piece", "gift": true},
         "GF HBA 1500 Points":        {"rule": "can_ride_epona and can_use(Bow) and Gerudo_Membership_Card", "vanilla": "Item_Quiver_Large", "gift": true},
         "GF Gerudo Membership Card": {"rule": "is_adult and (can_use(Bow) or can_use(Progressive_Hookshot))", "vanilla": "Item_Token_Gerudo", "gift": true}
       },
@@ -116,7 +116,7 @@
     },
     "Gerudo Valley": {
       "locations": {
-        "GV Waterfall Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece"}
+        "GV Waterfall Freestanding PoH": {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [16129198288828948135], "pickup": "freestanding"}
       },
       "exits": {
         "Hyrule Field": "True",
@@ -127,9 +127,9 @@
     "Goron City": {
       "locations": {
         "GC Darunias Joy":           {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
-        "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium"},
-        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or Progressive_Strength)", "vanilla": "Goron_Tunic"},
-        "GC Pot Freestanding PoH":   {"rule": "is_child and has_explosives and has_fire_or_sticks", "vanilla": "Obj_Heart_Piece", "_note": "spinning pot (flag GoronLargePot_IsGetHeartPiece set by Npc_Goron_005_Child, scene Dm_Goron_0045, map icon in GoronCity_Child_Dynamic); rule taken from OoT (bomb in the pot, torches lit), not checked in game"}
+        "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium", "gift": true},
+        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or Progressive_Strength)", "vanilla": "Goron_Tunic", "gift": true},
+        "GC Pot Freestanding PoH":   {"rule": "is_child and has_explosives and has_fire_or_sticks", "vanilla": "Obj_Heart_Piece"}
       },
       "exits": {
         "Death Mountain Trail": "True",
@@ -140,7 +140,7 @@
     "Graveyard": {
       "locations": {
         "Graveyard Dampe Gravedigging Tour": {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
-        "Graveyard Freestanding PoH":        {"rule": "is_adult and Graveyard_Bean_Planted", "vanilla": "Obj_Heart_Piece", "hashes": [2157466067026784951], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu : jamais d'objet nécessaire"},
+        "Graveyard Freestanding PoH":        {"rule": "is_adult and Graveyard_Bean_Planted", "vanilla": "Obj_Heart_Piece", "hashes": [2157466067026784951], "pickup": "freestanding"},
         "Song from Royal Familys Tomb":      {"kind": "song", "rule": "can_play(Zeldas_Lullaby)", "vanilla": "Item_Melody_SunSong"}
       },
       "events": {
@@ -198,7 +198,7 @@
         "Song from Windmill":            {"kind": "song", "rule": "is_adult and Ocarina", "vanilla": "Item_Melody_StormSong"},
         "Sheik in Kakariko":             {"kind": "song", "rule": "is_adult and Forest_Temple_Clear and Fire_Temple_Clear and Water_Temple_Clear", "vanilla": "Item_Melody_ShadowNocturne"},
         "Kak Shooting Gallery Reward":   {"rule": "can_use(Bow)", "vanilla": "Item_Quiver_Medium", "gift": true},
-        "Kak Second Freestanding PoH":   {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [17926402522258180222], "pickup": "freestanding", "no_progression": true, "_note": "emplacement exact inconnu (maison d'Impa ?) : jamais d'objet nécessaire"}
+        "Kak Second Freestanding PoH":   {"rule": "True", "vanilla": "Obj_Heart_Piece", "hashes": [17926402522258180222], "pickup": "freestanding"}
       },
       "events": {
         "Drain_Well": "is_child and can_play(Song_of_Storms)",
@@ -221,12 +221,12 @@
     },
     "Lake Hylia": {
       "locations": {
-        "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter", "hashes": [474136620438465634], "pickup": "item", "actor": "Obj_Bottle_Letter", "_note": "Ruto's letter on the lake floor (Obj_Bottle_Letter, child Hyrule Field map); shuffled with shuffle_gifts"},
-        "LH Child Fishing":    {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
+        "LH Underwater Item":  {"rule": "is_child and can_dive", "vanilla": "Item_Bottle_Letter", "hashes": [474136620438465634], "pickup": "item", "actor": "Obj_Bottle_Letter"},
+        "LH Child Fishing":    {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
         "LH Adult Fishing":    {"rule": "is_adult", "vanilla": "Item_Scale_Gold", "gift": true},
-        "LH Lab Dive":         {"rule": "has_gold_scale or (can_use(Iron_Boots) and can_use(Progressive_Hookshot))", "vanilla": "Obj_Heart_Piece"},
-        "LH Sun":              {"rule": "is_adult and Water_Medallion and can_use(Bow)", "vanilla": "Item_Arrow_Fire", "hashes": [4598657944866228526], "pickup": "item", "actor": "Obj_Arrow_Fire", "_note": "flèche posée sur l'eau (Obj_Arrow_Fire, carte de la plaine adulte) après le tir dans le soleil ; mélangée avec shuffle_gifts"},
-        "LH Freestanding PoH": {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [13469300937852836203], "pickup": "freestanding", "_note": "dans la carte de la plaine (version adulte), près de la maison du lac"}
+        "LH Lab Dive":         {"rule": "has_gold_scale", "vanilla": "Obj_Heart_Piece", "gift": true},
+        "LH Sun":              {"rule": "is_adult and Water_Medallion and can_use(Bow)", "vanilla": "Item_Arrow_Fire", "hashes": [4598657944866228526], "pickup": "item", "actor": "Obj_Arrow_Fire"},
+        "LH Freestanding PoH": {"rule": "can_use_longshot", "vanilla": "Obj_Heart_Piece", "hashes": [13469300937852836203], "pickup": "freestanding"}
       },
       "events": {
         "Trade_Eyedrops": "is_adult and Trade_Eyeball_Frog"
@@ -249,8 +249,8 @@
     },
     "Lost Woods": {
       "locations": {
-        "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece"},
-        "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece"},
+        "LW Skull Kid":           {"rule": "is_child and can_play(Sarias_Song)", "vanilla": "Obj_Heart_Piece", "gift": true},
+        "LW Ocarina Memory Game": {"rule": "is_child and Ocarina", "vanilla": "Obj_Heart_Piece", "gift": true},
         "LW Target in Woods":     {"rule": "can_use(Slingshot)", "vanilla": "Item_BulletBag_Medium", "gift": true},
         "LW Deku Scrub Stick Upgrade": {"rule": "is_child", "vanilla": "Item_StickBag_Medium", "hashes": [5406759280757349546, 11192313919554167152], "scrub": true, "price": 40}
       },
@@ -268,7 +268,7 @@
     },
     "Lost Woods Bridge": {
       "locations": {
-        "LW Gift from Saria": {"rule": "is_child and (forest_exit_open or Deku_Tree_Clear)", "vanilla": "Item_Ocarina_Fairy", "ocarina": true, "_note": "prudent : Saria attend peut-être la fin de l'Arbre Mojo (forêt ouverte)"}
+        "LW Gift from Saria": {"rule": "is_child and (forest_exit_open or Deku_Tree_Clear)", "vanilla": "Item_Ocarina_Fairy", "ocarina": true}
       },
       "exits": {
         "Kokiri Forest": "is_adult or forest_exit_open",
@@ -293,11 +293,11 @@
       "locations": {
         "Market Treasure Chest Game":          {"rule": "is_child and can_use(Lens_of_Truth)", "vanilla": "Obj_Heart_Piece"},
         "Market Bombchu Bowling First Prize":  {"rule": "is_child and Bomb_Bag", "vanilla": "Item_BombBag_Large", "gift": true},
-        "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece"},
+        "Market Bombchu Bowling Second Prize": {"rule": "is_child and Bomb_Bag", "vanilla": "Obj_Heart_Piece", "gift": true},
         "Market Shooting Gallery Reward":      {"rule": "is_child", "vanilla": "Item_BulletBag_Large", "gift": true},
-        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece"},
-        "Market Potion Shop Bottle":           {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true, "_note": "child potion shop keeper (Npc_Hylia_020_Shop_Child), bottle tutorial on first talk"},
-        "Market 5 Big Poes":                   {"rule": "is_adult and can_ride_epona and can_use(Bow) and has_bottle", "vanilla": "Item_Bottle", "gift": true, "_note": "Ghost Shop (Npc_Hylia_048_BottleShop, adult market): bottle at 500 points = 5 Big Poes; rule taken from OoT (Epona, bow), not checked in game"}
+        "Market Lost Dog":                     {"rule": "is_child", "vanilla": "Obj_Heart_Piece", "gift": true},
+        "Market Potion Shop Bottle":           {"rule": "is_child", "vanilla": "Item_Bottle", "gift": true},
+        "Market 5 Big Poes":                   {"rule": "is_adult and can_ride_epona and can_use(Bow) and has_bottle", "vanilla": "Item_Bottle", "gift": true}
       },
       "exits": {
         "Hyrule Field": "True",
@@ -340,8 +340,8 @@
       "locations": {
         "ZR Near Open Grotto Freestanding PoH": {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [11455676800795329345], "pickup": "freestanding"},
         "ZR Near Domain Freestanding PoH":     {"rule": "is_child or can_use(Hover_Boots)", "vanilla": "Obj_Heart_Piece", "hashes": [4189391771527808272], "pickup": "freestanding"},
-        "ZR Frogs Ocarina Game": {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song) and can_play(Suns_Song) and can_play(Eponas_Song) and can_play(Song_of_Time) and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece"},
-        "ZR Frogs in the Rain":  {"rule": "is_child and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece", "_note": "second frog heart piece (map icon MiniGame_FrogTenors_StormSong, script MiniGame_FrogTenors); rule taken from OoT, not checked in game"}
+        "ZR Frogs Ocarina Game": {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song) and can_play(Suns_Song) and can_play(Eponas_Song) and can_play(Song_of_Time) and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece", "gift": true},
+        "ZR Frogs in the Rain":  {"rule": "is_child and can_play(Song_of_Storms)", "vanilla": "Obj_Heart_Piece", "gift": true}
       },
       "exits": {
         "ZR Front": "has_explosives",
@@ -355,7 +355,7 @@
     "Zoras Domain": {
       "locations": {
         "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver", "gift": true},
-        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic"}
+        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic", "gift": true}
       },
       "events": {
         "King_Zora_Moved": "is_child and Rutos_Letter",

@@ -479,6 +479,8 @@ class PlandoApp:
         win.title("Settings")
         win.geometry("640x560")
         win.transient(self.root)
+        bar = ttk.Frame(win, padding=8)
+        bar.pack(side="bottom", fill="x")  # packed first: the pages never push it out of the window
         notebook = ttk.Notebook(win)
         notebook.pack(fill="both", expand=True, padx=8, pady=8)
         variables: dict[str, tk.Variable] = {}
@@ -530,8 +532,6 @@ class PlandoApp:
             win.destroy()
             self.rebuild_world()
 
-        bar = ttk.Frame(win, padding=8)
-        bar.pack(fill="x")
         ttk.Button(bar, text="OK", command=apply).pack(side="right")
         ttk.Button(bar, text="Cancel", command=win.destroy).pack(side="right", padx=6)
 

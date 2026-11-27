@@ -9,10 +9,8 @@ from ootrr.fill import Result  # noqa: E402
 from ootrr.patch import build_patch  # noqa: E402
 from ootrr.search import State  # noqa: E402
 from ootrr.world import (
-    CHILD_BRIDGE_DOWN_ACTOR,
     CHILD_BRIDGE_FLAG,
     CHILD_BRIDGE_FLOW,
-    CHILD_BRIDGE_UP_ACTOR,
     CRATER_SHEIK_EVENT_ACTOR,
     CRATER_SHEIK_EXP,
     DARUNIA_JOY_PENDING_EXP,
@@ -90,9 +88,6 @@ class StoryGateTests(unittest.TestCase):
     def test_child_market_bridge_stays_down(self):
         self.assertFalse(self.world.start_flags()[CHILD_BRIDGE_FLAG])
         self.assertEqual(self.world.event_bools()[CHILD_BRIDGE_FLOW], [(30, "Value", True, False)])
-        changes = self.world.actor_changes()
-        self.assertIsNone(changes[CHILD_BRIDGE_DOWN_ACTOR]["Presence"])
-        self.assertTrue(changes[CHILD_BRIDGE_UP_ACTOR]["__delete"])
         placements = {name: loc.vanilla for name, loc in self.world.locations.items()}
         patch = build_patch(self.world, Result(1, 1, placements), "test")
         self.assertEqual(patch["event_bools"][CHILD_BRIDGE_FLOW], [[30, "Value", True, False]])

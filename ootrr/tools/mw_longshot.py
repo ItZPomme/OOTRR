@@ -52,6 +52,10 @@ class _PendingPouchAction:
     code: int
     writes: list[str]
     phase: str = "clear"
+    started: float = 0.0
+
+
+POUCH_ACTION_TIMEOUT = 8.0  # seconds without an acknowledgement: the item is written to GameData instead
 
 
 class Bridge:
@@ -158,9 +162,16 @@ class Bridge:
                     return 0
                 self.game.set_int(POUCH_ACTION_REQUEST, action.code)
                 action.phase = "await"
+                action.started = time.monotonic()
                 return 0
             if ack != action.code:
-                return 0
+                if time.monotonic() - action.started < POUCH_ACTION_TIMEOUT:
+                    return 0
+                # the game never ran the action (seen 2026-11-26): without this the queue stays blocked
+                self.game.set_int(POUCH_ACTION_REQUEST, 0)
+                action.writes = self.giver.give(action.item)
+                self.say(f"  no answer from the game's pouch action, written to GameData: "
+                         f"{self.label(action.received_item)}")
             self._counted(action.index)
             del self.pending[action.index]
             count = action.index + 1

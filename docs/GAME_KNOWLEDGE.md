@@ -633,9 +633,10 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   `Market_Child_TimeTempleDoor_Opened` only skips the animation **[game]**.
 - The remake counts **the Goron Ruby and the Zora Sapphire** for the door (`DoorOfTime_CheckStoneNum`).
 - The child Market drawbridge is controlled by `IsHyruleFieldBridgeClose`: `DoorOfTime_CheckStoneNum` sets it true
-  (raised), while `DoorOfTime_Escape` sets it false. The randomizer keeps it false on new games, changes the
-  raising event to false, always enables the lowered child-map actor, and removes the raised variant. This also
-  keeps the bridge visually down on existing saves **[files]** (in-game validation still required).
+  (raised), while `DoorOfTime_Escape` sets it false. The randomizer keeps it false on new games and changes the
+  raising event to false. The bridge actors (`Land_HrlField_DrawBridge_A_01/_02`) and their logic module
+  `HyruleField_Child_Prefab_0ce5` must stay vanilla: deleting the raised actor (and with it the module) left an
+  invisible wall where the raised bridge stands **[game]** (2026-11-26, door open). Retest after 3 child dungeons.
 - The moat ocarina (`Obj_Ocarina_Time_A_01`, module `HyruleField_Child_Prefab_91f9`) only exists at step **=
   Step04**; picking it up runs `DoorOfTime:DoorOfTime_GetOcarinaOfTime` (scene `Dm_MelodyGet_Time`). Open door:
   module changed for Step06 + "3 stones" presence + direct gifts in the script **[game]**.

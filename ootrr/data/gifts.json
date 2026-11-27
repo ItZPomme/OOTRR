@@ -86,6 +86,45 @@
     "Kak Man on Roof": [
       ["Npc_Hylia_001_Adult", 14, "ActorName", "Obj_Heart_Piece"]
     ],
+    "GF HBA 1000 Points": [
+      ["Minigame_HorsebackArchery", 313, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "GC Rolling Goron as Adult": [
+      ["SageOfFire", 177, "ActorName", "Obj_Armor_Goron"]
+    ],
+    "ZD King Zora Thawed": [
+      ["SageOfWater", 252, "ActorName", "Obj_Armor_Zora"]
+    ],
+    "GC Rolling Goron as Child": [
+      ["Npc_Goron_006_Child", 72, "ReveiveItem", "Item_BombBag_Medium"],
+      ["Npc_Goron_006_Child", 73, "ReveiveItem", "Item_BombBag_Large"]
+    ],
+    "LH Child Fishing": [
+      ["MiniGame_Fishing", 482, "ReveiveItem", "Obj_Heart_Piece"],
+      ["MiniGame_Fishing", 489, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "LH Lab Dive": [
+      ["Npc_Hylia_045_Child", 55, "ReveiveItem", "Obj_Heart_Piece"]
+    ],
+    "LW Skull Kid": [
+      ["Npc_SkullKid_Child", 62, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "LW Ocarina Memory Game": [
+      ["Npc_SkullKid_Child_02", 203, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "Market Bombchu Bowling Second Prize": [
+      ["MiniGame_BombchuBowling", 296, "ReveiveItem", "Obj_Heart_Piece"]
+    ],
+    "Market Lost Dog": [
+      ["SubEvent_FindRichard", 35, "ReveiveItem", "Obj_Heart_Piece"]
+    ],
+    "ZR Frogs Ocarina Game": [
+      ["MiniGame_FrogTenors", 247, "ActorName", "Obj_Heart_Piece"]
+    ],
+    "ZR Frogs in the Rain": [
+      ["MiniGame_FrogTenors", 71, "ActorName", "Obj_Heart_Piece"],
+      ["MiniGame_FrogTenors", 91, "ActorName", "Obj_Heart_Piece"]
+    ],
     "Graveyard Dampe Gravedigging Tour": [
       ["Npc_Hylia_Dampe_001", 602, "ActorName", "Obj_Heart_Piece"],
       ["Npc_Hylia_Dampe_001.110", 602, "ActorName", "Obj_Heart_Piece"]

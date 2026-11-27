@@ -173,6 +173,18 @@ class Longshot:
         addr = self.bool_address(name_or_hash)
         return None if addr is None else bool(self.read(addr, 1)[0])
 
+    def get_enum(self, name_or_hash: str | int, values: tuple[str, ...]) -> str | None:
+        """Current raw name of an Enum among `values` (entries at manager + 0x258, 0x38 bytes: default at +0x18,
+        current at +0x1c, saved copy at +0x20) [game: LiftGrade Low after a write, 2026-11-26]; None if it is none
+        of them."""
+        h = flag_hash(name_or_hash) if isinstance(name_or_hash, str) else name_or_hash
+        mgr = self.gamedata_manager()
+        index = self._lookup(h, mgr, ENUM_TABLE, ENUM_TABLE_SIZE)
+        if index is None:
+            return Nonec
+        current = self.u32(self.u64(mgr + 0x258) + index * 0x38 + 0x18)
+        return next((v for v in values if flag_hash(v) == current), None)
+
     # ---- writes (HOS_CONTROL_MEM=rw) ----
     def write(self, addr: int, data: bytes) -> None:
         self.call("mem_write", addr=addr, hex=data.hex())

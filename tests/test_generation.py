@@ -241,7 +241,7 @@ class GenerationTests(unittest.TestCase):
                 self._check(overrides, results[name])
 
     def test_gifts(self):
-        """shuffle_gifts: the 26 gifts are shuffled, without bombs or rupees; the scene edits name the
+        """shuffle_gifts: the 38 gifts are shuffled, without bombs or rupees; the scene edits name the
         placed item (mod without the menu) and every targeted event exists in gifts.json. The 5 vanilla
         bottles (4 gifts + Ruto's letter on the ground) are shuffled too."""
         off = World(settings_mod.build({"shuffle_gifts": False}))
@@ -250,7 +250,7 @@ class GenerationTests(unittest.TestCase):
         self.assertTrue(settings_mod.defaults()["shuffle_gifts"])
         self.assertEqual(settings_mod.defaults()["shuffle_hearts"], "all")
         gifts = [l for l in world.locations.values() if l.gift]
-        self.assertEqual(len(gifts), 26)
+        self.assertEqual(len(gifts), 38)
         self.assertTrue(all(l.shuffle for l in gifts))
         bottles = [l for l in world.locations.values() if l.vanilla.startswith("Item_Bottle")]
         self.assertEqual(sorted(l.name for l in bottles),

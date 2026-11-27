@@ -60,6 +60,11 @@ BAGS = {
     "Item_BombBag_Large": ("Item_Bomb", 40),
     "Item_Range_Bow": ("Item_Arrow_Normal", 30), "Item_Quiver_Medium": ("Item_Arrow_Normal", 40),
     "Item_Quiver_Large": ("Item_Arrow_Normal", 50),
+    # capacities: PouchActorInfo AfterExpansionMaxNum (IsItemStockMaxIfGet: the game fills them too)
+    "Item_Range_SlingShot": ("Item_DekuSeed", 30), "Item_BulletBag_Medium": ("Item_DekuSeed", 40),
+    "Item_BulletBag_Large": ("Item_DekuSeed", 50),
+    "Item_NutBag_Medium": ("Item_DekuNut", 30), "Item_NutBag_Large": ("Item_DekuNut", 40),
+    "Item_StickBag_Medium": ("Item_DekuStick", 20), "Item_StickBag_Large": ("Item_DekuStick", 30),
 }
 # extra items that come with a step (the bow comes with its small quiver; memory: a bow without one is unusable)
 WITH = {"Item_Range_Bow": ("Item_Quiver_Small",), "Item_Range_SlingShot": ("Item_BulletBag_Small",)}

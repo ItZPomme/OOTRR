@@ -128,6 +128,11 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   **validated in game**, 2026-11-12). The native tab-title hook (0xa6ab50) now keeps tab 6 visible from the start;
   the separate content hook (0x181160) is unchanged, so the screen may still say "Unavailable right now" before a
   reward. **New behavior not yet validated in game.**
+- [ ] Key Items tab on Longshot (no native module): still "Unavailable right now" until a stone or medallion is owned
+  (reported 2026-11-26). The test is in the game's code (list 4 queried at 0xa694dc and 0x33dd82c), not in data:
+  `Sequence/ImportantMenu.module.ainb` only sets the pouch display type 4, and the `KeyItem` category of
+  `PouchActorInfo` is the equipment tab, not this list **[files]**. No data-only fix found; writing an `IsGet` flag of a
+  stone would break the logic.
 - [x] Threads of Time tab: `UI_IsFinishChallengeMenuOpenEvent` is set at the start (validated in game). The
   "MsgNotFound" in Threads of Time (skipped quest steps) remain to look at.
 - [x] Menu: end-of-page button and navigation, **validated in game** (2026-11-12). "Next Page" / "Start the Game"
