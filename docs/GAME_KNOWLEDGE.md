@@ -206,12 +206,16 @@ confirmed.
   already played. It then calls the existing local `KakarikoVillage_MelodyGet_Shadow` entry and resumes the arrival
   flow **[files]** (to test in game). These Sheik/Ocarina reward changes affect in-game triggers only, not placement
   or reachability rules.
-- **Sheik in Crater (Fire Bolero)**: the location is adult-only (`is_adult`).
-  The map's `EventRequestActor` request is disabled; the DMC arrival flow now calls
-  `SageOfFire:SageOfFire_MelodyGetFire` on each crater entry route, guarded by adult age and
-  `HavePlayedEvent.Dm_MelodyGet_Fire`. That entry transitions to `Dm_MelodyGet_Fire`, whose scene runs
-  `Dm_SY_Ocarina:LearningOcarinaPlayAutoForSeek` and `GetPouchContent` for `Item_Melody_FireBolero` **[files]**.
-  No Fire Temple-clear requirement is added. Test in game.
+- **Sheik in Crater (Fire Bolero)**: the location is adult-only (`is_adult`). The game's own trigger is module
+  `DeathMountainCrater_Adult_Prefab_e63c`: the area `Area_c294` exists while `Dm_MelodyGet_Fire` has not played AND
+  the `SageOfFire` quest is before `EnterTemple`; Link walking in makes `EventRequestActor_0220` (hash
+  13416397632384752550) request `SageOfFire:SageOfFire_MelodyGetFire` as a standalone event, and the end of that
+  event sets the quest to `EnterTemple`. `world.CRATER_SHEIK_LOGIC_GRAPH_EDITS` replaces the step check with
+  `OoTRR_CanGetFireBolero_Exp` (adult, scene not played) and points the step set to a missing step, so the quest stays
+  at `StopDaruniaJr` for the rolling Goron. Sheik's scene plays and gives the song **[game]** (2026-11-26). Calling the scene from the arrival flows
+  (`Dm_SY_BancChangeArrive`, 2026-11-26) did not work: as a sub-flow (`SageOfFire_MelodyGetFire` starts a player
+  event while the arrival flow already runs one) it froze the game, and the gate in `DeathMountainCrater_Arrive`
+  sat behind Navi's tunic remark, so later arrivals never reached it. No Fire Temple-clear requirement is added.
 
 - The 12 songs are given by the common script `Dm_SY_Ocarina` (called by the `Dm_MelodyGet_*` scenes): a query
   `EventQueryMelodyTypeForNormal` (melody of the scene) leads to one inventory action per song. The Lullaby's name is

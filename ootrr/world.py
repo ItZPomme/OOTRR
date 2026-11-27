@@ -174,26 +174,31 @@ KAKARIKO_NOCTURNE_ENTRIES = {
         },
     }
 }
-CRATER_SHEIK_EVENT_ACTOR = 13416397632384752550
-CRATER_SHEIK_ARRIVAL_GATES = {
-    "GoTo_DeathMountainCrater": {
-        "condition": CRATER_SHEIK_EXP,
-        "flow": "SageOfFire",
-        "entry": "SageOfFire_MelodyGetFire",
-        "before": "94",
-    },
-    "DeathMountainCrater_Arrive": {
-        "condition": CRATER_SHEIK_EXP,
-        "flow": "SageOfFire",
-        "entry": "SageOfFire_MelodyGetFire",
-        "before": "96",
-    },
-    "Dm_SY_BancChangeArrive_DeathMountainCrater_02": {
-        "condition": CRATER_SHEIK_EXP,
-        "flow": "SageOfFire",
-        "entry": "SageOfFire_MelodyGetFire",
-        "before": "258",
-    },
+# Sheik in the crater: the game's own trigger (module DeathMountainCrater_Adult_Prefab_e63c) creates the area
+# Area_c294 while Dm_MelodyGet_Fire has not played AND the SageOfFire quest is before EnterTemple; Link walking in
+# requests SageOfFire_MelodyGetFire (EventRequestActor_0220) as a standalone event, then the end of the event sets the
+# quest to EnterTemple. The step check becomes OoTRR_CanGetFireBolero_Exp (adult, scene not played: the Fire Temple or
+# the rolling Goron's quest step no longer matter) and the step set after the scene points to a step that does not
+# exist, so the quest stays at StopDaruniaJr (rolling Goron, ROLLING_GORON_*). Calling the scene from the arrival
+# flows instead (2026-11-26) froze the game or never played it: the arrival flows already run an event.
+CRATER_SHEIK_LOGIC_GRAPH_EDITS = {
+    "DeathMountainCrater_Adult_Prefab_e63c": {
+        "node": 6,
+        "expected": "HoldChallengeCurrentStepCheckOrder",
+        "expected_inputs": {
+            "ChallengeName": "Work/Challenge/SageOfFire.game__challenge__Challenge.gyml",
+            "ChallengeStepName": "EnterTemple",
+        },
+        "template_module": "Market_Adult_Prefab_edc2",
+        "template_node": 3,
+        "template_node_name": "HoldGameDataGetBoolExpSimple",
+        "expression": CRATER_SHEIK_EXP,
+        "output": "Bool",
+        "consumers": [{"node": 4, "expected": "OperateAND", "input": "BoolMulti",
+                       "source_output": 1}],  # IsBefore
+        "string_inputs": [{"node": 5, "expected": "TriggerChallengeSetStep", "input": "StepName",
+                           "old": "EnterTemple", "new": "EnterTemp__"}],
+    }
 }
 DARUNIA_JOY_POST_CLEAR_GATES = {
     "Dm_Goron_0030": {
@@ -310,8 +315,8 @@ RETURN_POINTS = {"child": ("KokiriForest_Child", "ReturnFromDreamWorld"),  # in 
 # The Fire Temple itself still moves the quest on. Not validated in game.
 ROLLING_GORON_FLAGS = {"SageOfFire_GenerateDaruniaJr": True, "HavePlayedEvent.SageOfFire_CityIn": True,
                        "#4004018924": "StopDaruniaJr"}
-ROLLING_GORON_MODULES = {"DeathMountainCrater_Adult_Prefab_a0e2": {"MeetSheik": "MeetShe__"},
-                         "DeathMountainCrater_Adult_Prefab_e63c": {"EnterTemple": "EnterTemp__"}}
+ROLLING_GORON_MODULES = {"DeathMountainCrater_Adult_Prefab_a0e2": {"MeetSheik": "MeetShe__"}}
+# (EnterTemple, module _e63c: CRATER_SHEIK_LOGIC_GRAPH_EDITS)
 # Checks whose giver tests "Link has this item" instead of "already given": a saved flag of our own instead, set by
 # the giver's script (ModBuilder.GIVEN_FLAGS). Same length as the replaced name in the logic modules.
 DAMPE_FLAG = "OoTRR.DampeHookshot"
@@ -1363,14 +1368,12 @@ class World:
 
     def logic_graph_edits(self) -> dict[str, dict]:
         """Runtime AI-module gates that cannot be represented by same-length string replacements."""
-        return dict(LIGHT_ARROW_LOGIC_GRAPH_EDITS)
+        return {**LIGHT_ARROW_LOGIC_GRAPH_EDITS, **CRATER_SHEIK_LOGIC_GRAPH_EDITS}
 
     def event_entry_gates(self) -> dict[str, dict[str, dict[str, str]]]:
         """Conditions that start existing story entries during map arrival flows."""
         out = {flow: {entry: dict(gate) for entry, gate in entries.items()}
                for flow, entries in KAKARIKO_NOCTURNE_ENTRIES.items()}
-        out.setdefault("Dm_SY_BancChangeArrive", {}).update(
-            {entry: dict(gate) for entry, gate in CRATER_SHEIK_ARRIVAL_GATES.items()})
         out.update({flow: {entry: dict(gate) for entry, gate in entries.items()}
                     for flow, entries in DARUNIA_JOY_POST_CLEAR_GATES.items()})
         return out
@@ -1456,7 +1459,6 @@ class World:
                 out[h] = {"Presence": None}
         out[LAKE_SWITCH_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                   "IsNegation": True}}
-        out[CRATER_SHEIK_EVENT_ACTOR] = {"RequestEventName": None}
         out[CHILD_BRIDGE_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                    "IsNegation": True}}
         out[SHADOW_FALLING_FLOOR] = {"PreFallTime": SHADOW_FALLING_FLOOR_DELAY}

@@ -1592,6 +1592,15 @@ class ModBuilder:
                 raise KeyError(f"{edit['template_module']}: {template.name} has no GameDataNameBoolExp input")
             condition.default_value = edit["expression"]
             script.nodes[index] = replacement
+            for change in edit.get("string_inputs", []):
+                node = script.nodes[change["node"]]
+                if node.name != change["expected"]:
+                    raise KeyError(f"{module}: node {change['node']} is {node.name}, expected {change['expected']}")
+                plug = next((p for p in (node.params.string_inputs or []) if p.name == change["input"]), None)
+                if plug is None or plug.default_value != change["old"]:
+                    raise ValueError(f"{module}: node {change['node']} {change['input']} = "
+                                     f"{getattr(plug, 'default_value', None)}, expected {change['old']}")
+                plug.default_value = change["new"]
             dest = out_romfs / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(script.to_binary())

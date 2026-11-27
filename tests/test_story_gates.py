@@ -11,7 +11,6 @@ from ootrr.search import State  # noqa: E402
 from ootrr.world import (
     CHILD_BRIDGE_FLAG,
     CHILD_BRIDGE_FLOW,
-    CRATER_SHEIK_EVENT_ACTOR,
     CRATER_SHEIK_EXP,
     DARUNIA_JOY_PENDING_EXP,
     World,
@@ -45,12 +44,14 @@ class StoryGateTests(unittest.TestCase):
         self.assertFalse(self.can_access("Sheik in Crater", "child", []))
         self.assertTrue(self.can_access("Sheik in Crater", "adult", []))
 
-    def test_sheik_in_crater_is_started_by_arrival_flow(self):
-        gates = self.world.event_entry_gates()["Dm_SY_BancChangeArrive"]
-        self.assertEqual(gates["GoTo_DeathMountainCrater"]["condition"], CRATER_SHEIK_EXP)
-        self.assertEqual(gates["GoTo_DeathMountainCrater"]["before"], "94")
-        self.assertEqual(gates["DeathMountainCrater_Arrive"]["before"], "96")
-        self.assertEqual(gates["Dm_SY_BancChangeArrive_DeathMountainCrater_02"]["before"], "258")
+    def test_sheik_in_crater_uses_the_game_trigger(self):
+        """The map's own trigger (module _e63c) reads the expression; no gate in the arrival flows."""
+        self.assertFalse(any("Crater" in entry for entry in self.world.event_entry_gates().get(
+            "Dm_SY_BancChangeArrive", {})))
+        edit = self.world.logic_graph_edits()["DeathMountainCrater_Adult_Prefab_e63c"]
+        self.assertEqual(edit["expression"], CRATER_SHEIK_EXP)
+        self.assertEqual(edit["expected_inputs"]["ChallengeStepName"], "EnterTemple")
+        self.assertNotIn("DeathMountainCrater_Adult_Prefab_e63c", self.world.logic_patches())
         self.assertEqual(self.world.bool_exps()[CRATER_SHEIK_EXP], [
             ("Bool", "Sequence_IsChildhood"),
             ("NOT",),
@@ -58,7 +59,6 @@ class StoryGateTests(unittest.TestCase):
             ("NOT",),
             ("AND",),
         ])
-        self.assertIsNone(self.world.actor_changes()[CRATER_SHEIK_EVENT_ACTOR]["RequestEventName"])
 
     def test_post_clear_darunia_flow_replays_unclaimed_reward(self):
         gate = self.world.event_entry_gates()["Dm_Goron_0030"]["C11"]
