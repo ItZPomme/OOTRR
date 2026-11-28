@@ -89,6 +89,33 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   placement constraints kept, no beatable check; spoiler marked "not beatable"). Python and native generators
   identical (`native_check`, 2 no-logic presets); **to validate in game** (menu row, seed generated).
 
+#### Reported 2026-11-27 (in-game test)
+- [x] Goron / Zora Tunic in a chest: the chest could not be opened. Cause: the rolling Goron and King Zora gifts had
+  the logic-only aliases `Goron_Tunic` / `Zora_Tunic` as vanilla item (no such actor), so with shuffled gifts a chest
+  got `Drop__DropActor = Goron_Tunic` (the menu mod build even crashed on `Pack/Actor/Goron_Tunic.pack.zs`). Vanilla
+  items are now `Armor_Adult_Goron` / `Armor_Adult_Zora` (`overworld.json`). **Validated in game** (2026-11-27,
+  Fritchii: both tunics from Mido's chests).
+- [x] Lake Hylia owl (flight to the field) is gone. First fix (actor presence `Dm_TimeTemple_0086`) was not enough
+  (still absent in game, 2026-11-27). **Real gate [files]**: logic module `HyruleField_LakeHylia_Child_Prefab_32f1`
+  creates it only while `Goto_HyruleCastle_IsCompleted_Exp` (child Zelda met) AND (lake visited OR ...) AND NOT
+  `Dm_TimeTemple_0086`. The quest test is replaced with an always-true expression (`world.LAKE_OWL_MODULE`). **Validated in game**
+  (2026-11-27, Fritchii, child Link at the lake without meeting Zelda).
+- [x] Beds do not let Link choose day or night. **Cause found in the files**: `LinkSleepInBed:EntryPoint0` (Link's
+  bed, event 13) and `CommonBed` (other beds, events 85 and 131; the Lon Lon Ranch bed still had no choice with only
+  event 13 changed) offer the choice only after child Zelda (`HavePlayedEvent.HyruleCastle_Goto_HyruleCastle_MeetZelda`), otherwise
+  `SleepBeforeMeetZelda` without a choice. The test now reads `UI_IsFinishChallengeMenuOpenEvent` (true from the start;
+  `world.BED_STRINGS`). **Validated in game** (2026-11-27, Fritchii, Lon Lon Ranch bed).
+- [x] No Hyrule Field music when leaving the forest. **Cause found in the files**: the forest exit
+  (`Goto_HyruleCastle:KokiriForest_ArriveLostWood`, step 89) stops the in-game BGM (`CommandLife 0`); only the owl at
+  the field entrance (`Goto_HyruleCastle_Kaepora_00`, step 96) starts `BGM_HyruleField` again. Skipping step 89
+  alone was not enough (still silent in game, 2026-11-27; the fade near the bridge is vanilla: scenery
+  `Area_KokiriForest_Bridge` has no `BgmName`). The owl event was never requested because `Dm_HrlField_0005/0010` were
+  marked seen at the start (`EXTRA_SKIPPED`); they are now replaced with their flags inside the owl script
+  (`world.FIELD_OWL_SCENES`), so the event runs at once without cutscenes (BGM, quest Step02, Navi balloon, the "Threads of Time"
+  tutorial frame). **Validated in game** (2026-11-27, Fritchii, open forest). Still open: settings where the castle quest does not start at Step01 (skipped Zelda / open
+  door with a closed forest) never request the owl.
+- [ ] Key Items tab still unavailable without a child stone (any one): re-reported, see "Menu / settings" below.
+
 ### Shuffle to extend
 - [ ] Minigames: shuffled rewards (Slingshot, Bow, etc.).
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:
@@ -127,12 +154,20 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
 - [ ] Key Items tab: the game previously hid it until a stone or medallion was obtained (the gated behavior was
   **validated in game**, 2026-11-12). The native tab-title hook (0xa6ab50) now keeps tab 6 visible from the start;
   the separate content hook (0x181160) is unchanged, so the screen may still say "Unavailable right now" before a
-  reward. **New behavior not yet validated in game.**
-- [ ] Key Items tab on Longshot (no native module): still "Unavailable right now" until a stone or medallion is owned
-  (reported 2026-11-26). The test is in the game's code (list 4 queried at 0xa694dc and 0x33dd82c), not in data:
-  `Sequence/ImportantMenu.module.ainb` only sets the pouch display type 4, and the `KeyItem` category of
-  `PouchActorInfo` is the equipment tab, not this list **[files]**. No data-only fix found; writing an `IsGet` flag of a
-  stone would break the logic.
+  reward. With the native module, a medallion alone opens the tab: **validated in game** (2026-11-27, Fritchii, child
+  Link with only the starting Light Medallion; log "Key Items ouvert (recompense obtenue), appel 0xa694dc"). The
+  2026-11-27 report "unavailable without a child stone" comes from Longshot (below).
+- [ ] Key Items tab on Longshot (no native module): still "Unavailable right now" until a child stone is owned
+  (reported 2026-11-26 and 2026-11-27). The test is in the game's code, not in data **[files]**: tab 0xa69220 and
+  screen 0x33dd6b0 walk list 4 (0xa6f690 -> 0x3397ac0, item names hard-coded in `main`: `Item_Stone_*`,
+  `Item_Medal_*`) and call 0x181160 ("obtained?") at 0xa694d8 / 0x33dd828; `Sequence/ImportantMenu.module.ainb` only
+  sets the pouch display type 4, stones and medallions have identical `PouchActorInfo` rows. A code patch (both calls
+  -> `mov w0, #1`) would fix it, but Longshot only loads RomFS mods (no `exefs`, IPS or `subsdk` in `longshot.exe`,
+  v3.2.0). Needs code-patch support in Longshot; writing an `IsGet` flag of a stone would break the logic.
+  **Tested in Longshot 2026-11-27** (control pipe, OoTRR-essai, new game): `IsGet.Item_Medal_Light` true, no stone ->
+  tab "???" and "Unavailable right now", as child and as adult (`age age=adult`). So the walked list holds the three
+  stones only, for both ages. 0x181160 reads `IsGet.<name>` (murmur3 of the name, member of GameData struct
+  0xade0ef78); no `GameActorInfo` / `PouchActorInfo` field redirects it [files].
 - [x] Threads of Time tab: `UI_IsFinishChallengeMenuOpenEvent` is set at the start (validated in game). The
   "MsgNotFound" in Threads of Time (skipped quest steps) remain to look at.
 - [x] Menu: end-of-page button and navigation, **validated in game** (2026-11-12). "Next Page" / "Start the Game"

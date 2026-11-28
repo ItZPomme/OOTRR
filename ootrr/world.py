@@ -205,6 +205,13 @@ CRATER_SHEIK_LOGIC_GRAPH_EDITS = {
 # 2026-11-27).
 DARUNIA_JOY_FLOW = "Get_StoneOfFire"
 DARUNIA_JOY_STRINGS = [(16, "GameDataName", "Get_StoneOfFire_IsAfter_SariaMelodyPlay_Exp", DARUNIA_JOY_DONE_EXP)]
+# Beds: LinkSleepInBed only offers "sleep until morning / until night" once child Zelda has been met
+# (HavePlayedEvent.HyruleCastle_Goto_HyruleCastle_MeetZelda); before that, SleepBeforeMeetZelda, without a choice
+# (reported in game 2026-11-27, Lon Lon Ranch bed) [files]. Tested in EntryPoint0 (Link's bed, event 13) and
+# CommonBed (other beds, events 85 and 131). The tests read a flag that is true from the start of every game instead.
+BED_FLOW = "LinkSleepInBed"
+BED_STRINGS = [(e, "GameDataName", "HavePlayedEvent.HyruleCastle_Goto_HyruleCastle_MeetZelda",
+                "UI_IsFinishChallengeMenuOpenEvent") for e in (13, 85, 131)]
 # The end of Dm_Goron_0030 (C11, event 164) sets Get_StoneOfFire to DodongoCavernOpne: skipped (to event 47, the
 # camera reset after the progress UI) when the quest is already past it, so a late Darunia's Joy cannot rewind it.
 DARUNIA_JOY_STEP_GATES = {
@@ -233,8 +240,15 @@ CHILD_BRIDGE_CLOSE_EVENT = 30
 # skip_cutscenes=safe : scènes de Kaepora Gaebora mises de côté par le tri automatique (elles posent
 # des drapeaux) mais sans objet, et la découverte de la forêt à la sortie de la maison (Dm_Kokiri_0045 : caméra, nom du lieu ;
 # écartée par le tri car elle replace Link devant sa porte)
-EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
+EXTRA_SKIPPED = ("Dm_HrlField_0080",
                  "Dm_LakeHrl_0003", "Dm_LakeHrl_0005", "Dm_LakeHrl_0010", "Dm_Kokiri_0045")
+# The owl at the field entrance (Goto_HyruleCastle:Goto_HyruleCastle_Kaepora_00) is no longer prevented: it is the only
+# thing that starts BGM_HyruleField after the forest exit (scene BGM, step 96), moves Goto_HyruleCastle to Step02 and
+# sets HyruleField_ArriveEntrance / UI_IsFinishChallengeMenuOpenEvent. Module HyruleField_Child_Prefab_de5f requests it
+# when Link enters the entrance area while Dm_HrlField_0010 is unseen and the quest is at Step01 [files]. Marking
+# 0005 / 0010 as seen at the start left the field silent (reported in game 2026-11-27). Its three timelines are replaced
+# with their flag instead (timeline_skips), so it runs at once without any cutscene.
+FIELD_OWL_SCENES = ("Goto_HyruleCastle", ("Dm_HrlField_0000", "Dm_HrlField_0005", "Dm_HrlField_0010"))
 # Cycle jour / nuit de la plaine : en quittant la forêt (Goto_HyruleCastle:KokiriForest_ArriveLostWood, étape
 # 182), le jeu pose HyruleField_ChangeENV = vrai ; la plaine enfant prend alors la palette
 # MainField_Bluesky_First (WorldParam HyruleField_Child, ConditionEnvTimePalette), qui force la lumière du
@@ -244,6 +258,24 @@ EXTRA_SKIPPED = ("Dm_HrlField_0005", "Dm_HrlField_0010", "Dm_HrlField_0080",
 # Step01 : avec ses scènes marquées vues (EXTRA_SKIPPED) ou Zelda passée (quête Complete), la lumière restait
 # figée. L'étape qui pose le drapeau est sautée (la palette « First » n'est qu'un éclairage de première arrivée).
 FIELD_FIRST_PALETTE_STEP = ("Goto_HyruleCastle", "#182")
+# Hyrule Field music: the same forest exit (KokiriForest_ArriveLostWood) stops the in-game BGM at step 89
+# (EventTriggerStopInGameBgm, CommandLife 0); only the owl at the field entrance starts it again
+# (Goto_HyruleCastle_Kaepora_00, step 96: EventTriggerSoundStartSceneBgm BGM_HyruleField). Without the owl the field
+# stayed silent (reported in game 2026-11-27). The stop is skipped (all settings: the owl stops and restarts the BGM
+# itself, step 95).
+FIELD_BGM_STOP_STEP = ("Goto_HyruleCastle", "#89")
+# Lake Hylia owl (flight to the field), reported missing in game 2026-11-27. Logic module
+# HyruleField_LakeHylia_Child_Prefab_32f1 creates it while (lake visited OR Npc_Kaepora_LakeHrl_Appeared_FromValley OR
+# HavePlayedEvent.Dm_HrlField_0050) AND Goto_HyruleCastle_IsCompleted_Exp AND NOT HavePlayedEvent.Dm_TimeTemple_0086
+# [files]. The castle quest is only Complete after child Zelda (never with a closed forest + skipped Zelda / open door,
+# see MALON_HOME_QUEST), so the quest test is replaced (same length) with an expression that is always true
+# (CHALLENGE_MENU_FLAG is set at the start of every game). The actor's own presence is "Dm_TimeTemple_0086 not played"
+# (Kaepora at the Temple of Time, SageOfSpirit, skipped by timeline_skips but its flag still set) and is removed; the
+# module's own 0086 test is kept (vanilla: the owl leaves after that late scene).
+LAKE_OWL = 8515476870752834170
+LAKE_OWL_EXP = "OoTRR_LakeHylia_Owl_Present_Exp00"
+LAKE_OWL_EXPS = {LAKE_OWL_EXP: [("Bool", "UI_IsFinishChallengeMenuOpenEvent")]}
+LAKE_OWL_MODULE = {"HyruleField_LakeHylia_Child_Prefab_32f1": {"Goto_HyruleCastle_IsCompleted_Exp": LAKE_OWL_EXP}}
 # Le temps ne s'écoule qu'après l'arrivée à l'entrée de la plaine : 0x345c020 (« heure figée ? », appelé par
 # l'avance de l'heure 0x3cdf70) répond « libre » si la quête Meet_DekuTree est à Ready, ou si
 # HyruleField_ArriveEntrance est vrai et HrlField_HasEnteredFirstTime_Adult faux ; sinon l'heure ne bouge plus et
@@ -1396,6 +1428,7 @@ class World:
         if self.settings.get("bridge", "vanilla") != "vanilla":
             out.update(BRIDGE_MODULE)
         out.update(ROLLING_GORON_MODULES)
+        out.update(LAKE_OWL_MODULE)
         return out
 
     def logic_graph_edits(self) -> dict[str, dict]:
@@ -1412,7 +1445,7 @@ class World:
 
     def event_strings(self) -> dict[str, list[tuple[int, str, str, str]]]:
         """Text parameters of precise script events: {flow: [(event, parameter, vanilla text, new text)]}."""
-        return {DARUNIA_JOY_FLOW: list(DARUNIA_JOY_STRINGS)}
+        return {DARUNIA_JOY_FLOW: list(DARUNIA_JOY_STRINGS), BED_FLOW: list(BED_STRINGS)}
 
     def logic_ints(self) -> dict[str, list[tuple[int, str, int, int]]]:
         """Integer inputs to change in logic modules: {module: [(node, input, vanilla value, new value)]}."""
@@ -1444,7 +1477,7 @@ class World:
 
     def bool_exps(self) -> dict[str, list[tuple]]:
         """Expressions booléennes ajoutées aux données de sauvegarde (non sauvegardées)."""
-        out = {**RUNTIME_EVENT_EXPS, **(BOOL_EXPS if self.settings.get("open_door_of_time") else {})}
+        out = {**RUNTIME_EVENT_EXPS, **LAKE_OWL_EXPS, **(BOOL_EXPS if self.settings.get("open_door_of_time") else {})}
         out.update(bridge_exps(self.settings.get("bridge", "vanilla"), self.settings.get("bridge_count", 0)))
         out.update(ganon_key_exps(self.ganon_key, self.settings.get("ganon_boss_key_count", 0)))
         if self.settings.get("fast_bunny_hood"):
@@ -1496,6 +1529,7 @@ class World:
         out[CHILD_BRIDGE_AIR_WALL] = {"Presence": {"FlagName": CHALLENGE_MENU_FLAG, "IsCheckLazy": False,
                                                    "IsNegation": True}}
         out[SHADOW_FALLING_FLOOR] = {"PreFallTime": SHADOW_FALLING_FLOOR_DELAY}
+        out[LAKE_OWL] = {"Presence": None}  # see LAKE_OWL
         if self.settings.get("skip_cutscenes") == "safe":
             for h in KOKIRI_INTERRUPTIONS:
                 out[h] = {"Presence": dict(NEVER_AFTER_INTRO)}
@@ -1551,6 +1585,8 @@ class World:
             skips.setdefault("Npc_Kokiri_001_Shop_Child", []).append("DekuShield_TutorialTalk")
         # cycle jour / nuit (tous réglages) : voir FIELD_FIRST_PALETTE_STEP
         skips.setdefault(FIELD_FIRST_PALETTE_STEP[0], []).append(FIELD_FIRST_PALETTE_STEP[1])
+        # Hyrule Field music after leaving the forest (all settings): see FIELD_BGM_STOP_STEP
+        skips.setdefault(FIELD_BGM_STOP_STEP[0], []).append(FIELD_BGM_STOP_STEP[1])
         # time frozen after the first awakening as an adult (all settings): see ADULT_TIME_FREEZE_STEP
         skips.setdefault(ADULT_TIME_FREEZE_STEP[0], []).append(ADULT_TIME_FREEZE_STEP[1])
         return skips
@@ -1566,8 +1602,9 @@ class World:
         data = _read_json(DATA_DIR / "cutscenes.json")
         seen = {k[len("HavePlayedEvent."):] for k, v in self.start_flags().items()
                 if k.startswith("HavePlayedEvent.") and v is True}
-        skips = {flow: [s for s in scenes if s not in seen]
-                 for flow, scenes in data.get("timeline_skips", {}).items()}
+        table = {flow: list(scenes) for flow, scenes in data.get("timeline_skips", {}).items()}
+        table.setdefault(FIELD_OWL_SCENES[0], []).extend(s for s in FIELD_OWL_SCENES[1] if s not in table[FIELD_OWL_SCENES[0]])
+        skips = {flow: [s for s in scenes if s not in seen] for flow, scenes in table.items()}
         skips = {flow: scenes for flow, scenes in skips.items() if scenes}
         played = {s for scenes in skips.values() for s in scenes}
         return skips, [s for s in data.get("timeline_fade_in", []) if s in played]

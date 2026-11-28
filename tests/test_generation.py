@@ -142,11 +142,17 @@ class WorldTests(unittest.TestCase):
         replaced = {s for scenes in skips.values() for s in scenes}
         self.assertGreater(len(replaced), 50)
         self.assertLessEqual(set(fade_in), replaced)
-        self.assertLessEqual(replaced, set(data["game_skippable"]) | set(data["timeline_gated"]))
+        # exception: the field-entrance owl's scenes (world.FIELD_OWL_SCENES) were marked as seen at the start before;
+        # they are replaced instead so the owl event itself (field music, quest Step02) still runs
+        from ootrr.world import FIELD_OWL_SCENES
+        owl = set(FIELD_OWL_SCENES[1])
+        self.assertLessEqual(owl, set(skips[FIELD_OWL_SCENES[0]]))
+        others = replaced - owl
+        self.assertLessEqual(others, set(data["game_skippable"]) | set(data["timeline_gated"]))
         # the Deku Tree arrival event (Navi's tutorial, which unlocks the D-pad guide) must still run
         self.assertIn("Dm_Deku_0000", replaced)
-        self.assertFalse(replaced & set(data["game_no_skip"]))
-        self.assertFalse(replaced & set(data["timeline_kept"]))
+        self.assertFalse(others & set(data["game_no_skip"]))
+        self.assertFalse(others & set(data["timeline_kept"]))
         seen = {k for k, v in world.start_flags().items() if k.startswith("HavePlayedEvent.") and v is True}
         self.assertFalse({f"HavePlayedEvent.{s}" for s in replaced} & seen)
         # a scene a logic module names is never marked as seen at the start (Dm_FireTemple_BossIn: no floor to

@@ -128,7 +128,7 @@
       "locations": {
         "GC Darunias Joy":           {"rule": "is_child and can_play(Zeldas_Lullaby) and can_play(Sarias_Song)", "vanilla": "Item_Gauntlet_Goron", "gift": true},
         "GC Rolling Goron as Child": {"rule": "is_child and has_explosives", "vanilla": "Item_BombBag_Medium", "gift": true},
-        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or Progressive_Strength)", "vanilla": "Goron_Tunic", "gift": true},
+        "GC Rolling Goron as Adult": {"rule": "is_adult and (has_explosives or Progressive_Strength)", "vanilla": "Armor_Adult_Goron", "gift": true},
         "GC Pot Freestanding PoH":   {"rule": "is_child and has_explosives and has_fire_or_sticks", "vanilla": "Obj_Heart_Piece"}
       },
       "exits": {
@@ -355,7 +355,7 @@
     "Zoras Domain": {
       "locations": {
         "ZD Diving Minigame":  {"rule": "is_child", "vanilla": "Item_Scale_Silver", "gift": true},
-        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Zora_Tunic", "gift": true}
+        "ZD King Zora Thawed": {"rule": "is_adult and King_Zora_Moved and Blue_Fire", "vanilla": "Armor_Adult_Zora", "gift": true}
       },
       "events": {
         "King_Zora_Moved": "is_child and Rutos_Letter",
