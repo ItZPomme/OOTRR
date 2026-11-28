@@ -430,6 +430,16 @@ CASTLE_MEET_ZELDA_REQUEST = 9854201107877740182  # HyruleCastle_Goto_HyruleCastl
 # flag turned true in the save after Dodongo's Cavern). Its only readers are that check, Entry_LonLonRanch and module
 # HyruleField_Common_5e73 (which set it) [files]: true from the start = no reminder, Malon and Talon stay at the ranch.
 MALON_REMINDER_OFF_FLAG = "IsArrived_LonLonRanch_AfterMalonAppear"
+# Epona owned from the start, as if Ingo's race were won (the logic only asks for Epona's Song as adult). Epona's
+# Song (Dm_SY_Ocarina_EponaSong:EponaSong) calls the horse with EventCreateAndCallOwnedHorse when
+# EventQueryHasOwnedHorse is true (adult, scene where riding is allowed); otherwise it only calls the ranch Epona over
+# inside the fence. The race registers her with Animal_Epona_Adult.EventCopyAndRegisterOwnedHorse
+# (Get_Epona:Sub_Get_Epona_EscapeRanch_*_Warp), which fills the OwnedHorseList struct (one horse): actor name, name,
+# familiarity (Epona's HorseParam: InitFamiliarity 1.0), saddle, mane, body colours and stats; Epona's look and stats
+# come from her own actor. The Get_Epona quest itself is left alone: its first steps are child Malon's
+# (GuideToLonLonRanch, ReadyForGetEponaSong) [files]. These three members are enough: validated in game (2026-11-28).
+EPONA_OWNED_FLAGS = {"OwnedHorseList.ActorName": "Animal_Epona_Adult", "OwnedHorseList.Name": "Epona",
+                     "OwnedHorseList.Familiarity": 1.0}
 # Air wall around the Hookshot switch of the Water Temple gate (Lake Hylia, HyruleField_Adult_Dynamic): present
 # until SageOfWater is after Step03 (Water Serenade), it makes the switch an invalid Hookshot target. The logic only
 # asks for the Hookshot, Iron Boots and Zora Tunic, so it is made absent in every seed. It stays in the map with a
@@ -1265,6 +1275,8 @@ class World:
         flags[CHALLENGE_MENU_FLAG] = True
         # Malon and Talon stay at the ranch after a stone: see MALON_REMINDER_OFF_FLAG
         flags[MALON_REMINDER_OFF_FLAG] = True
+        # Epona rideable as soon as the adult has Epona's Song: see EPONA_OWNED_FLAGS
+        flags.update(EPONA_OWNED_FLAGS)
         # D-pad guide shown from the start: see NAVI_GUIDE_FLAG
         flags[NAVI_GUIDE_FLAG] = True
         if self.settings.get("maps_compasses") == "start_with":

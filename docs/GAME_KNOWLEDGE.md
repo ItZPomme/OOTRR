@@ -707,6 +707,19 @@ Navi's short lines ("You OK?" after a fall: `Near_18`, `Return000`) are balloons
   by `Entry_LonLonRanch` (quest after Step04) and module `HyruleField_Common_5e73` (quest after Step03_02, in the
   ranch); with the forest closed the quest stays at Ready, so seen in a save right after Dodongo's Cavern. Set true at
   the start in all settings (`world.MALON_REMINDER_OFF_FLAG`); **validated in game** (2026-11-27, with the Step04 start).
+- **Owned horse (Epona) [files]**: Epona's Song (`Dm_SY_Ocarina_EponaSong:EponaSong`) as adult asks
+  `EventQueryHasOwnedHorse`, then `EventQueryIsCurrentSceneEnableRide`, and calls the horse with
+  `EventCreateAndCallOwnedHorse`; without an owned horse it only calls the ranch Epona inside the fence
+  (`LonLonRanch_GambleRace_IsInsideFence`); as a child it always calls her over. Winning Ingo's race registers her
+  with `Animal_Epona_Adult.EventCopyAndRegisterOwnedHorse` (`Get_Epona:Sub_Get_Epona_EscapeRanch_*_Warp`), which
+  fills the `OwnedHorseList` struct (one horse, members: `ActorName` String64Array, `Name` WString16Array,
+  `Familiarity` FloatArray, `Saddle` / `Mane` / reins EnumArrays, `Body` and `Hair` structs, `ColorType`, `Speed` and
+  other IntArrays, a BoolArray, a UInt64Array). Epona's `HorseParam` has `InitFamiliarity` 1.0; her look and stats
+  come from her own actor. The randomizer sets `ActorName` = `Animal_Epona_Adult`, `Name` = `Epona`, `Familiarity`
+  = 1.0 at the start (`world.EPONA_OWNED_FLAGS`), so the logic's `can_ride_epona` (adult + Epona's Song) holds
+  without the race. The `Get_Epona` quest is untouched (its first steps are child Malon's). **Validated in game**
+  (2026-11-28: adult, Epona's Song in Hyrule Field calls her and she can be ridden; the other members left at their
+  defaults).
 - `IsWorldTimeStop` / `IsDisableTimeProgress` are event settings (EventSetting), not a global state.
 - **Time only flows after `HyruleField_ArriveEntrance` [game, native trace]**: 0x345c020 freezes the time unless
   `Meet_DekuTree` is at Ready, or `HyruleField_ArriveEntrance` is true and `HrlField_HasEnteredFirstTime_Adult` false

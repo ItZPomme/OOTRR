@@ -68,6 +68,13 @@ class ModBuilder:
                 e["DefaultValue"] = int(value)
             elif section == "Enum":  # valeur donnée par son nom (ex. « Step06 »)
                 e["DefaultValue"] = type(old)(enum_value(e, value))
+            elif section in ("String64", "String64Array", "WString16", "WString16Array"):
+                limit = 64 if section.startswith("String64") else 16
+                if len(value) >= limit:
+                    raise ValueError(f"{name}: {value!r} too long for {section}")
+                e["DefaultValue"] = str(value)  # arrays: the default of every element
+            elif section in ("Float", "FloatArray"):
+                e["DefaultValue"] = float(value)
             else:
                 raise TypeError(f"{name} : type {section} non géré")
             report.append(f"GameData {name}: {old} -> {e['DefaultValue']}")
