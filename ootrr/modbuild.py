@@ -16,6 +16,11 @@ from .formats.byml import byml_version, read_byml, write_byml
 from .formats.restbl import Restbl
 
 TITLE_ID = "0400486024DEC000"
+# A bow or slingshot added by a script (EventTriggerAddOrRemovePouchContent: gifts, progressive gifts, ground item
+# fixes, starting items) comes alone: Weapon_Range_Bow at 0/0, unusable (seen in Longshot 2026-11-28: a progressive
+# Medium Quiver from the Kakariko roof man gave the bow without a quiver). A chest gives the quiver too. Scripts that
+# add the weapon add its small container right after (its row fills the ammunition: IsItemStockMaxIfGet).
+SMALL_CONTAINERS = {"Item_Range_Bow": "Item_Quiver_Small", "Item_Range_SlingShot": "Item_BulletBag_Small"}
 
 
 class ModBuilder:
@@ -200,7 +205,9 @@ class ModBuilder:
                 if params is None:
                     raise KeyError(f"{self.POUCH_TEMPLATE} : action {self.POUCH_ACTION} introuvable")
                 new, add_report = add_actions(new, self.START_ENTRY, *self.POUCH_ACTION, template, params,
-                                              [{"Actor": item} for item in start_items])
+                                              [{"Actor": a} for item in start_items
+                                               for a in (item, SMALL_CONTAINERS.get(item)) if a
+                                               and not (a != item and a in start_items)])
                 report += add_report
             if scrub_sales and flow == self.SCRUB_FLOW:
                 new, scrub_report = self._scrub_sales(new, scrub_sales, scrub_progressive)
@@ -761,8 +768,9 @@ class ModBuilder:
         """Before each gift step, questions from the last step down: "does Link own step k?" -> a copy of the gift
         step that gives step k+1 (the last step once owned); none -> step 1. The copies go on where the gift
         step went. Pouch question: PouchSystemActor.EventQueryIsExistInPouch (0 = yes), as at Dampe's exit."""
-        from .formats.evfl import ensure_actor_member, event_param_slot, find_query, insert_flow
+        from .formats.evfl import ensure_actor_member, event_param_slot, find_action, find_query, insert_flow
 
+        add = None  # pouch add action template, loaded for the first weapon gift
         template = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.DAMPE_FLOW}.bfevfl.zs")
         ask = (template, find_query(template, "PouchSystemActor", "EventQueryIsExistInPouch"))
         if ask[1] is None:
@@ -776,12 +784,15 @@ class ModBuilder:
             n = len(steps)
             nodes: list[dict] = []
             first = steps[0][1]
-            # a weapon first (bow, slingshot): no weapon, whatever bag Link has -> the weapon
+            # a weapon first (bow, slingshot): no weapon, whatever bag Link has -> the weapon, then its small
+            # container (SMALL_CONTAINERS), added last so that it sits after the 2n+1 nodes below
             base = 2 if first.startswith("Weapon_") and first != steps[0][0] else 0
+            container = SMALL_CONTAINERS.get(steps[0][0]) if base else None
             if base:
                 nodes = [{"actor": "PouchSystemActor", "query": "EventQueryIsExistInPouch", "template": ask,
                           "set": {"Actor": first}, "cases": {0: 2, 1: 1}},
-                         {"copy_event": event, "set": {param: steps[0][0]}, "next": "after"}]
+                         {"copy_event": event, "set": {param: steps[0][0]},
+                          "next": base + 2 * n + 1 if container else "after"}]
             # node 2k: question "owns step n-1-k?"; node 2k+1: copy giving the step after it
             for k in range(n):
                 owned = n - 1 - k
@@ -791,6 +802,13 @@ class ModBuilder:
                 nodes.append({"copy_event": event, "set": {param: steps[min(owned + 1, n - 1)][0]},
                               "next": "after"})
             nodes.append({"copy_event": event, "set": {param: steps[0][0]}, "next": "after"})
+            if container:
+                if add is None:
+                    tpl = self.codec.decompress(self.romfs / "Event" / "EventFlow" / f"{self.POUCH_TEMPLATE}.bfevfl.zs")
+                    add = (tpl, find_action(tpl, *self.POUCH_ACTION))
+                    flow = ensure_actor_member(flow, *self.POUCH_ACTION[:1], "action", self.POUCH_ACTION[1])
+                nodes.append({"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1], "template": add,
+                              "set": {"Actor": container}, "next": "after"})
             flow, _ = insert_flow(flow, f"ProgressiveGift{event}", nodes, before=event)  # entry: names only
             report.append(f"progressive gift, event {event}: {' / '.join(s[0] for s in steps)}")
         return flow, report
@@ -1399,9 +1417,11 @@ class ModBuilder:
 
         for number, chain in enumerate(self.ground_chains):
             start, n, last = len(nodes), len(chain), chain[-1]
-            # layout: question "last step?", n-1 questions, n-1 fixes of 3 actions
+            container = SMALL_CONTAINERS.get(chain[0][0])
+            # layout: question "last step?", n-1 questions, n-1 fixes of 3 actions, the weapon's container
             fixes = start + n
-            after = "old" if number == len(self.ground_chains) - 1 else fixes + 3 * (n - 1)
+            extra = fixes + 3 * (n - 1)
+            after = "old" if number == len(self.ground_chains) - 1 else extra + (1 if container else 0)
             nodes.append({"actor": pq[0], "query": pq[1], "template": templates["has"], "set": {"Actor": last[1]},
                           "cases": {0: start + 1, 1: after}})
             for i, step in enumerate(chain[:-1]):
@@ -1414,7 +1434,11 @@ class ModBuilder:
                           {"actor": ga[0], "action": ga[1], "template": templates["set"],
                            "set": {"GameDataName": f"IsGet.{last[0]}", "Value": 0}, "next": at + 2},
                           {"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
-                           "template": templates["add"], "set": {"Actor": step[0]}, "next": after}]
+                           "template": templates["add"], "set": {"Actor": step[0]},
+                           "next": extra if container and i == 0 else after}]
+            if container:  # see SMALL_CONTAINERS
+                nodes.append({"actor": self.POUCH_ACTION[0], "action": self.POUCH_ACTION[1],
+                              "template": templates["add"], "set": {"Actor": container}, "next": after})
         new, _ = insert_flow(flow, None, nodes, before=before)
         return new, ["progressive ground items: " + ", ".join("/".join(s[0] for s in c) for c in self.ground_chains)]
 

@@ -116,6 +116,16 @@ Bugs and improvements found during test sessions. Tick when fixed **and** valida
   door with a closed forest) never request the owl.
 - [ ] Key Items tab still unavailable without a child stone (any one): re-reported, see "Menu / settings" below.
 
+#### Reported 2026-11-28 (Longshot, multiworld)
+- [ ] Bow without a quiver: a progressive Medium Quiver from the Kakariko roof man (Willx, mw 0AEF6F9822) gave the bow
+  at 0/0 (the Ice Arrows he also had were real: DC Map Chest; the bow's in-game name is "Fairy Bow"). **Cause [game,
+  Longshot memory reads]**: a script adding `Item_Range_Bow` (`EventTriggerAddOrRemovePouchContent`: progressive gifts,
+  ground item fixes, starting items) gives `Weapon_Range_Bow` only, no `Item_Quiver_Small`, 0 arrows; a chest gives the
+  bow correctly. Fix (`modbuild.SMALL_CONTAINERS`): those scripts add the small quiver / seed bag right after the weapon;
+  starting items verified in Longshot (quiver + 30 arrows), progressive gift verified in the files (roof man: bow, then
+  quiver). **To validate in game** on a real gift. Not covered: a bow or slingshot given as placed by a non-progressive
+  gift (only when a chain copy sits where nothing progressive is possible).
+
 ### Shuffle to extend
 - [ ] Minigames: shuffled rewards (Slingshot, Bow, etc.).
 - [ ] Man on the roof (Kakariko) and gravedigging tour (child Dampé): added to the gifts (`gifts.json`:
